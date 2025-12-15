@@ -1,0 +1,55 @@
+:root {
+  color: #e8ecf3;
+  background-color: #0f1115;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+body,
+html,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  background: #0f1115;
+}
+
+.widget-host {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.widget-frame {
+  background: #151922;
+  border-radius: 8px;
+  padding: 8px;
+  color: #e8ecf3;
+  border: 1px solid #1f2633;
+}
+
+.widget-frame__header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.settings-panel {
+  background: #151922;
+  border-radius: 8px;
+  padding: 12px;
+  color: #e8ecf3;
+  border: 1px solid #1f2633;
+}
+
+.widget-placeholder {
+  color: #9aa4b5;
+  font-size: 14px;
+}

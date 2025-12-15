@@ -1,0 +1,30 @@
+{
+  "agents": [
+    {
+      "name": "alert-curator",
+      "prompt": "../prompts/agent-alert-curator.md",
+      "permissions": [
+        "alerts:list",
+        "alerts:create"
+      ],
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "name": "notification-summarizer",
+      "prompt": "../prompts/agent-ops.md",
+      "permissions": [
+        "notifications:list",
+        "settings:set"
+      ],
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "name": "release-copy",
+      "prompt": "../prompts/agent-copywriter.md",
+      "permissions": [
+        "settings:get"
+      ],
+      "schedule": "@weekly"
+    }
+  ]
+}
