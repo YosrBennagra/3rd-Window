@@ -7,6 +7,8 @@
   height: 100%;
   padding: 24px;
   position: relative;
+  user-select: none;
+  touch-action: none;
 }
 
 .grid-cell {
@@ -20,6 +22,11 @@
 .grid-cell--hover {
   background: rgba(99, 102, 241, 0.2);
   border-color: rgba(99, 102, 241, 0.5);
+}
+
+.grid-cell--invalid {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.6);
 }
 
 .grid-widget {
@@ -37,6 +44,7 @@
 .grid-widget--dragging {
   opacity: 0.5;
   cursor: grabbing;
+  z-index: 999;
 }
 
 .grid-widget__content {

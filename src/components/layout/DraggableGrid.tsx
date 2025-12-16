@@ -1,10 +1,7 @@
-import { useState, DragEvent } from 'react';
-import { useGridStore, type WidgetGridItem } from '../../store/gridStore';
+import { useEffect, useRef, useState } from 'react';
+import { useGridStore, type WidgetGridItem, GRID_COLS, GRID_ROWS } from '../../store/gridStore';
 import { ClockWidget, CpuTempWidget, GpuTempWidget } from '../widgets';
 import './DraggableGrid.css';
-
-const GRID_COLS = 6;
-const GRID_ROWS = 6;
 
 const widgetComponents: Record<string, React.ComponentType> = {
   'clock': ClockWidget,
@@ -12,125 +9,260 @@ const widgetComponents: Record<string, React.ComponentType> = {
   'gpu-temp': GpuTempWidget,
 };
 
+type DragInfo = { id: string; width: number; height: number };
+type ResizeInfo = { id: string; startWidth: number; startHeight: number; startX: number; startY: number };
+
 export function DraggableGrid() {
-  const { widgets, updateWidgetPosition, removeWidget } = useGridStore();
-  const [draggedWidget, setDraggedWidget] = useState<WidgetGridItem | null>(null);
+  const { widgets, updateWidgetPositionWithPush, removeWidget } = useGridStore();
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const lastDragCellRef = useRef<{ col: number; row: number } | null>(null);
+
+  const [dragInfo, setDragInfo] = useState<DragInfo | null>(null);
+  const [dragPointerId, setDragPointerId] = useState<number | null>(null);
+  const [isDragBlocked, setIsDragBlocked] = useState(false);
+
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
-  const [resizingWidget, setResizingWidget] = useState<string | null>(null);
-  const [resizeStart, setResizeStart] = useState<{ width: number; height: number; x: number; y: number } | null>(null);
+  const [resizeInfo, setResizeInfo] = useState<ResizeInfo | null>(null);
+  const [resizePointerId, setResizePointerId] = useState<number | null>(null);
 
-  const handleDragStart = (e: DragEvent, widget: WidgetGridItem) => {
-    // Don't start drag if clicking on controls
-    const target = e.target as HTMLElement;
-    if (target.closest('.grid-widget__remove') || target.closest('.grid-widget__resize-handle')) {
-      e.preventDefault();
-      return;
-    }
-    setDraggedWidget(widget);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-  const handleDragEnd = () => {
-    setDraggedWidget(null);
-    setHoverCell(null);
-  };
+  const getGridMetrics = (gridElement: HTMLElement) => {
+    const rect = gridElement.getBoundingClientRect();
+    const style = getComputedStyle(gridElement);
 
-  const handleDragOver = (e: DragEvent, col: number, row: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setHoverCell({ col, row });
-  };
+    const paddingLeft = parseFloat(style.paddingLeft || '0') || 0;
+    const paddingRight = parseFloat(style.paddingRight || '0') || 0;
+    const paddingTop = parseFloat(style.paddingTop || '0') || 0;
+    const paddingBottom = parseFloat(style.paddingBottom || '0') || 0;
 
-  const handleDrop = (e: DragEvent, col: number, row: number) => {
-    e.preventDefault();
-    
-    if (!draggedWidget) return;
+    const columnGap = parseFloat(style.columnGap || style.gap || '0') || 0;
+    const rowGap = parseFloat(style.rowGap || style.gap || '0') || 0;
 
-    const newPosition = {
-      col,
-      row,
-      width: draggedWidget.position.width,
-      height: draggedWidget.position.height,
+    const innerWidth = Math.max(0, rect.width - paddingLeft - paddingRight);
+    const innerHeight = Math.max(0, rect.height - paddingTop - paddingBottom);
+
+    const cellWidth = GRID_COLS > 0
+      ? Math.max(0, (innerWidth - columnGap * (GRID_COLS - 1)) / GRID_COLS)
+      : 0;
+    const cellHeight = GRID_ROWS > 0
+      ? Math.max(0, (innerHeight - rowGap * (GRID_ROWS - 1)) / GRID_ROWS)
+      : 0;
+
+    return {
+      rect,
+      paddingLeft,
+      paddingTop,
+      innerWidth,
+      innerHeight,
+      columnGap,
+      rowGap,
+      cellWidth,
+      cellHeight,
     };
+  };
 
-    // Check bounds
-    if (col + newPosition.width > GRID_COLS || row + newPosition.height > GRID_ROWS) {
-      return;
+  const getCellFromPointer = (
+    gridElement: HTMLElement,
+    clientX: number,
+    clientY: number,
+    size?: { width: number; height: number }
+  ) => {
+    const {
+      rect,
+      paddingLeft,
+      paddingTop,
+      innerWidth,
+      innerHeight,
+      columnGap,
+      rowGap,
+      cellWidth,
+      cellHeight,
+    } = getGridMetrics(gridElement);
+
+    if (!rect.width || !rect.height || !cellWidth || !cellHeight) {
+      return { col: 0, row: 0 };
     }
 
-    updateWidgetPosition(draggedWidget.id, newPosition);
-    setDraggedWidget(null);
+    const x = clamp(clientX - rect.left - paddingLeft, 0, Math.max(0, innerWidth - 1));
+    const y = clamp(clientY - rect.top - paddingTop, 0, Math.max(0, innerHeight - 1));
+
+    const colStride = cellWidth + columnGap;
+    const rowStride = cellHeight + rowGap;
+
+    const maxCol = size ? Math.max(0, GRID_COLS - size.width) : GRID_COLS - 1;
+    const maxRow = size ? Math.max(0, GRID_ROWS - size.height) : GRID_ROWS - 1;
+
+    const col = clamp(Math.floor(x / colStride), 0, maxCol);
+    const row = clamp(Math.floor(y / rowStride), 0, maxRow);
+    return { col, row };
+  };
+
+  const isOutOfBounds = (position: { col: number; row: number; width: number; height: number }) => {
+    if (position.col < 0 || position.row < 0) return true;
+    if (position.width < 1 || position.height < 1) return true;
+    if (position.col + position.width > GRID_COLS) return true;
+    if (position.row + position.height > GRID_ROWS) return true;
+    return false;
+  };
+
+  const attemptWidgetMove = (moving: DragInfo, col: number, row: number) => {
+    const nextPosition = { col, row, width: moving.width, height: moving.height };
+    if (isOutOfBounds(nextPosition)) return false;
+    return updateWidgetPositionWithPush(moving.id, nextPosition);
+  };
+
+  const endDrag = () => {
+    setDragInfo(null);
+    setDragPointerId(null);
+    setIsDragBlocked(false);
     setHoverCell(null);
+    lastDragCellRef.current = null;
   };
 
   const handleRemoveWidget = (id: string) => {
     removeWidget(id);
   };
 
-  const handleWidgetDragOver = (e: DragEvent) => {
+  const handleWidgetPointerDown = (e: React.PointerEvent, widget: WidgetGridItem) => {
+    if (e.button !== 0) return;
+    if (resizeInfo) return;
+
+    const target = e.target as HTMLElement;
+    if (target.closest('.grid-widget__remove') || target.closest('.grid-widget__resize-handle')) {
+      return;
+    }
+
     e.preventDefault();
-    e.stopPropagation();
+    setDragInfo({ id: widget.id, width: widget.position.width, height: widget.position.height });
+    setDragPointerId(e.pointerId);
+    setIsDragBlocked(false);
+    setHoverCell({ col: widget.position.col, row: widget.position.row });
+    lastDragCellRef.current = { col: widget.position.col, row: widget.position.row };
   };
 
-  const handleResizeStart = (e: React.MouseEvent, widget: WidgetGridItem) => {
-    e.stopPropagation();
+  const endResize = () => {
+    setResizeInfo(null);
+    setResizePointerId(null);
+  };
+
+  const handleResizePointerDown = (e: React.PointerEvent, widget: WidgetGridItem) => {
+    if (e.button !== 0) return;
+    if (dragInfo) return;
     e.preventDefault();
-    setResizingWidget(widget.id);
-    setResizeStart({
-      width: widget.position.width,
-      height: widget.position.height,
-      x: e.clientX,
-      y: e.clientY,
+    e.stopPropagation();
+    setResizeInfo({
+      id: widget.id,
+      startWidth: widget.position.width,
+      startHeight: widget.position.height,
+      startX: e.clientX,
+      startY: e.clientY,
     });
+    setResizePointerId(e.pointerId);
   };
 
-  const handleResizeMove = (e: React.MouseEvent) => {
-    if (!resizingWidget || !resizeStart) return;
-    
-    const widget = widgets.find(w => w.id === resizingWidget);
-    if (!widget) return;
+  useEffect(() => {
+    if (!dragInfo || dragPointerId == null) return;
 
-    const gridRect = e.currentTarget.getBoundingClientRect();
-    const cellWidth = gridRect.width / GRID_COLS;
-    const cellHeight = gridRect.height / GRID_ROWS;
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== dragPointerId) return;
+      const grid = gridRef.current;
+      if (!grid) return;
 
-    const deltaX = e.clientX - resizeStart.x;
-    const deltaY = e.clientY - resizeStart.y;
+      const { col, row } = getCellFromPointer(grid, ev.clientX, ev.clientY, {
+        width: dragInfo.width,
+        height: dragInfo.height,
+      });
 
-    const newWidth = Math.max(1, Math.min(
-      Math.round(resizeStart.width + deltaX / cellWidth),
-      GRID_COLS - widget.position.col
-    ));
-    const newHeight = Math.max(1, Math.min(
-      Math.round(resizeStart.height + deltaY / cellHeight),
-      GRID_ROWS - widget.position.row
-    ));
+      const last = lastDragCellRef.current;
+      if (last && last.col === col && last.row === row) return;
 
-    if (newWidth !== widget.position.width || newHeight !== widget.position.height) {
-      updateWidgetPosition(widget.id, {
+      lastDragCellRef.current = { col, row };
+      setHoverCell({ col, row });
+
+      const ok = attemptWidgetMove(dragInfo, col, row);
+      setIsDragBlocked(!ok);
+    };
+
+    const onEnd = (ev: PointerEvent) => {
+      if (ev.pointerId !== dragPointerId) return;
+      endDrag();
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+    };
+  }, [dragInfo, dragPointerId, updateWidgetPositionWithPush]);
+
+  useEffect(() => {
+    if (!resizeInfo || resizePointerId == null) return;
+
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== resizePointerId) return;
+      const grid = gridRef.current;
+      if (!grid) return;
+
+      const widget = widgets.find(w => w.id === resizeInfo.id);
+      if (!widget) return;
+
+      const { cellWidth, cellHeight } = getGridMetrics(grid);
+      if (!cellWidth || !cellHeight) return;
+
+      const deltaX = ev.clientX - resizeInfo.startX;
+      const deltaY = ev.clientY - resizeInfo.startY;
+
+      const newWidth = Math.max(1, Math.min(
+        Math.round(resizeInfo.startWidth + deltaX / cellWidth),
+        GRID_COLS - widget.position.col
+      ));
+      const newHeight = Math.max(1, Math.min(
+        Math.round(resizeInfo.startHeight + deltaY / cellHeight),
+        GRID_ROWS - widget.position.row
+      ));
+
+      if (newWidth === widget.position.width && newHeight === widget.position.height) return;
+
+      updateWidgetPositionWithPush(widget.id, {
         ...widget.position,
         width: newWidth,
         height: newHeight,
       });
-    }
-  };
+    };
 
-  const handleResizeEnd = () => {
-    setResizingWidget(null);
-    setResizeStart(null);
-  };
+    const onEnd = (ev: PointerEvent) => {
+      if (ev.pointerId !== resizePointerId) return;
+      endResize();
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+    };
+  }, [resizeInfo, resizePointerId, widgets, updateWidgetPositionWithPush]);
 
   const renderGridCells = () => {
     const cells = [];
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
         const isHovered = hoverCell?.col === col && hoverCell?.row === row;
+        const isInvalidHover = Boolean(
+          isHovered &&
+          dragInfo &&
+          (isDragBlocked || isOutOfBounds({ col, row, width: dragInfo.width, height: dragInfo.height }))
+        );
         cells.push(
           <div
             key={`${col}-${row}`}
-            className={`grid-cell ${isHovered ? 'grid-cell--hover' : ''}`}
-            onDragOver={(e) => handleDragOver(e, col, row)}
-            onDrop={(e) => handleDrop(e, col, row)}
+            className={`grid-cell ${isHovered ? 'grid-cell--hover' : ''} ${isInvalidHover ? 'grid-cell--invalid' : ''}`}
             style={{
               gridColumn: col + 1,
               gridRow: row + 1,
@@ -145,9 +277,7 @@ export function DraggableGrid() {
   return (
     <div 
       className="draggable-grid"
-      onMouseMove={handleResizeMove}
-      onMouseUp={handleResizeEnd}
-      onMouseLeave={handleResizeEnd}
+      ref={gridRef}
     >
       {renderGridCells()}
       
@@ -158,11 +288,8 @@ export function DraggableGrid() {
         return (
           <div
             key={widget.id}
-            className={`grid-widget ${draggedWidget?.id === widget.id ? 'grid-widget--dragging' : ''}`}
-            draggable
-            onDragStart={(e) => handleDragStart(e, widget)}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleWidgetDragOver}
+            className={`grid-widget ${dragInfo?.id === widget.id ? 'grid-widget--dragging' : ''}`}
+            onPointerDown={(e) => handleWidgetPointerDown(e, widget)}
             style={{
               gridColumn: `${widget.position.col + 1} / span ${widget.position.width}`,
               gridRow: `${widget.position.row + 1} / span ${widget.position.height}`,
@@ -180,7 +307,7 @@ export function DraggableGrid() {
             </button>
             <div
               className="grid-widget__resize-handle"
-              onMouseDown={(e) => handleResizeStart(e, widget)}
+              onPointerDown={(e) => handleResizePointerDown(e, widget)}
               title="Drag to resize"
             />
           </div>
