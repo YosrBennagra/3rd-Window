@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 
 export interface GridPosition {
-  col: number; // 0-2 (3 columns)
+  col: number; // 0-5 (6 columns)
   row: number; // 0-5 (6 rows)
-  width: number; // span in columns (1-3)
+  width: number; // span in columns (1-6)
   height: number; // span in rows (1-6)
 }
 
