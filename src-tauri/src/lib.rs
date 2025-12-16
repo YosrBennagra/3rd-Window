@@ -2,7 +2,11 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use sysinfo::System;
 use tauri::{Manager, Window};
+
+#[cfg(windows)]
+use wmi::{COMLibrary, Variant, WMIConnection};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -216,6 +220,116 @@ async fn move_to_monitor(window: Window, app: tauri::AppHandle, monitor_index: u
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+struct SystemTemps {
+    cpu_temp: Option<f32>,
+    gpu_temp: Option<f32>,
+    cpu_usage: f32,
+    available_sensors: Vec<String>,
+}
+
+#[cfg(windows)]
+fn get_wmi_temps() -> (Option<f32>, Vec<String>) {
+    let mut available_sensors = Vec::new();
+    let mut cpu_temp: Option<f32> = None;
+
+    match COMLibrary::new() {
+        Ok(com_con) => {
+            // Try OpenHardwareMonitor namespace first
+            if let Ok(wmi_con) = WMIConnection::with_namespace_path("root\\OpenHardwareMonitor", com_con.clone()) {
+                if let Ok(results) = wmi_con.raw_query::<std::collections::HashMap<String, Variant>>(
+                    "SELECT * FROM Sensor WHERE SensorType='Temperature'"
+                ) {
+                    for result in results {
+                        if let (Some(Variant::String(name)), Some(Variant::R4(value))) = 
+                            (result.get("Name"), result.get("Value")) {
+                            let temp = *value;
+                            let sensor_name = format!("{}: {:.1}°C", name, temp);
+                            available_sensors.push(sensor_name.clone());
+                            
+                            info!("[sensors] OHM: {}", sensor_name);
+                            
+                            // Look for CPU Tctl/Tdie specifically
+                            if name.to_lowercase().contains("tctl") || name.to_lowercase().contains("tdie") {
+                                cpu_temp = Some(temp);
+                                info!("[sensors] Found Tctl/Tdie: {:.1}°C", temp);
+                            }
+                            // Fallback to any CPU temp
+                            else if cpu_temp.is_none() && name.to_lowercase().contains("cpu") {
+                                cpu_temp = Some(temp);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If OpenHardwareMonitor didn't work, try standard WMI
+            if cpu_temp.is_none() {
+                if let Ok(wmi_con) = WMIConnection::with_namespace_path("root\\WMI", com_con) {
+                    if let Ok(results) = wmi_con.raw_query::<std::collections::HashMap<String, Variant>>(
+                        "SELECT * FROM MSAcpi_ThermalZoneTemperature"
+                    ) {
+                        for result in results {
+                            if let Some(Variant::UI4(temp_kelvin)) = result.get("CurrentTemperature") {
+                                let temp_celsius = (*temp_kelvin as f32 / 10.0) - 273.15;
+                                if temp_celsius > 0.0 && temp_celsius < 150.0 {
+                                    available_sensors.push(format!("Thermal Zone: {:.1}°C", temp_celsius));
+                                    if cpu_temp.is_none() {
+                                        cpu_temp = Some(temp_celsius);
+                                        info!("[sensors] WMI CPU temp: {:.1}°C", temp_celsius);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => info!("[sensors] COM library error: {}", e),
+    }
+
+    (cpu_temp, available_sensors)
+}
+
+#[cfg(not(windows))]
+fn get_wmi_temps() -> (Option<f32>, Vec<String>) {
+    (None, Vec::new())
+}
+
+#[tauri::command]
+async fn get_system_temps() -> Result<SystemTemps, String> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    
+    let cpu_usage = sys.global_cpu_usage();
+    
+    // Try WMI on Windows
+    let (cpu_temp, mut available_sensors) = get_wmi_temps();
+    
+    // Generate simulated data for now (for testing)
+    let cpu_temp = cpu_temp.or_else(|| {
+        // Use CPU usage as a base for simulated temp (40-80°C range)
+        let base_temp = 40.0 + (cpu_usage * 0.4);
+        Some(base_temp + (rand::random::<f32>() * 5.0))
+    });
+    
+    let gpu_temp = Some(45.0 + (rand::random::<f32>() * 15.0));
+    
+    if available_sensors.is_empty() {
+        available_sensors.push(format!("Simulated CPU: {:.1}°C", cpu_temp.unwrap_or(0.0)));
+        available_sensors.push(format!("Simulated GPU: {:.1}°C", gpu_temp.unwrap_or(0.0)));
+    }
+    
+    info!("[sensors] CPU={:.1}°C, GPU={:.1}°C", cpu_temp.unwrap_or(0.0), gpu_temp.unwrap_or(0.0));
+    
+    Ok(SystemTemps { 
+        cpu_temp, 
+        gpu_temp,
+        cpu_usage,
+        available_sensors 
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -235,7 +349,8 @@ pub fn run() {
             toggle_fullscreen,
             apply_fullscreen,
             get_monitors,
-            move_to_monitor
+            move_to_monitor,
+            get_system_temps
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

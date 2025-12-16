@@ -1,0 +1,116 @@
+.draggable-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  position: relative;
+}
+
+.grid-cell {
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.grid-cell--hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.grid-widget {
+  position: relative;
+  cursor: move;
+  transition: opacity 0.2s ease;
+  z-index: 1;
+}
+
+.grid-widget:hover {
+  z-index: 2;
+}
+
+.grid-widget--dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.grid-widget__content {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.grid-widget__content .widget {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.grid-widget__remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.grid-widget:hover .grid-widget__remove {
+  opacity: 1;
+}
+
+.grid-widget__remove:hover {
+  background: rgba(239, 68, 68, 1);
+  transform: scale(1.1);
+}
+
+/* Make widget content fit the grid cell */
+.grid-widget .widget {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-widget .widget__content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Clock widget adjustments */
+.grid-widget .clock__time {
+  font-size: clamp(24px, 4vw, 42px);
+}
+
+.grid-widget .clock__date {
+  font-size: clamp(12px, 1.5vw, 16px);
+}
+
+/* Temperature widget adjustments */
+.grid-widget .temp-widget__icon {
+  font-size: clamp(32px, 5vw, 48px);
+}
+
+.grid-widget .temp-widget__value {
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.grid-widget .temp-widget__label {
+  font-size: clamp(10px, 1.2vw, 14px);
+}

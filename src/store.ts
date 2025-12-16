@@ -1,17 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
-
-export interface Monitor {
-  name: string;
-  size: { width: number; height: number };
-  position: { x: number; y: number };
-  is_primary: boolean;
-}
-
-export interface AppSettings {
-  isFullscreen: boolean;
-  selectedMonitor: number;
-}
+import type { Monitor, AppSettings } from './types/system';
 
 interface AppState {
   settingsOpen: boolean;
