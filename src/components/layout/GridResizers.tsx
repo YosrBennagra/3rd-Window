@@ -9,6 +9,29 @@ type Props = {
   setRowHeights: (v: number[] | null) => void;
 };
 
+const MIN_COL_WIDTH = 40;
+const MIN_ROW_HEIGHT = 32;
+const MIN_PIXEL = 1;
+
+const hasSibling = (tracks: number[] | null, index: number) =>
+  Array.isArray(tracks) && index >= 0 && index < tracks.length - 1;
+
+const clampPair = (total: number, desiredFirst: number, minSize: number) => {
+  if (!Number.isFinite(total) || total <= 0) {
+    return { first: 0, second: 0 };
+  }
+  const effectiveMin = Math.max(MIN_PIXEL, Math.min(minSize, Math.floor(total / 2)));
+  const maxFirst = total - effectiveMin;
+  if (maxFirst <= effectiveMin) {
+    const half = Math.floor(total / 2);
+    return { first: half, second: total - half };
+  }
+  const rawFirst = Number.isFinite(desiredFirst) ? desiredFirst : total / 2;
+  const rounded = Math.round(rawFirst);
+  const first = Math.max(effectiveMin, Math.min(maxFirst, rounded));
+  return { first, second: total - first };
+};
+
 const getGridMetrics = (gridElement: HTMLElement) => {
   const rect = gridElement.getBoundingClientRect();
   const style = getComputedStyle(gridElement);
@@ -30,32 +53,60 @@ export default function GridResizers({ gridRef, colWidths, rowHeights, setColWid
   const rowCaptureElemRef = useRef<HTMLElement | null>(null);
   const [colResizerPointerId, setColResizerPointerId] = useState<number | null>(null);
   const [rowResizerPointerId, setRowResizerPointerId] = useState<number | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const [, setRev] = useState(0);
+  const [gridElement, setGridElement] = useState<HTMLElement | null>(null);
+  const [, forceRender] = useState(0);
 
-  // ensure we render resizers once the gridRef is attached and on resizes
   useEffect(() => {
-    let raf = 0;
-    const check = () => {
-      if (gridRef.current) {
-        setMounted(true);
+    let raf: number | null = null;
+    let ro: ResizeObserver | null = null;
+    let cleanupWindow: (() => void) | null = null;
+
+    const attach = () => {
+      const grid = gridRef.current;
+      if (!grid) {
+        raf = requestAnimationFrame(attach);
         return;
       }
-      raf = requestAnimationFrame(check);
+      setGridElement(grid);
+
+      if (typeof ResizeObserver === 'function') {
+        ro = new ResizeObserver(() => forceRender(v => v + 1));
+        ro.observe(grid);
+      } else {
+        const onResize = () => forceRender(v => v + 1);
+        window.addEventListener('resize', onResize);
+        cleanupWindow = () => window.removeEventListener('resize', onResize);
+      }
     };
-    check();
-    const onResize = () => setRev(r => r + 1);
-    window.addEventListener('resize', onResize);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); };
+
+    attach();
+    return () => {
+      if (raf != null) cancelAnimationFrame(raf);
+      if (ro) ro.disconnect();
+      if (cleanupWindow) cleanupWindow();
+    };
   }, [gridRef]);
+
+  useEffect(() => {
+    return () => {
+      if (colCaptureElemRef.current && colResizerPointerId != null) {
+        try {
+          colCaptureElemRef.current.releasePointerCapture(colResizerPointerId);
+        } catch {}
+      }
+      if (rowCaptureElemRef.current && rowResizerPointerId != null) {
+        try {
+          rowCaptureElemRef.current.releasePointerCapture(rowResizerPointerId);
+        } catch {}
+      }
+    };
+  }, [colResizerPointerId, rowResizerPointerId]);
 
   const handleColResizerPointerDown = (e: React.PointerEvent, index: number) => {
     if (e.button !== 0) return;
+    if (!colWidths || !hasSibling(colWidths, index)) return;
     e.preventDefault();
     e.stopPropagation();
-    const grid = gridRef.current;
-    if (!grid) return;
-    if (!colWidths) return;
     colResizingRef.current = { index, startX: e.clientX, startWidths: [...colWidths] };
     setColResizerPointerId(e.pointerId);
     try {
@@ -73,23 +124,19 @@ export default function GridResizers({ gridRef, colWidths, rowHeights, setColWid
       if (ev.pointerId !== colResizerPointerId) return;
       const info = colResizingRef.current; if (!info) return;
       const grid = gridRef.current; if (!grid) return;
-      const minW = 40;
+      const minW = MIN_COL_WIDTH;
       const dx = ev.clientX - info.startX;
       const i = info.index;
       const start = info.startWidths;
 
+      if (i < 0 || i >= start.length - 1) return;
       const pairTotal = start[i] + start[i + 1];
-      if (!Number.isFinite(pairTotal) || pairTotal <= 0) return;
-
-      const minForPair = Math.min(minW, Math.floor(pairTotal / 2));
-      const leftMin = Math.max(16, minForPair);
-      const leftMax = Math.max(leftMin, pairTotal - leftMin);
-      const leftNew = Math.max(leftMin, Math.min(start[i] + dx, leftMax));
-      const rightNew = Math.max(leftMin, pairTotal - leftNew);
+      const desiredLeft = start[i] + dx;
+      const { first: leftNew, second: rightNew } = clampPair(pairTotal, desiredLeft, minW);
 
       const newWidths = [...start];
-      newWidths[i] = Math.round(leftNew);
-      newWidths[i + 1] = Math.round(rightNew);
+      newWidths[i] = leftNew;
+      newWidths[i + 1] = rightNew;
       setColWidths(newWidths);
     };
     const onEnd = (ev: PointerEvent) => {
@@ -115,8 +162,9 @@ export default function GridResizers({ gridRef, colWidths, rowHeights, setColWid
 
   const handleRowResizerPointerDown = (e: React.PointerEvent, index: number) => {
     if (e.button !== 0) return;
-    e.preventDefault(); e.stopPropagation(); const grid = gridRef.current; if (!grid) return;
-    if (!rowHeights) return;
+    if (!rowHeights || !hasSibling(rowHeights, index)) return;
+    e.preventDefault();
+    e.stopPropagation();
     rowResizingRef.current = { index, startY: e.clientY, startHeights: [...rowHeights] };
     setRowResizerPointerId(e.pointerId);
     try {
@@ -133,23 +181,19 @@ export default function GridResizers({ gridRef, colWidths, rowHeights, setColWid
     const onMove = (ev: PointerEvent) => {
       if (ev.pointerId !== rowResizerPointerId) return;
       const info = rowResizingRef.current; if (!info) return; const grid = gridRef.current; if (!grid) return;
-      const minH = 32;
+      const minH = MIN_ROW_HEIGHT;
       const dy = ev.clientY - info.startY;
       const i = info.index;
       const start = info.startHeights;
 
+      if (i < 0 || i >= start.length - 1) return;
       const pairTotal = start[i] + start[i + 1];
-      if (!Number.isFinite(pairTotal) || pairTotal <= 0) return;
-
-      const minForPair = Math.min(minH, Math.floor(pairTotal / 2));
-      const topMin = Math.max(16, minForPair);
-      const topMax = Math.max(topMin, pairTotal - topMin);
-      const topNew = Math.max(topMin, Math.min(start[i] + dy, topMax));
-      const bottomNew = Math.max(topMin, pairTotal - topNew);
+      const desiredTop = start[i] + dy;
+      const { first: topNew, second: bottomNew } = clampPair(pairTotal, desiredTop, minH);
 
       const newHeights = [...start];
-      newHeights[i] = Math.round(topNew);
-      newHeights[i + 1] = Math.round(bottomNew);
+      newHeights[i] = topNew;
+      newHeights[i + 1] = bottomNew;
       setRowHeights(newHeights);
     };
     const onEnd = (ev: PointerEvent) => {
@@ -168,8 +212,8 @@ export default function GridResizers({ gridRef, colWidths, rowHeights, setColWid
   }, [rowResizerPointerId, gridRef, setRowHeights]);
 
   // render handles
-  const grid = gridRef.current;
-  if (!grid || !mounted) return null;
+  const grid = gridElement;
+  if (!grid || (!colWidths && !rowHeights)) return null;
   const metrics = getGridMetrics(grid) as any;
   const { paddingLeft, paddingTop, columnGap, innerHeight, innerWidth, rowGap } = metrics;
   const nodes: React.ReactNode[] = [];

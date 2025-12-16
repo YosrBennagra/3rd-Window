@@ -130,8 +130,18 @@
 /* Vertical resizer between columns */
 .grid-resizer {
   position: absolute;
-  width: 16px;
-  margin-left: -8px;
+  /* shared look/feel for both orientations */
+  --resizer-hit: 16px;
+  --resizer-line: 3px;
+  --resizer-knob: 12px;
+  --resizer-pad: 12px;
+  --resizer-color: rgba(255, 255, 255, 0.22);
+  --resizer-color-dim: rgba(255, 255, 255, 0.08);
+  --resizer-color-active: rgba(99, 102, 241, 0.95);
+  --resizer-glow: rgba(99, 102, 241, 0.12);
+
+  width: var(--resizer-hit);
+  margin-left: calc(var(--resizer-hit) / -2);
   cursor: col-resize;
   z-index: 1100;
   background: transparent;
@@ -143,81 +153,58 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 10px;
-  height: 34px;
+  width: var(--resizer-knob);
+  height: var(--resizer-knob);
   border-radius: 999px;
   transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--resizer-color-dim);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
 }
 .grid-resizer::after {
   content: '';
   position: absolute;
   left: 50%;
-  top: 12px;
-  bottom: 12px;
-  width: 3px;
+  top: var(--resizer-pad);
+  bottom: var(--resizer-pad);
+  width: var(--resizer-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--resizer-color);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
   transform: translateX(-50%);
 }
 .grid-resizer:hover::before,
 .grid-resizer--active::before {
-  background: rgba(99, 102, 241, 0.18);
-  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.22);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 0 0 6px var(--resizer-glow), 0 8px 24px rgba(2, 6, 23, 0.35);
 }
 .grid-resizer:hover::after,
 .grid-resizer--active::after {
-  background: rgba(99, 102, 241, 0.95);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+  background: var(--resizer-color-active);
+  box-shadow: 0 0 0 4px var(--resizer-glow);
 }
 
 /* Horizontal resizer between rows */
 .grid-resizer--row {
-  height: 16px;
-  margin-top: -8px;
+  height: var(--resizer-hit);
+  margin-top: calc(var(--resizer-hit) / -2);
   cursor: row-resize;
   display: block;
   touch-action: none;
   user-select: none;
 }
-.grid-resizer--row::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 34px;
-  height: 10px;
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
-}
 .grid-resizer--row::after {
-  content: '';
-  position: absolute;
-  left: 12px;
-  right: 12px;
+  /* override the base vertical line with a horizontal one */
+  left: var(--resizer-pad);
+  right: var(--resizer-pad);
   top: 50%;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  bottom: auto;
+  width: auto;
+  height: var(--resizer-line);
   transform: translateY(-50%);
 }
-.grid-resizer--row:hover::before,
-.grid-resizer--row.grid-resizer--active::before {
-  background: rgba(99, 102, 241, 0.18);
-  border-color: rgba(99, 102, 241, 0.4);
-}
-.grid-resizer--row:hover::after,
-.grid-resizer--row.grid-resizer--active::after {
-  background: rgba(99, 102, 241, 0.95);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
-}
+/* row hover/active inherits same visuals via the shared selectors above */
 
 /* Ghost preview for dragging */
 .grid-widget--ghost {
