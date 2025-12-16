@@ -4,7 +4,7 @@ import { useStore } from '../../store';
 import GridResizers from './GridResizers';
 import GridGhost from './GridGhost';
 import useGridDrag from './useGridDrag';
-import { ClockWidget, CpuTempWidget, GpuTempWidget } from '../widgets';
+import { ClockWidget } from '../widgets';
 import GridCells from './GridCells';
 import GridWidgetItem from './GridWidgetItem';
 import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/GridContextMenu';
@@ -13,8 +13,6 @@ import './DraggableGrid.css';
 
 const widgetComponents: Record<string, React.ComponentType> = {
   'clock': ClockWidget,
-  'cpu-temp': CpuTempWidget,
-  'gpu-temp': GpuTempWidget,
 };
 
 type ResizeInfo = { id: string; startWidth: number; startHeight: number; startX: number; startY: number };

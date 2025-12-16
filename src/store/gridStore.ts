@@ -130,16 +130,7 @@ export const useGridStore = create<GridState>((set, get) => ({
       widgetType: 'clock',
       position: { col: 0, row: 0, width: 1, height: 1 }
     },
-    {
-      id: 'cpu-temp-1',
-      widgetType: 'cpu-temp',
-      position: { col: 1, row: 0, width: 1, height: 1 }
-    },
-    {
-      id: 'gpu-temp-1',
-      widgetType: 'gpu-temp',
-      position: { col: 2, row: 0, width: 1, height: 1 }
-    }
+    // CPU and GPU temperature widgets are disabled by default
   ],
 
   addWidget: (widgetType, position) => {

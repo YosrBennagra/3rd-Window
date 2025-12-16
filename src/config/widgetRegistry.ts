@@ -1,5 +1,5 @@
 import type { WidgetConfig } from '../types/widget';
-import { ClockWidget, CpuTempWidget, GpuTempWidget } from '../components/widgets';
+import { ClockWidget } from '../components/widgets';
 
 export const widgetRegistry: WidgetConfig[] = [
   {
@@ -8,22 +8,6 @@ export const widgetRegistry: WidgetConfig[] = [
     description: 'Displays current time and date',
     icon: '🕐',
     component: ClockWidget,
-    defaultSize: 'medium',
-  },
-  {
-    id: 'cpu-temp',
-    name: 'CPU Temperature',
-    description: 'Monitor CPU temperature in real-time',
-    icon: '🖥️',
-    component: CpuTempWidget,
-    defaultSize: 'medium',
-  },
-  {
-    id: 'gpu-temp',
-    name: 'GPU Temperature',
-    description: 'Monitor GPU temperature in real-time',
-    icon: '🎮',
-    component: GpuTempWidget,
     defaultSize: 'medium',
   },
 ];

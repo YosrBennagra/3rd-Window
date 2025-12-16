@@ -149,17 +149,9 @@
   user-select: none;
 }
 .grid-resizer::before {
+  /* knob removed: keep pseudo-element present for layout stability but hide it */
   content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--resizer-knob);
-  height: var(--resizer-knob);
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
-  background: var(--resizer-color-dim);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  display: none;
 }
 .grid-resizer::after {
   content: '';
@@ -175,9 +167,8 @@
 }
 .grid-resizer:hover::before,
 .grid-resizer--active::before {
-  background: rgba(99, 102, 241, 0.22);
-  border-color: rgba(99, 102, 241, 0.45);
-  box-shadow: 0 0 0 6px var(--resizer-glow), 0 8px 24px rgba(2, 6, 23, 0.35);
+  /* knob hidden — no visual change on hover/active */
+  display: none;
 }
 .grid-resizer:hover::after,
 .grid-resizer--active::after {
