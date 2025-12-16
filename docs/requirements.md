@@ -21,5 +21,5 @@
 - Accessibility: keyboard navigation, contrast, readable typography.
 
 ## Constraints
-- Desktop focus (Windows/Mac/Linux) via Electron.
+- Desktop focus (Windows/Mac/Linux) via Tauri shell.
 - No permanent background services beyond app unless user opts in (agents optional).

@@ -1,5 +1,0 @@
-# Placeholder electron-builder config
-appId: com.example.desktopdashboard
-productName: Desktop Dashboard
-files:
-  - dist/**

@@ -1,5 +1,5 @@
 # Troubleshooting (Draft)
 
-- Blank window: check preload path and dev server URL.
+- Blank window: ensure Vite is running on port 5173 (Tauri dev server). Restart `npm run tauri:dev` if the port was busy.
 - Metrics missing: ensure sensors/tools available; verify permissions.
-- IPC errors: confirm channel allowlist and schema.
+- Tauri build issues: confirm Rust toolchain installed and up to date (`rustup update`).

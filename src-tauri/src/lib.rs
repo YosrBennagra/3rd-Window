@@ -1,0 +1,242 @@
+use log::info;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+use tauri::{Manager, Window};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AppSettings {
+    is_fullscreen: bool,
+    selected_monitor: usize,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            is_fullscreen: false,
+            selected_monitor: 0,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Monitor {
+    name: String,
+    size: MonitorSize,
+    position: MonitorPosition,
+    is_primary: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MonitorSize {
+    width: u32,
+    height: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MonitorPosition {
+    x: i32,
+    y: i32,
+}
+
+fn get_settings_path(app: tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))
+        .map(|mut path| {
+            path.push("settings.json");
+            path
+        })
+}
+
+#[tauri::command]
+async fn save_settings(app: tauri::AppHandle, settings: AppSettings) -> Result<(), String> {
+    let settings_path = get_settings_path(app)?;
+    
+    if let Some(parent) = settings_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create settings directory: {}", e))?;
+    }
+    
+    let json = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    
+    fs::write(&settings_path, json)
+        .map_err(|e| format!("Failed to write settings: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn load_settings(app: tauri::AppHandle) -> Result<AppSettings, String> {
+    let settings_path = get_settings_path(app)?;
+    
+    if !settings_path.exists() {
+        return Ok(AppSettings::default());
+    }
+    
+    let json = fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read settings: {}", e))?;
+    
+    let settings: AppSettings = serde_json::from_str(&json)
+        .map_err(|e| format!("Failed to parse settings: {}", e))?;
+    
+    Ok(settings)
+}
+
+#[tauri::command]
+async fn toggle_fullscreen(window: Window) -> Result<bool, String> {
+    let current = window
+        .is_fullscreen()
+        .map_err(|e| format!("Failed to query fullscreen: {}", e))?;
+    
+    let new_state = !current;
+    info!("[window] toggle_fullscreen: {} -> {}", current, new_state);
+    
+    window
+        .set_fullscreen(new_state)
+        .map_err(|e| format!("Failed to set fullscreen: {}", e))?;
+    
+    Ok(new_state)
+}
+
+#[tauri::command]
+async fn apply_fullscreen(window: Window, fullscreen: bool) -> Result<(), String> {
+    info!("[window] apply_fullscreen: {}", fullscreen);
+    
+    // Small delay to allow window state to settle on Windows
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    
+    window
+        .set_fullscreen(fullscreen)
+        .map_err(|e| format!("Failed to apply fullscreen: {}", e))?;
+    
+    // Verify the state was applied
+    let actual_state = window
+        .is_fullscreen()
+        .map_err(|e| format!("Failed to verify fullscreen: {}", e))?;
+    
+    info!("[window] apply_fullscreen: requested={}, actual={}", fullscreen, actual_state);
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String> {
+    let monitors = app
+        .primary_monitor()
+        .map_err(|e| format!("Failed to get monitors: {}", e))?;
+    
+    let available_monitors = app
+        .available_monitors()
+        .map_err(|e| format!("Failed to get available monitors: {}", e))?;
+    
+    let primary_name = monitors
+        .and_then(|m| m.name().map(|s| s.to_string()))
+        .unwrap_or_else(|| "Unknown".to_string());
+    
+    let mut result = Vec::new();
+    
+    for (index, monitor) in available_monitors.iter().enumerate() {
+        let name = monitor.name()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("Monitor {}", index + 1));
+        let size = monitor.size();
+        let position = monitor.position();
+        let is_primary = name == primary_name;
+        
+        result.push(Monitor {
+            name,
+            size: MonitorSize {
+                width: size.width,
+                height: size.height,
+            },
+            position: MonitorPosition {
+                x: position.x,
+                y: position.y,
+            },
+            is_primary,
+        });
+    }
+    
+    if result.is_empty() {
+        result.push(Monitor {
+            name: "Primary Monitor".to_string(),
+            size: MonitorSize { width: 1920, height: 1080 },
+            position: MonitorPosition { x: 0, y: 0 },
+            is_primary: true,
+        });
+    }
+    
+    Ok(result)
+}
+
+#[tauri::command]
+async fn move_to_monitor(window: Window, app: tauri::AppHandle, monitor_index: usize) -> Result<(), String> {
+    let monitors = app
+        .available_monitors()
+        .map_err(|e| format!("Failed to get monitors: {}", e))?;
+
+    let monitor = monitors
+        .get(monitor_index)
+        .ok_or_else(|| format!("Monitor index {} not found", monitor_index))?;
+
+    info!(
+        "[window] move_to_monitor -> index={}, name={:?}",
+        monitor_index,
+        monitor.name()
+    );
+
+    let position = monitor.position();
+    let size = monitor.size();
+
+    // Move window to monitor
+    window
+        .set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+            x: position.x,
+            y: position.y,
+        }))
+        .map_err(|e| format!("Failed to move window: {}", e))?;
+
+    // Only resize if explicitly in windowed mode (don't check during transition)
+    // This prevents interfering with fullscreen state during monitor moves
+    std::thread::sleep(std::time::Duration::from_millis(30));
+    
+    if let Ok(false) = window.is_fullscreen() {
+        window
+            .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+                width: size.width.saturating_sub(100),
+                height: size.height.saturating_sub(100),
+            }))
+            .map_err(|e| format!("Failed to resize window: {}", e))?;
+    }
+
+    info!("[window] move_to_monitor -> complete");
+    Ok(())
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .setup(|app| {
+            if cfg!(debug_assertions) {
+                app.handle().plugin(
+                    tauri_plugin_log::Builder::default()
+                        .level(log::LevelFilter::Info)
+                        .build(),
+                )?;
+            }
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            save_settings,
+            load_settings,
+            toggle_fullscreen,
+            apply_fullscreen,
+            get_monitors,
+            move_to_monitor
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}

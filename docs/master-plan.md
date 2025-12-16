@@ -35,7 +35,7 @@ This file captures the full stack of deliverables to take the desktop dashboard 
 - docs/marketing/release-notes-template.md: changelog pattern.
 
 ## Project Setup and Tooling
-- package.json: scripts and dependencies (Electron plus web stack).
+- package.json: scripts and dependencies (Tauri + web stack).
 - tsconfig.json: TypeScript config.
 - vite.config.ts or webpack.config.js: bundler config.
 - .editorconfig: formatting rules.
@@ -44,11 +44,10 @@ This file captures the full stack of deliverables to take the desktop dashboard 
 - .github/workflows/release.yml: signing and artifact upload.
 - .github/issue_template.md and .github/pull_request_template.md: contribution hygiene.
 
-## Desktop App (Electron example)
-- electron/main.ts: main process, window creation, always-on-top toggle.
-- electron/preload.ts: safe IPC surface.
-- electron/ipc-contracts.ts: typed channels for widgets and alerts.
-- electron/security.md: hardening, CSP, permission policy.
+## Desktop App (Tauri example)
+- src-tauri/tauri.conf.json: window, bundle, and dev server config.
+- src-tauri/Cargo.toml: Rust crate config and Tauri dependencies.
+- src-tauri/src/main.rs: shell entrypoint; register commands and window opts.
 
 ## App Frontend
 - src/index.tsx: app bootstrap.
@@ -88,7 +87,7 @@ This file captures the full stack of deliverables to take the desktop dashboard 
 - src/alerts/schedules.ts: quiet hours, recurrence.
 
 ## Packaging and Release
-- electron-builder.yml or forge.config.js: installers and auto-update.
+- Tauri bundler outputs: platform installers and code signing.
 - scripts/signing.md: code signing steps.
 - scripts/release-checklist.md: gates before ship.
 
