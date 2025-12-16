@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGridStore, type WidgetGridItem, GRID_COLS, GRID_ROWS } from '../../store/gridStore';
+import GridResizers from './GridResizers';
+import GridGhost from './GridGhost';
+import useGridDrag from './useGridDrag';
 import { ClockWidget, CpuTempWidget, GpuTempWidget } from '../widgets';
+import GridCells from './GridCells';
+import GridWidgetItem from './GridWidgetItem';
 import './DraggableGrid.css';
 
 const widgetComponents: Record<string, React.ComponentType> = {
@@ -9,21 +14,19 @@ const widgetComponents: Record<string, React.ComponentType> = {
   'gpu-temp': GpuTempWidget,
 };
 
-type DragInfo = { id: string; width: number; height: number };
 type ResizeInfo = { id: string; startWidth: number; startHeight: number; startX: number; startY: number };
 
 export function DraggableGrid() {
-  const { widgets, updateWidgetPositionWithPush, removeWidget } = useGridStore();
+  const { widgets, updateWidgetPositionWithPush, updateWidgetPosition, removeWidget } = useGridStore();
   const gridRef = useRef<HTMLDivElement | null>(null);
-  const lastDragCellRef = useRef<{ col: number; row: number } | null>(null);
 
-  const [dragInfo, setDragInfo] = useState<DragInfo | null>(null);
-  const [dragPointerId, setDragPointerId] = useState<number | null>(null);
-  const [isDragBlocked, setIsDragBlocked] = useState(false);
-
-  const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
+  const [colWidths, setColWidths] = useState<number[] | null>(null);
+  const [rowHeights, setRowHeights] = useState<number[] | null>(null);
+  
+  
   const [resizeInfo, setResizeInfo] = useState<ResizeInfo | null>(null);
   const [resizePointerId, setResizePointerId] = useState<number | null>(null);
+  const resizeCaptureElemRef = useRef<EventTarget | null>(null);
 
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -59,7 +62,9 @@ export function DraggableGrid() {
       rowGap,
       cellWidth,
       cellHeight,
-    };
+      customColWidths: colWidths,
+      customRowHeights: rowHeights,
+    } as const;
   };
 
   const getCellFromPointer = (
@@ -68,17 +73,18 @@ export function DraggableGrid() {
     clientY: number,
     size?: { width: number; height: number }
   ) => {
-    const {
-      rect,
-      paddingLeft,
-      paddingTop,
-      innerWidth,
-      innerHeight,
-      columnGap,
-      rowGap,
-      cellWidth,
-      cellHeight,
-    } = getGridMetrics(gridElement);
+    const metrics = getGridMetrics(gridElement) as any;
+    const rect = metrics.rect as DOMRect;
+    const paddingLeft = metrics.paddingLeft as number;
+    const paddingTop = metrics.paddingTop as number;
+    const innerWidth = metrics.innerWidth as number;
+    const innerHeight = metrics.innerHeight as number;
+    const columnGap = metrics.columnGap as number;
+    const rowGap = metrics.rowGap as number;
+    const cellWidth = metrics.cellWidth as number;
+    const cellHeight = metrics.cellHeight as number;
+    const customColWidths = metrics.customColWidths as number[] | null;
+    const customRowHeights = metrics.customRowHeights as number[] | null;
 
     if (!rect.width || !rect.height || !cellWidth || !cellHeight) {
       return { col: 0, row: 0 };
@@ -87,16 +93,66 @@ export function DraggableGrid() {
     const x = clamp(clientX - rect.left - paddingLeft, 0, Math.max(0, innerWidth - 1));
     const y = clamp(clientY - rect.top - paddingTop, 0, Math.max(0, innerHeight - 1));
 
-    const colStride = cellWidth + columnGap;
     const rowStride = cellHeight + rowGap;
 
     const maxCol = size ? Math.max(0, GRID_COLS - size.width) : GRID_COLS - 1;
     const maxRow = size ? Math.max(0, GRID_ROWS - size.height) : GRID_ROWS - 1;
 
-    const col = clamp(Math.floor(x / colStride), 0, maxCol);
-    const row = clamp(Math.floor(y / rowStride), 0, maxRow);
+    let col = 0;
+    if (customColWidths && customColWidths.length === GRID_COLS) {
+      // compute column by summing widths + gaps
+      let acc = 0;
+      for (let c = 0; c < GRID_COLS; c++) {
+        const w = customColWidths[c] + (c > 0 ? columnGap : 0);
+        if (x < acc + w) {
+          col = c;
+          break;
+        }
+        acc += w;
+        col = c;
+      }
+      col = clamp(col, 0, maxCol);
+    } else {
+      const colStride = cellWidth + columnGap;
+      col = clamp(Math.floor(x / colStride), 0, maxCol);
+    }
+    let row = 0;
+    if (customRowHeights && customRowHeights.length === GRID_ROWS) {
+      let acc = 0;
+      for (let r = 0; r < GRID_ROWS; r++) {
+        const h = customRowHeights[r] + (r > 0 ? rowGap : 0);
+        if (y < acc + h) {
+          row = r;
+          break;
+        }
+        acc += h;
+        row = r;
+      }
+      row = clamp(row, 0, maxRow);
+    } else {
+      row = clamp(Math.floor(y / rowStride), 0, maxRow);
+    }
     return { col, row };
   };
+
+  // now that helpers are defined, initialize drag hook
+  const {
+    dragInfo,
+    isDragBlocked,
+    ghostStyle,
+    swapCandidateId,
+    hoverCell,
+    handleWidgetPointerDown,
+  } = useGridDrag({
+    gridRef,
+    widgets,
+    updateWidgetPositionWithPush,
+    updateWidgetPosition,
+    getGridMetrics,
+    getCellFromPointer,
+  });
+
+  
 
   const isOutOfBounds = (position: { col: number; row: number; width: number; height: number }) => {
     if (position.col < 0 || position.row < 0) return true;
@@ -106,39 +162,8 @@ export function DraggableGrid() {
     return false;
   };
 
-  const attemptWidgetMove = (moving: DragInfo, col: number, row: number) => {
-    const nextPosition = { col, row, width: moving.width, height: moving.height };
-    if (isOutOfBounds(nextPosition)) return false;
-    return updateWidgetPositionWithPush(moving.id, nextPosition);
-  };
-
-  const endDrag = () => {
-    setDragInfo(null);
-    setDragPointerId(null);
-    setIsDragBlocked(false);
-    setHoverCell(null);
-    lastDragCellRef.current = null;
-  };
-
   const handleRemoveWidget = (id: string) => {
     removeWidget(id);
-  };
-
-  const handleWidgetPointerDown = (e: React.PointerEvent, widget: WidgetGridItem) => {
-    if (e.button !== 0) return;
-    if (resizeInfo) return;
-
-    const target = e.target as HTMLElement;
-    if (target.closest('.grid-widget__remove') || target.closest('.grid-widget__resize-handle')) {
-      return;
-    }
-
-    e.preventDefault();
-    setDragInfo({ id: widget.id, width: widget.position.width, height: widget.position.height });
-    setDragPointerId(e.pointerId);
-    setIsDragBlocked(false);
-    setHoverCell({ col: widget.position.col, row: widget.position.row });
-    lastDragCellRef.current = { col: widget.position.col, row: widget.position.row };
   };
 
   const endResize = () => {
@@ -159,45 +184,84 @@ export function DraggableGrid() {
       startY: e.clientY,
     });
     setResizePointerId(e.pointerId);
+    // pointer capture to keep resize active if the pointer leaves the handle
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      resizeCaptureElemRef.current = e.currentTarget;
+    } catch (err) {
+      resizeCaptureElemRef.current = null;
+    }
   };
 
-  useEffect(() => {
-    if (!dragInfo || dragPointerId == null) return;
+  
 
-    const onMove = (ev: PointerEvent) => {
-      if (ev.pointerId !== dragPointerId) return;
+  
+
+  const computeEqualTracks = (available: number, count: number, min: number) => {
+    const safeAvailable = Math.max(0, Math.floor(available));
+    const base = Math.floor(safeAvailable / count);
+    const remainder = safeAvailable - base * count;
+    return Array.from({ length: count }, (_, i) => Math.max(min, base + (i < remainder ? 1 : 0)));
+  };
+
+  // initialize equal column/row tracks and keep them in sync with container resizes
+  useEffect(() => {
+    const compute = () => {
       const grid = gridRef.current;
       if (!grid) return;
+      const { innerWidth, innerHeight, columnGap, rowGap } = getGridMetrics(grid) as any;
+      const totalGaps = columnGap * (GRID_COLS - 1);
+      const availableW = Math.max(0, innerWidth - totalGaps);
+      setColWidths(computeEqualTracks(availableW, GRID_COLS, 40));
 
-      const { col, row } = getCellFromPointer(grid, ev.clientX, ev.clientY, {
-        width: dragInfo.width,
-        height: dragInfo.height,
-      });
+      const totalRowGaps = rowGap * (GRID_ROWS - 1);
+      const availableH = Math.max(0, innerHeight - totalRowGaps);
+      setRowHeights(computeEqualTracks(availableH, GRID_ROWS, 32));
+    };
+    compute();
 
-      const last = lastDragCellRef.current;
-      if (last && last.col === col && last.row === row) return;
-
-      lastDragCellRef.current = { col, row };
-      setHoverCell({ col, row });
-
-      const ok = attemptWidgetMove(dragInfo, col, row);
-      setIsDragBlocked(!ok);
+    const scaleTracks = (tracks: number[] | null, available: number, min: number, count: number) => {
+      if (!tracks || tracks.length !== count) return computeEqualTracks(available, count, min);
+      const currentTotal = tracks.reduce((a, b) => a + b, 0);
+      if (currentTotal <= 0) return tracks;
+      const ratio = available / currentTotal;
+      const scaled = tracks.map(w => Math.max(min, Math.round(w * ratio)));
+      const scaledTotal = scaled.reduce((a, b) => a + b, 0);
+      const diff = Math.round(available - scaledTotal);
+      if (diff !== 0) {
+        const last = scaled.length - 1;
+        const next = scaled[last] + diff;
+        if (next >= min) scaled[last] = next;
+      }
+      return scaled;
     };
 
-    const onEnd = (ev: PointerEvent) => {
-      if (ev.pointerId !== dragPointerId) return;
-      endDrag();
+    const onResize = () => {
+      const grid = gridRef.current;
+      if (!grid) return;
+      const { innerWidth, innerHeight, columnGap, rowGap } = getGridMetrics(grid) as any;
+      const totalGaps = columnGap * (GRID_COLS - 1);
+      const availableW = Math.max(0, innerWidth - totalGaps);
+      setColWidths(prev => scaleTracks(prev, availableW, 40, GRID_COLS));
+
+      const totalRowGaps = rowGap * (GRID_ROWS - 1);
+      const availableH = Math.max(0, innerHeight - totalRowGaps);
+      setRowHeights(prev => scaleTracks(prev, availableH, 32, GRID_ROWS));
     };
 
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onEnd);
-    window.addEventListener('pointercancel', onEnd);
+    let ro: ResizeObserver | null = null;
+    try {
+      ro = new ResizeObserver(() => onResize());
+      if (gridRef.current) ro.observe(gridRef.current);
+    } catch {
+      ro = null;
+    }
+    window.addEventListener('resize', onResize);
     return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onEnd);
-      window.removeEventListener('pointercancel', onEnd);
+      window.removeEventListener('resize', onResize);
+      if (ro) ro.disconnect();
     };
-  }, [dragInfo, dragPointerId, updateWidgetPositionWithPush]);
+  }, []);
 
   useEffect(() => {
     if (!resizeInfo || resizePointerId == null) return;
@@ -210,20 +274,60 @@ export function DraggableGrid() {
       const widget = widgets.find(w => w.id === resizeInfo.id);
       if (!widget) return;
 
-      const { cellWidth, cellHeight } = getGridMetrics(grid);
-      if (!cellWidth || !cellHeight) return;
+      const metrics = getGridMetrics(grid) as any;
+      const { cellWidth, cellHeight, customColWidths, rowGap } = metrics;
+      if ((!cellWidth && !customColWidths) || !cellHeight) return;
 
       const deltaX = ev.clientX - resizeInfo.startX;
       const deltaY = ev.clientY - resizeInfo.startY;
 
-      const newWidth = Math.max(1, Math.min(
-        Math.round(resizeInfo.startWidth + deltaX / cellWidth),
-        GRID_COLS - widget.position.col
-      ));
-      const newHeight = Math.max(1, Math.min(
-        Math.round(resizeInfo.startHeight + deltaY / cellHeight),
-        GRID_ROWS - widget.position.row
-      ));
+      let newWidth = widget.position.width;
+      if (customColWidths && customColWidths.length === GRID_COLS) {
+        // compute start pixel width
+        const startCol = widget.position.col;
+        const startCount = resizeInfo.startWidth;
+        let startPixel = 0;
+        for (let i = 0; i < startCount; i++) {
+          startPixel += customColWidths[startCol + i] + (i > 0 ? metrics.columnGap : 0);
+        }
+        const desiredPixel = Math.max(1, startPixel + deltaX);
+        // find number of columns that fit desiredPixel
+        let acc = 0;
+        let cols = 0;
+        while (cols < GRID_COLS - startCol && acc < desiredPixel) {
+          acc += customColWidths[startCol + cols] + (cols > 0 ? metrics.columnGap : 0);
+          cols++;
+        }
+        newWidth = clamp(cols, 1, GRID_COLS - widget.position.col);
+      } else if (cellWidth) {
+        newWidth = Math.max(1, Math.min(
+          Math.round(resizeInfo.startWidth + deltaX / cellWidth),
+          GRID_COLS - widget.position.col
+        ));
+      }
+
+      let newHeight = widget.position.height;
+      if (rowHeights && rowHeights.length === GRID_ROWS) {
+        const startRow = widget.position.row;
+        const startCount = resizeInfo.startHeight;
+        let startPixel = 0;
+        for (let i = 0; i < startCount; i++) {
+          startPixel += rowHeights[startRow + i] + (i > 0 ? rowGap : 0);
+        }
+        const desiredPixel = Math.max(1, startPixel + deltaY);
+        let acc = 0;
+        let rows = 0;
+        while (rows < GRID_ROWS - startRow && acc < desiredPixel) {
+          acc += rowHeights[startRow + rows] + (rows > 0 ? rowGap : 0);
+          rows++;
+        }
+        newHeight = clamp(rows, 1, GRID_ROWS - widget.position.row);
+      } else if (cellHeight) {
+        newHeight = Math.max(1, Math.min(
+          Math.round(resizeInfo.startHeight + deltaY / cellHeight),
+          GRID_ROWS - widget.position.row
+        ));
+      }
 
       if (newWidth === widget.position.width && newHeight === widget.position.height) return;
 
@@ -236,6 +340,16 @@ export function DraggableGrid() {
 
     const onEnd = (ev: PointerEvent) => {
       if (ev.pointerId !== resizePointerId) return;
+      // release pointer capture if set
+      try {
+        const el = resizeCaptureElemRef.current as unknown as HTMLElement | null;
+        if (el && typeof (el as any).releasePointerCapture === 'function') {
+          (el as any).releasePointerCapture(resizePointerId);
+        }
+      } catch (e) {
+        // ignore
+      }
+      resizeCaptureElemRef.current = null;
       endResize();
     };
 
@@ -249,70 +363,41 @@ export function DraggableGrid() {
     };
   }, [resizeInfo, resizePointerId, widgets, updateWidgetPositionWithPush]);
 
-  const renderGridCells = () => {
-    const cells = [];
-    for (let row = 0; row < GRID_ROWS; row++) {
-      for (let col = 0; col < GRID_COLS; col++) {
-        const isHovered = hoverCell?.col === col && hoverCell?.row === row;
-        const isInvalidHover = Boolean(
-          isHovered &&
-          dragInfo &&
-          (isDragBlocked || isOutOfBounds({ col, row, width: dragInfo.width, height: dragInfo.height }))
-        );
-        cells.push(
-          <div
-            key={`${col}-${row}`}
-            className={`grid-cell ${isHovered ? 'grid-cell--hover' : ''} ${isInvalidHover ? 'grid-cell--invalid' : ''}`}
-            style={{
-              gridColumn: col + 1,
-              gridRow: row + 1,
-            }}
-          />
-        );
-      }
-    }
-    return cells;
+  // grid cells rendering moved to GridCells component
+
+  const gridStyle: React.CSSProperties = {
+    position: 'relative',
+    gridTemplateColumns: colWidths ? colWidths.map((w) => `${w}px`).join(' ') : undefined,
+    gridTemplateRows: rowHeights ? rowHeights.map((h) => `${h}px`).join(' ') : undefined,
   };
+
+  
 
   return (
     <div 
       className="draggable-grid"
       ref={gridRef}
+      style={gridStyle}
     >
-      {renderGridCells()}
+      <GridCells hoverCell={hoverCell} dragInfo={dragInfo} isDragBlocked={isDragBlocked} isOutOfBounds={isOutOfBounds} />
+      <GridResizers gridRef={gridRef} colWidths={colWidths} rowHeights={rowHeights} setColWidths={setColWidths} setRowHeights={setRowHeights} />
       
       {widgets.map((widget) => {
         const WidgetComponent = widgetComponents[widget.widgetType];
         if (!WidgetComponent) return null;
-
         return (
-          <div
+          <GridWidgetItem
             key={widget.id}
-            className={`grid-widget ${dragInfo?.id === widget.id ? 'grid-widget--dragging' : ''}`}
-            onPointerDown={(e) => handleWidgetPointerDown(e, widget)}
-            style={{
-              gridColumn: `${widget.position.col + 1} / span ${widget.position.width}`,
-              gridRow: `${widget.position.row + 1} / span ${widget.position.height}`,
-            }}
-          >
-            <div className="grid-widget__content">
-              <WidgetComponent />
-            </div>
-            <button
-              className="grid-widget__remove"
-              onClick={() => handleRemoveWidget(widget.id)}
-              title="Remove widget"
-            >
-              ✕
-            </button>
-            <div
-              className="grid-widget__resize-handle"
-              onPointerDown={(e) => handleResizePointerDown(e, widget)}
-              title="Drag to resize"
-            />
-          </div>
+            widget={widget}
+            WidgetComponent={WidgetComponent}
+            handleWidgetPointerDown={handleWidgetPointerDown}
+            handleRemoveWidget={handleRemoveWidget}
+            handleResizePointerDown={handleResizePointerDown}
+            dragInfo={dragInfo}
+          />
         );
       })}
+      <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} swapCandidateId={swapCandidateId} widgets={widgets} widgetComponents={widgetComponents} />
     </div>
   );
 }
