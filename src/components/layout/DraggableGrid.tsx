@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGridStore, type WidgetGridItem, GRID_COLS, GRID_ROWS } from '../../store/gridStore';
+import { useStore } from '../../store';
 import GridResizers from './GridResizers';
 import GridGhost from './GridGhost';
 import useGridDrag from './useGridDrag';
 import { ClockWidget, CpuTempWidget, GpuTempWidget } from '../widgets';
 import GridCells from './GridCells';
 import GridWidgetItem from './GridWidgetItem';
+import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/GridContextMenu';
+import { SettingsPanel, WidgetSettingsPanel, AddWidgetPanel } from '../panels';
 import './DraggableGrid.css';
 
 const widgetComponents: Record<string, React.ComponentType> = {
@@ -16,13 +19,20 @@ const widgetComponents: Record<string, React.ComponentType> = {
 
 type ResizeInfo = { id: string; startWidth: number; startHeight: number; startX: number; startY: number };
 
+type PanelType = 'settings' | 'widget-settings' | 'add-widget' | null;
+
 export function DraggableGrid() {
   const { widgets, updateWidgetPositionWithPush, updateWidgetPosition, removeWidget } = useGridStore();
+  const { setFullscreen } = useStore();
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const [colWidths, setColWidths] = useState<number[] | null>(null);
   const [rowHeights, setRowHeights] = useState<number[] | null>(null);
   
+  // Context menu and panel state
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [activePanel, setActivePanel] = useState<PanelType>(null);
+  const [selectedWidget, setSelectedWidget] = useState<WidgetGridItem | null>(null);
   
   const [resizeInfo, setResizeInfo] = useState<ResizeInfo | null>(null);
   const [resizePointerId, setResizePointerId] = useState<number | null>(null);
@@ -164,6 +174,53 @@ export function DraggableGrid() {
 
   const handleRemoveWidget = (id: string) => {
     removeWidget(id);
+  };
+
+  // Context menu handlers
+  const handleContextMenu = (e: React.MouseEvent, widget: WidgetGridItem | null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, widget });
+  };
+
+  const handleGridContextMenu = (e: React.MouseEvent) => {
+    // Only show if clicking on empty grid area (not on a widget)
+    if ((e.target as HTMLElement).closest('.grid-widget')) return;
+    handleContextMenu(e, null);
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleMenuAction = (action: MenuAction, widget?: WidgetGridItem | null) => {
+    switch (action) {
+      case 'exit-fullscreen':
+        setFullscreen(false);
+        break;
+      case 'settings':
+        setActivePanel('settings');
+        break;
+      case 'widget-settings':
+        if (widget) {
+          setSelectedWidget(widget);
+          setActivePanel('widget-settings');
+        }
+        break;
+      case 'remove-widget':
+        if (widget) {
+          removeWidget(widget.id);
+        }
+        break;
+      case 'add-widget':
+        setActivePanel('add-widget');
+        break;
+    }
+  };
+
+  const handleClosePanel = () => {
+    setActivePanel(null);
+    setSelectedWidget(null);
   };
 
   const endResize = () => {
@@ -374,30 +431,52 @@ export function DraggableGrid() {
   
 
   return (
-    <div 
-      className="draggable-grid"
-      ref={gridRef}
-      style={gridStyle}
-    >
-      <GridCells hoverCell={hoverCell} dragInfo={dragInfo} isDragBlocked={isDragBlocked} isOutOfBounds={isOutOfBounds} />
-      <GridResizers gridRef={gridRef} colWidths={colWidths} rowHeights={rowHeights} setColWidths={setColWidths} setRowHeights={setRowHeights} />
-      
-      {widgets.map((widget) => {
-        const WidgetComponent = widgetComponents[widget.widgetType];
-        if (!WidgetComponent) return null;
-        return (
-          <GridWidgetItem
-            key={widget.id}
-            widget={widget}
-            WidgetComponent={WidgetComponent}
-            handleWidgetPointerDown={handleWidgetPointerDown}
-            handleRemoveWidget={handleRemoveWidget}
-            handleResizePointerDown={handleResizePointerDown}
-            dragInfo={dragInfo}
-          />
-        );
-      })}
-      <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} swapCandidateId={swapCandidateId} widgets={widgets} widgetComponents={widgetComponents} />
-    </div>
+    <>
+      <div 
+        className="draggable-grid"
+        ref={gridRef}
+        style={gridStyle}
+        onContextMenu={handleGridContextMenu}
+      >
+        <GridCells hoverCell={hoverCell} dragInfo={dragInfo} isDragBlocked={isDragBlocked} isOutOfBounds={isOutOfBounds} />
+        <GridResizers gridRef={gridRef} colWidths={colWidths} rowHeights={rowHeights} setColWidths={setColWidths} setRowHeights={setRowHeights} />
+        
+        {widgets.map((widget) => {
+          const WidgetComponent = widgetComponents[widget.widgetType];
+          if (!WidgetComponent) return null;
+          return (
+            <GridWidgetItem
+              key={widget.id}
+              widget={widget}
+              WidgetComponent={WidgetComponent}
+              handleWidgetPointerDown={handleWidgetPointerDown}
+              handleRemoveWidget={handleRemoveWidget}
+              handleResizePointerDown={handleResizePointerDown}
+              handleContextMenu={handleContextMenu}
+              dragInfo={dragInfo}
+            />
+          );
+        })}
+        <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} swapCandidateId={swapCandidateId} widgets={widgets} widgetComponents={widgetComponents} />
+      </div>
+
+      {/* Context Menu */}
+      <GridContextMenu
+        menu={contextMenu}
+        onClose={handleCloseContextMenu}
+        onAction={handleMenuAction}
+      />
+
+      {/* Panels */}
+      {activePanel === 'settings' && (
+        <SettingsPanel onClose={handleClosePanel} />
+      )}
+      {activePanel === 'widget-settings' && selectedWidget && (
+        <WidgetSettingsPanel widget={selectedWidget} onClose={handleClosePanel} />
+      )}
+      {activePanel === 'add-widget' && (
+        <AddWidgetPanel onClose={handleClosePanel} />
+      )}
+    </>
   );
 }
