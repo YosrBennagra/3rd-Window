@@ -121,7 +121,7 @@ export function DraggableGrid() {
     grid,
     widgets,
     resizeWidget,
-    getCellFromPointer: (x, y) => getCellFromPointer(x, y, undefined),
+    getCellFromPointer: (x: number, y: number) => getCellFromPointer(x, y, undefined),
     getConstraints,
   });
 
