@@ -146,7 +146,7 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
         onClick={() => handleItemClick('settings')}
       >
         <span className="grid-context-menu__icon">⚙</span>
-        Dashboard Settings
+        Settings
       </button>
     </div>
   );

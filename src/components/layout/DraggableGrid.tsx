@@ -19,11 +19,13 @@ const widgetComponents: Record<string, React.ComponentType> = {
   'clock': ClockWidget,
 };
 
-type PanelType = 'settings' | 'widget-settings' | 'add-widget' | null;
+
+type PanelType = 'widget-settings' | 'add-widget' | null;
 
 export function DraggableGrid() {
   const { widgets, gridLayout, updateWidgetPositionWithPush, updateWidgetPosition, removeWidget, setGridLayout, addWidget, isPositionOccupied } = useGridStore();
-  const { setFullscreen } = useStore();
+  const { setFullscreen, toggleSettings } = useStore();
+
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const {
@@ -96,7 +98,7 @@ export function DraggableGrid() {
         setFullscreen(false);
         break;
       case 'settings':
-        setActivePanel('settings');
+        toggleSettings();
         break;
       case 'widget-settings':
         if (widget) {
@@ -231,9 +233,6 @@ export function DraggableGrid() {
       />
 
       {/* Panels */}
-      {activePanel === 'settings' && (
-        <SettingsPanel onClose={handleClosePanel} />
-      )}
       {activePanel === 'widget-settings' && selectedWidget && (
         <WidgetSettingsPanel widget={selectedWidget} onClose={handleClosePanel} />
       )}
