@@ -8,7 +8,7 @@ import { ClockWidget } from '../widgets';
 import GridCells from './GridCells';
 import GridWidgetItem from './GridWidgetItem';
 import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/GridContextMenu';
-import { WidgetSettingsPanel, AddWidgetPanel } from '../panels';
+import { SettingsPanel, WidgetSettingsPanel, AddWidgetPanel } from '../panels';
 import { useGridTracks } from './useGridTracks';
 import { useWidgetResize } from './useWidgetResize';
 import './DraggableGrid.css';
@@ -19,11 +19,13 @@ const widgetComponents: Record<string, React.ComponentType> = {
   'clock': ClockWidget,
 };
 
+
 type PanelType = 'widget-settings' | 'add-widget' | null;
 
 export function DraggableGrid() {
   const { widgets, gridLayout, updateWidgetPositionWithPush, updateWidgetPosition, removeWidget, setGridLayout, addWidget, isPositionOccupied } = useGridStore();
   const { setFullscreen, toggleSettings } = useStore();
+
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const {
