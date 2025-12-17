@@ -6,7 +6,7 @@ import { DraggableGrid } from './components/layout/DraggableGrid';
 import './App.css';
 
 export default function App() {
-  const { toggleSettings, loadSettings, loadMonitors } = useStore();
+  const { loadSettings, loadMonitors } = useStore();
   const { loadDashboard } = useGridStore();
 
   // Load all persisted state on app startup ONLY ONCE
@@ -26,12 +26,6 @@ export default function App() {
   return (
     <div className="app">
       <DraggableGrid />
-
-      {/* Floating settings button */}
-      <button className="fab fab--settings" onClick={toggleSettings} title="Settings">
-        ⚙️
-      </button>
-
       <SettingsPanel />
     </div>
   );
