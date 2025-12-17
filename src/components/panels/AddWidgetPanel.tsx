@@ -1,10 +1,25 @@
 import './Panel.css';
 
-interface Props {
-  onClose: () => void;
+interface WidgetOption {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
 }
 
-export default function AddWidgetPanel({ onClose }: Props) {
+interface Props {
+  onClose: () => void;
+  onAdd: (widgetType: string) => void;
+  widgets: WidgetOption[];
+}
+
+export default function AddWidgetPanel({ onClose, onAdd, widgets }: Props) {
+  const handleAdd = (widgetType: string, isActive: boolean) => {
+    if (isActive) return;
+    onAdd(widgetType);
+    onClose();
+  };
+
   return (
     <div className="panel-overlay" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
@@ -13,7 +28,29 @@ export default function AddWidgetPanel({ onClose }: Props) {
           <button className="panel__close" onClick={onClose}>✕</button>
         </div>
         <div className="panel__content">
-          <p className="panel__placeholder">Widget selection coming soon...</p>
+          {widgets.length === 0 ? (
+            <p className="panel__placeholder">No widgets available</p>
+          ) : (
+            <ul className="panel__list">
+              {widgets.map((widget) => (
+                <li key={widget.id} className="panel__list-item">
+                  <div className="panel__list-text">
+                    <div className="panel__list-title">{widget.name}</div>
+                    {widget.description && (
+                      <div className="panel__list-description">{widget.description}</div>
+                    )}
+                  </div>
+                  <button
+                    className="panel__button"
+                    disabled={widget.isActive}
+                    onClick={() => handleAdd(widget.id, widget.isActive)}
+                  >
+                    {widget.isActive ? 'Already Added' : 'Add'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>
