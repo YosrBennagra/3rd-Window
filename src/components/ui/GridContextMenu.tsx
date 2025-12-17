@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { WidgetGridItem } from '../../store/gridStore';
+import type { WidgetLayout } from '../../types/layout';
 import './GridContextMenu.css';
 
 export type MenuAction = 
@@ -14,13 +14,13 @@ export type MenuAction =
 export interface ContextMenuState {
   x: number;
   y: number;
-  widget: WidgetGridItem | null; // null if right-clicked on empty grid area
+  widget: WidgetLayout | null; // null if right-clicked on empty grid area
 }
 
 interface Props {
   menu: ContextMenuState | null;
   onClose: () => void;
-  onAction: (action: MenuAction, widget?: WidgetGridItem | null) => void;
+  onAction: (action: MenuAction, widget?: WidgetLayout | null) => void;
   widgetDisplayName?: (widgetType: string) => string;
   isAdjustGridMode?: boolean;
 }
@@ -29,6 +29,8 @@ const defaultWidgetNames: Record<string, string> = {
   'clock': 'Clock',
   'cpu-temp': 'CPU Temperature',
   'gpu-temp': 'GPU Temperature',
+  'mail': 'Mail',
+  'chart': 'Chart',
 };
 
 export default function GridContextMenu({ menu, onClose, onAction, widgetDisplayName, isAdjustGridMode }: Props) {
@@ -138,7 +140,7 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
         onClick={() => handleItemClick('toggle-adjust-grid')}
       >
         <span className="grid-context-menu__icon">{isAdjustGridMode ? '✓' : '☐'}</span>
-        Adjust Grid
+        Show Grid Overlay
       </button>
 
       <button

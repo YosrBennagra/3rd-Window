@@ -108,6 +108,12 @@ body {
   text-align: center;
 }
 
+.widget__subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+}
+
 /* Clock Widget Specific */
 .clock__time {
   font-size: 48px;
@@ -122,6 +128,76 @@ body {
 .clock__date {
   font-size: 16px;
   color: var(--color-text-muted);
+}
+
+.mail-widget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.mail-widget__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mail-widget__item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.mail-widget__item:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.mail-widget__item--unread {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.mail-widget__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 4px;
+}
+
+.mail-widget__from {
+  font-weight: 600;
+}
+
+.mail-widget__time {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mail-widget__subject {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.chart-widget__body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  text-align: left;
+}
+
+.chart-widget__value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #22d3ee;
+}
+
+.chart-widget__sparkline svg {
+  width: 100%;
+  height: 48px;
 }
 
 /* Settings Overlay */

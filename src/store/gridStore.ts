@@ -1,274 +1,211 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
+import type { GridConfig, LayoutOperation, LayoutState, WidgetConstraints, WidgetLayout } from '../types/layout';
 
-export const GRID_COLS = 6;
-export const GRID_ROWS = 6;
+export const DEFAULT_GRID: GridConfig = { columns: 5, rows: 4 };
+export const GRID_COLS = DEFAULT_GRID.columns;
+export const GRID_ROWS = DEFAULT_GRID.rows;
 
-export interface GridPosition {
-  col: number; // 0-5 (6 columns)
-  row: number; // 0-5 (6 rows)
-  width: number; // span in columns (1-6)
-  height: number; // span in rows (1-6)
-}
+type GridBox = { x: number; y: number; width: number; height: number };
 
-export interface WidgetGridItem {
-  id: string;
-  widgetType: string;
-  position: GridPosition;
-}
-
-// Persisted dashboard state
-export interface DashboardState {
-  widgets: WidgetGridItem[];
-  gridLayout?: {
-    colWidths?: number[] | null;
-    rowHeights?: number[] | null;
-  };
-  version: number; // For migration support
-}
-
-interface GridState {
-  widgets: WidgetGridItem[];
-  gridLayout: {
-    colWidths: number[] | null;
-    rowHeights: number[] | null;
-  };
-  addWidget: (widgetType: string, position: GridPosition) => void;
-  updateWidgetPosition: (id: string, position: GridPosition) => void;
-  updateWidgetPositionWithPush: (id: string, position: GridPosition) => boolean;
-  removeWidget: (id: string) => void;
-  isPositionOccupied: (position: GridPosition, excludeId?: string) => boolean;
-  setGridLayout: (colWidths: number[] | null, rowHeights: number[] | null) => void;
-  loadDashboard: () => Promise<void>;
-  saveDashboard: () => Promise<void>;
-  _persistTimer: number | null;
-}
-
-// Default dashboard state
-const defaultDashboard: DashboardState = {
-  widgets: [
-    {
-      id: 'clock-1',
-      widgetType: 'clock',
-      position: { col: 0, row: 0, width: 1, height: 1 }
-    },
-  ],
-  gridLayout: {
-    colWidths: null,
-    rowHeights: null,
+const DEFAULT_WIDGETS: WidgetLayout[] = [
+  {
+    id: 'mail-demo',
+    widgetType: 'mail',
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 2,
   },
+  {
+    id: 'clock-demo',
+    widgetType: 'clock',
+    x: 3,
+    y: 0,
+    width: 2,
+    height: 2,
+  },
+  {
+    id: 'chart-demo',
+    widgetType: 'chart',
+    x: 0,
+    y: 2,
+    width: 3,
+    height: 2,
+  },
+];
+
+const DEFAULT_LAYOUT_STATE: LayoutState = {
+  grid: DEFAULT_GRID,
+  widgets: DEFAULT_WIDGETS,
   version: 1,
 };
 
-// Debounce delay for auto-save (ms)
-const SAVE_DEBOUNCE_MS = 500;
+const constraintsByType: Record<string, WidgetConstraints> = {
+  mail: { minWidth: 3, minHeight: 2, maxWidth: 5, maxHeight: 4 },
+  clock: { minWidth: 1, minHeight: 1, maxWidth: 3, maxHeight: 3 },
+  chart: { minWidth: 3, minHeight: 2, maxWidth: 5, maxHeight: 4 },
+};
 
-const rectanglesOverlap = (a: GridPosition, b: GridPosition) => {
+const rectanglesOverlap = (a: GridBox, b: GridBox) => {
   return !(
-    a.col >= b.col + b.width ||
-    a.col + a.width <= b.col ||
-    a.row >= b.row + b.height ||
-    a.row + a.height <= b.row
+    a.x >= b.x + b.width ||
+    a.x + a.width <= b.x ||
+    a.y >= b.y + b.height ||
+    a.y + a.height <= b.y
   );
 };
 
-const isWithinBounds = (position: GridPosition) => {
+const isWithinBounds = (grid: GridConfig, layout: GridBox) => {
   return (
-    position.width >= 1 &&
-    position.height >= 1 &&
-    position.col >= 0 &&
-    position.row >= 0 &&
-    position.col + position.width <= GRID_COLS &&
-    position.row + position.height <= GRID_ROWS
+    layout.x >= 0 &&
+    layout.y >= 0 &&
+    layout.x + layout.width <= grid.columns &&
+    layout.y + layout.height <= grid.rows &&
+    layout.width >= 1 &&
+    layout.height >= 1
   );
 };
 
-const overlapsAny = (placed: GridPosition[], candidate: GridPosition) => {
-  return placed.some(p => rectanglesOverlap(p, candidate));
+const clampSizeToConstraints = (
+  widgetType: string,
+  size: { width: number; height: number },
+  grid: GridConfig,
+): { width: number; height: number } => {
+  const constraints = constraintsByType[widgetType];
+  if (!constraints) return size;
+
+  return {
+    width: Math.min(Math.max(size.width, constraints.minWidth), Math.min(constraints.maxWidth, grid.columns)),
+    height: Math.min(Math.max(size.height, constraints.minHeight), Math.min(constraints.maxHeight, grid.rows)),
+  };
 };
 
-const findNextFreePosition = (
-  placed: GridPosition[],
-  size: { width: number; height: number },
-  startFrom: { col: number; row: number }
-): GridPosition | null => {
-  const totalCells = GRID_COLS * GRID_ROWS;
-  const startCol = Math.min(Math.max(startFrom.col, 0), GRID_COLS - 1);
-  const startRow = Math.min(Math.max(startFrom.row, 0), GRID_ROWS - 1);
-  const startIndex = startRow * GRID_COLS + startCol;
+const findFirstSlot = (
+  grid: GridConfig,
+  widgets: WidgetLayout[],
+  desiredSize: { width: number; height: number },
+): GridBox | null => {
+  const totalCells = grid.columns * grid.rows;
 
-  const tryIndex = (index: number) => {
-    const col = index % GRID_COLS;
-    const row = Math.floor(index / GRID_COLS);
-    const candidate: GridPosition = { col, row, width: size.width, height: size.height };
-    if (!isWithinBounds(candidate)) return null;
-    if (overlapsAny(placed, candidate)) return null;
-    return candidate;
+  const candidateFits = (candidate: GridBox) => {
+    if (!isWithinBounds(grid, candidate)) return false;
+    return !widgets.some((placed) => rectanglesOverlap(placed, candidate));
   };
 
-  for (let index = startIndex; index < totalCells; index++) {
-    const candidate = tryIndex(index);
-    if (candidate) return candidate;
-  }
-
-  for (let index = 0; index < startIndex; index++) {
-    const candidate = tryIndex(index);
-    if (candidate) return candidate;
+  for (let index = 0; index < totalCells; index++) {
+    const x = index % grid.columns;
+    const y = Math.floor(index / grid.columns);
+    const candidate = { x, y, width: desiredSize.width, height: desiredSize.height };
+    if (candidateFits(candidate)) return candidate;
   }
 
   return null;
 };
 
-export const computePushedLayout = (
-  widgets: WidgetGridItem[],
-  movingId: string,
-  desiredPosition: GridPosition
-): WidgetGridItem[] | null => {
-  const movingWidget = widgets.find(w => w.id === movingId);
-  if (!movingWidget) return null;
-  if (!isWithinBounds(desiredPosition)) return null;
-
-  const placed: GridPosition[] = [];
-  const positionsById = new Map<string, GridPosition>();
-
-  placed.push(desiredPosition);
-  positionsById.set(movingId, desiredPosition);
-
-  for (const widget of widgets) {
-    if (widget.id === movingId) continue;
-
-    const preferred = widget.position;
-    if (isWithinBounds(preferred) && !overlapsAny(placed, preferred)) {
-      placed.push(preferred);
-      positionsById.set(widget.id, preferred);
-      continue;
-    }
-
-    const next = findNextFreePosition(
-      placed,
-      { width: preferred.width, height: preferred.height },
-      { col: preferred.col, row: preferred.row }
-    );
-
-    if (!next) return null;
-    placed.push(next);
-    positionsById.set(widget.id, next);
-  }
-
-  return widgets.map(w => {
-    const position = positionsById.get(w.id);
-    return position ? { ...w, position } : w;
-  });
-};
-
-// Debounced auto-save helper
-const scheduleSave = (store: GridState) => {
-  if (store._persistTimer) {
-    clearTimeout(store._persistTimer);
-  }
-  store._persistTimer = setTimeout(() => {
-    store._persistTimer = null;
-    void store.saveDashboard();
-  }, SAVE_DEBOUNCE_MS);
-};
+interface GridState {
+  grid: GridConfig;
+  widgets: WidgetLayout[];
+  debugGrid: boolean;
+  isLoaded: boolean;
+  loadDashboard: () => Promise<void>;
+  applyOperation: (operation: LayoutOperation) => Promise<boolean>;
+  addWidget: (widgetType: string, layout?: Partial<WidgetLayout>) => Promise<boolean>;
+  moveWidget: (id: string, coords: { x: number; y: number }) => Promise<boolean>;
+  resizeWidget: (id: string, size: { width: number; height: number }) => Promise<boolean>;
+  removeWidget: (id: string) => Promise<boolean>;
+  isPositionOccupied: (pos: { x: number; y: number; width: number; height: number }, excludeId?: string) => boolean;
+  getConstraints: (widgetType: string) => WidgetConstraints | undefined;
+  toggleDebugGrid: () => void;
+}
 
 export const useGridStore = create<GridState>((set, get) => ({
-  widgets: defaultDashboard.widgets,
-  gridLayout: {
-    colWidths: null,
-    rowHeights: null,
-  },
-  _persistTimer: null,
+  grid: DEFAULT_GRID,
+  widgets: DEFAULT_WIDGETS,
+  debugGrid: false,
+  isLoaded: false,
 
-  addWidget: (widgetType, position) => {
-    const id = `${widgetType}-${Date.now()}`;
-    set(state => ({
-      widgets: [...state.widgets, { id, widgetType, position }]
-    }));
-    scheduleSave(get());
-  },
-
-  updateWidgetPosition: (id, position) => {
-    set(state => ({
-      widgets: state.widgets.map(w => 
-        w.id === id ? { ...w, position } : w
-      )
-    }));
-    scheduleSave(get());
-  },
-
-  updateWidgetPositionWithPush: (id, position) => {
-    const next = computePushedLayout(get().widgets, id, position);
-    if (!next) return false;
-    set({ widgets: next });
-    scheduleSave(get());
-    return true;
+  async loadDashboard() {
+    try {
+      const state = await invoke<LayoutState>('load_dashboard');
+      set({
+        grid: state?.grid ?? DEFAULT_GRID,
+        widgets: state?.widgets ?? DEFAULT_WIDGETS,
+        isLoaded: true,
+      });
+    } catch (error) {
+      console.error('[dashboard] load fallback to defaults', error);
+      set({ grid: DEFAULT_GRID, widgets: DEFAULT_WIDGETS, isLoaded: true });
+      try {
+        await invoke('save_dashboard', { dashboard: DEFAULT_LAYOUT_STATE });
+      } catch (persistError) {
+        console.warn('[dashboard] failed to persist default layout', persistError);
+      }
+    }
   },
 
-  removeWidget: (id) => {
-    set(state => ({
-      widgets: state.widgets.filter(w => w.id !== id)
-    }));
-    scheduleSave(get());
+  async applyOperation(operation) {
+    try {
+      const state = await invoke<LayoutState>('apply_layout_operation', { operation });
+      set({ grid: state.grid ?? get().grid, widgets: state.widgets, isLoaded: true });
+      return true;
+    } catch (error) {
+      console.error('[dashboard] failed to apply layout operation', error);
+      return false;
+    }
   },
 
-  setGridLayout: (colWidths, rowHeights) => {
-    console.info('[grid] setGridLayout ->', { colWidths, rowHeights });
-    set({ gridLayout: { colWidths, rowHeights } });
-    scheduleSave(get());
-  },
+  async addWidget(widgetType, layout) {
+    const grid = get().grid ?? DEFAULT_GRID;
+    const baseSize = clampSizeToConstraints(
+      widgetType,
+      { width: layout?.width ?? 2, height: layout?.height ?? 2 },
+      grid,
+    );
 
-  isPositionOccupied: (position, excludeId) => {
-    const widgets = get().widgets.filter(w => w.id !== excludeId);
-    
-    return widgets.some(widget => {
-      const w = widget.position;
-      return rectanglesOverlap(position, w);
+    const slot = findFirstSlot(grid, get().widgets, baseSize);
+    if (!slot) {
+      console.warn('[dashboard] no free slot for widget', widgetType);
+      return false;
+    }
+
+    return get().applyOperation({
+      type: 'addWidget',
+      widgetType,
+      layout: {
+        id: layout?.id,
+        x: layout?.x ?? slot.x,
+        y: layout?.y ?? slot.y,
+        width: slot.width,
+        height: slot.height,
+      },
     });
   },
 
-  loadDashboard: async () => {
-    try {
-      const dashboard = await invoke<DashboardState>('load_dashboard');
-      console.info('[dashboard] loadDashboard ->', dashboard);
-      
-      // Validate and restore state
-      const validatedWidgets = dashboard.widgets.filter(w => 
-        isWithinBounds(w.position)
-      );
-      
-      set({ 
-        widgets: validatedWidgets.length > 0 ? validatedWidgets : defaultDashboard.widgets,
-        gridLayout: {
-          colWidths: dashboard.gridLayout?.colWidths ?? null,
-          rowHeights: dashboard.gridLayout?.rowHeights ?? null,
-        },
-      });
-      
-      console.info('[dashboard] loadDashboard -> success');
-    } catch (error) {
-      console.error('Failed to load dashboard:', error);
-      // Graceful fallback to defaults
-      set({ 
-        widgets: defaultDashboard.widgets,
-        gridLayout: { colWidths: null, rowHeights: null },
-      });
-    }
+  async moveWidget(id, coords) {
+    return get().applyOperation({ type: 'moveWidget', id, x: coords.x, y: coords.y });
   },
 
-  saveDashboard: async () => {
-    try {
-      const state = get();
-      const dashboard: DashboardState = {
-        widgets: state.widgets,
-        gridLayout: state.gridLayout,
-        version: 1,
-      };
-      
-      await invoke('save_dashboard', { dashboard });
-      console.info('[dashboard] saveDashboard -> success');
-    } catch (error) {
-      console.error('Failed to save dashboard:', error);
-    }
+  async resizeWidget(id, size) {
+    return get().applyOperation({ type: 'resizeWidget', id, width: size.width, height: size.height });
+  },
+
+  async removeWidget(id) {
+    return get().applyOperation({ type: 'removeWidget', id });
+  },
+
+  isPositionOccupied(pos, excludeId) {
+    return get().widgets.some((widget) => {
+      if (excludeId && widget.id === excludeId) return false;
+      return rectanglesOverlap(widget, pos);
+    });
+  },
+
+  getConstraints(widgetType) {
+    return constraintsByType[widgetType];
+  },
+
+  toggleDebugGrid() {
+    set((state) => ({ debugGrid: !state.debugGrid }));
   },
 }));
