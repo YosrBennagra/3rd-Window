@@ -25,6 +25,38 @@ impl Default for AppSettings {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct GridPosition {
+    col: i32,
+    row: i32,
+    width: i32,
+    height: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetGridItem {
+    id: String,
+    widget_type: String,
+    position: GridPosition,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct GridLayout {
+    col_widths: Option<Vec<f64>>,
+    row_heights: Option<Vec<f64>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DashboardState {
+    widgets: Vec<WidgetGridItem>,
+    grid_layout: Option<GridLayout>,
+    version: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Monitor {
     name: String,
     size: MonitorSize,
@@ -50,6 +82,16 @@ fn get_settings_path(app: tauri::AppHandle) -> Result<PathBuf, String> {
         .map_err(|e| format!("Failed to get app data dir: {}", e))
         .map(|mut path| {
             path.push("settings.json");
+            path
+        })
+}
+
+fn get_dashboard_path(app: tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))
+        .map(|mut path| {
+            path.push("dashboard.json");
             path
         })
 }
@@ -87,6 +129,46 @@ async fn load_settings(app: tauri::AppHandle) -> Result<AppSettings, String> {
         .map_err(|e| format!("Failed to parse settings: {}", e))?;
     
     Ok(settings)
+}
+
+#[tauri::command]
+async fn save_dashboard(app: tauri::AppHandle, dashboard: DashboardState) -> Result<(), String> {
+    let dashboard_path = get_dashboard_path(app)?;
+    
+    if let Some(parent) = dashboard_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create dashboard directory: {}", e))?;
+    }
+    
+    let json = serde_json::to_string_pretty(&dashboard)
+        .map_err(|e| format!("Failed to serialize dashboard: {}", e))?;
+    
+    fs::write(&dashboard_path, json)
+        .map_err(|e| format!("Failed to write dashboard: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn load_dashboard(app: tauri::AppHandle) -> Result<DashboardState, String> {
+    let dashboard_path = get_dashboard_path(app)?;
+    
+    if !dashboard_path.exists() {
+        // Return default dashboard if file doesn't exist
+        return Ok(DashboardState {
+            widgets: vec![],
+            grid_layout: None,
+            version: 1,
+        });
+    }
+    
+    let json = fs::read_to_string(&dashboard_path)
+        .map_err(|e| format!("Failed to read dashboard: {}", e))?;
+    
+    let dashboard: DashboardState = serde_json::from_str(&json)
+        .map_err(|e| format!("Failed to parse dashboard: {}", e))?;
+    
+    Ok(dashboard)
 }
 
 #[tauri::command]
@@ -346,6 +428,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_settings,
             load_settings,
+            save_dashboard,
+            load_dashboard,
             toggle_fullscreen,
             apply_fullscreen,
             get_monitors,

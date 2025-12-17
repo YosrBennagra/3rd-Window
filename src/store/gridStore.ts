@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { invoke } from '@tauri-apps/api/core';
 
 export const GRID_COLS = 6;
 export const GRID_ROWS = 6;
@@ -16,14 +17,51 @@ export interface WidgetGridItem {
   position: GridPosition;
 }
 
+// Persisted dashboard state
+export interface DashboardState {
+  widgets: WidgetGridItem[];
+  gridLayout?: {
+    colWidths?: number[] | null;
+    rowHeights?: number[] | null;
+  };
+  version: number; // For migration support
+}
+
 interface GridState {
   widgets: WidgetGridItem[];
+  gridLayout: {
+    colWidths: number[] | null;
+    rowHeights: number[] | null;
+  };
   addWidget: (widgetType: string, position: GridPosition) => void;
   updateWidgetPosition: (id: string, position: GridPosition) => void;
   updateWidgetPositionWithPush: (id: string, position: GridPosition) => boolean;
   removeWidget: (id: string) => void;
   isPositionOccupied: (position: GridPosition, excludeId?: string) => boolean;
+  setGridLayout: (colWidths: number[] | null, rowHeights: number[] | null) => void;
+  loadDashboard: () => Promise<void>;
+  saveDashboard: () => Promise<void>;
+  _persistTimer: number | null;
 }
+
+// Default dashboard state
+const defaultDashboard: DashboardState = {
+  widgets: [
+    {
+      id: 'clock-1',
+      widgetType: 'clock',
+      position: { col: 0, row: 0, width: 1, height: 1 }
+    },
+  ],
+  gridLayout: {
+    colWidths: null,
+    rowHeights: null,
+  },
+  version: 1,
+};
+
+// Debounce delay for auto-save (ms)
+const SAVE_DEBOUNCE_MS = 500;
 
 const rectanglesOverlap = (a: GridPosition, b: GridPosition) => {
   return !(
@@ -123,21 +161,31 @@ export const computePushedLayout = (
   });
 };
 
+// Debounced auto-save helper
+const scheduleSave = (store: GridState) => {
+  if (store._persistTimer) {
+    clearTimeout(store._persistTimer);
+  }
+  store._persistTimer = setTimeout(() => {
+    store._persistTimer = null;
+    void store.saveDashboard();
+  }, SAVE_DEBOUNCE_MS);
+};
+
 export const useGridStore = create<GridState>((set, get) => ({
-  widgets: [
-    {
-      id: 'clock-1',
-      widgetType: 'clock',
-      position: { col: 0, row: 0, width: 1, height: 1 }
-    },
-    // CPU and GPU temperature widgets are disabled by default
-  ],
+  widgets: defaultDashboard.widgets,
+  gridLayout: {
+    colWidths: null,
+    rowHeights: null,
+  },
+  _persistTimer: null,
 
   addWidget: (widgetType, position) => {
     const id = `${widgetType}-${Date.now()}`;
     set(state => ({
       widgets: [...state.widgets, { id, widgetType, position }]
     }));
+    scheduleSave(get());
   },
 
   updateWidgetPosition: (id, position) => {
@@ -146,12 +194,14 @@ export const useGridStore = create<GridState>((set, get) => ({
         w.id === id ? { ...w, position } : w
       )
     }));
+    scheduleSave(get());
   },
 
   updateWidgetPositionWithPush: (id, position) => {
     const next = computePushedLayout(get().widgets, id, position);
     if (!next) return false;
     set({ widgets: next });
+    scheduleSave(get());
     return true;
   },
 
@@ -159,6 +209,13 @@ export const useGridStore = create<GridState>((set, get) => ({
     set(state => ({
       widgets: state.widgets.filter(w => w.id !== id)
     }));
+    scheduleSave(get());
+  },
+
+  setGridLayout: (colWidths, rowHeights) => {
+    console.info('[grid] setGridLayout ->', { colWidths, rowHeights });
+    set({ gridLayout: { colWidths, rowHeights } });
+    scheduleSave(get());
   },
 
   isPositionOccupied: (position, excludeId) => {
@@ -166,8 +223,52 @@ export const useGridStore = create<GridState>((set, get) => ({
     
     return widgets.some(widget => {
       const w = widget.position;
-      // Check if rectangles overlap
       return rectanglesOverlap(position, w);
     });
+  },
+
+  loadDashboard: async () => {
+    try {
+      const dashboard = await invoke<DashboardState>('load_dashboard');
+      console.info('[dashboard] loadDashboard ->', dashboard);
+      
+      // Validate and restore state
+      const validatedWidgets = dashboard.widgets.filter(w => 
+        isWithinBounds(w.position)
+      );
+      
+      set({ 
+        widgets: validatedWidgets.length > 0 ? validatedWidgets : defaultDashboard.widgets,
+        gridLayout: {
+          colWidths: dashboard.gridLayout?.colWidths ?? null,
+          rowHeights: dashboard.gridLayout?.rowHeights ?? null,
+        },
+      });
+      
+      console.info('[dashboard] loadDashboard -> success');
+    } catch (error) {
+      console.error('Failed to load dashboard:', error);
+      // Graceful fallback to defaults
+      set({ 
+        widgets: defaultDashboard.widgets,
+        gridLayout: { colWidths: null, rowHeights: null },
+      });
+    }
+  },
+
+  saveDashboard: async () => {
+    try {
+      const state = get();
+      const dashboard: DashboardState = {
+        widgets: state.widgets,
+        gridLayout: state.gridLayout,
+        version: 1,
+      };
+      
+      await invoke('save_dashboard', { dashboard });
+      console.info('[dashboard] saveDashboard -> success');
+    } catch (error) {
+      console.error('Failed to save dashboard:', error);
+    }
   },
 }));

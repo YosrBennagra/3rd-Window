@@ -7,7 +7,9 @@ export type MenuAction =
   | 'settings'
   | 'widget-settings'
   | 'remove-widget'
-  | 'add-widget';
+  | 'add-widget'
+  | 'resize'
+  | 'toggle-adjust-grid';
 
 export interface ContextMenuState {
   x: number;
@@ -20,6 +22,7 @@ interface Props {
   onClose: () => void;
   onAction: (action: MenuAction, widget?: WidgetGridItem | null) => void;
   widgetDisplayName?: (widgetType: string) => string;
+  isAdjustGridMode?: boolean;
 }
 
 const defaultWidgetNames: Record<string, string> = {
@@ -28,7 +31,7 @@ const defaultWidgetNames: Record<string, string> = {
   'gpu-temp': 'GPU Temperature',
 };
 
-export default function GridContextMenu({ menu, onClose, onAction, widgetDisplayName }: Props) {
+export default function GridContextMenu({ menu, onClose, onAction, widgetDisplayName, isAdjustGridMode }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -99,6 +102,14 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
           </button>
 
           <button
+            className="grid-context-menu__item"
+            onClick={() => handleItemClick('resize')}
+          >
+            <span className="grid-context-menu__icon">↔</span>
+            Resize
+          </button>
+
+          <button
             className="grid-context-menu__item grid-context-menu__item--danger"
             onClick={() => handleItemClick('remove-widget')}
           >
@@ -122,6 +133,14 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
       <div className="grid-context-menu__divider" />
 
       {/* General Settings */}
+      <button
+        className="grid-context-menu__item"
+        onClick={() => handleItemClick('toggle-adjust-grid')}
+      >
+        <span className="grid-context-menu__icon">{isAdjustGridMode ? '✓' : '☐'}</span>
+        Adjust Grid
+      </button>
+
       <button
         className="grid-context-menu__item"
         onClick={() => handleItemClick('settings')}

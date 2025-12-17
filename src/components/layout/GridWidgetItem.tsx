@@ -8,18 +8,19 @@ interface Props {
   handleResizePointerDown: (e: React.PointerEvent, widget: WidgetGridItem) => void;
   handleContextMenu: (e: React.MouseEvent, widget: WidgetGridItem) => void;
   dragInfo?: any;
+  isResizing?: boolean;
 }
 
-export default function GridWidgetItem({ widget, WidgetComponent, handleWidgetPointerDown, handleRemoveWidget, handleResizePointerDown, handleContextMenu, dragInfo }: Props) {
+export default function GridWidgetItem({ widget, WidgetComponent, handleWidgetPointerDown, handleRemoveWidget, handleResizePointerDown, handleContextMenu, dragInfo, isResizing }: Props) {
   return (
     <div
       key={widget.id}
-      className={`grid-widget ${dragInfo?.id === widget.id ? 'grid-widget--dragging' : ''}`}
+      className={`grid-widget ${dragInfo?.id === widget.id ? 'grid-widget--dragging' : ''} ${isResizing ? 'grid-widget--resizing' : ''}`}
       onPointerDown={(e) => handleWidgetPointerDown(e, widget)}
       onContextMenu={(e) => handleContextMenu(e, widget)}
       style={{
-        gridColumn: `${widget.position.col + 1} / span ${widget.position.width}`,
-        gridRow: `${widget.position.row + 1} / span ${widget.position.height}`,
+        gridColumn: `${widget.position.col * 2 + 1} / span ${widget.position.width * 2 - 1}`,
+        gridRow: `${widget.position.row * 2 + 1} / span ${widget.position.height * 2 - 1}`,
       }}
     >
       <div className="grid-widget__content">
@@ -32,11 +33,19 @@ export default function GridWidgetItem({ widget, WidgetComponent, handleWidgetPo
       >
         ✕
       </button>
-      <div
-        className="grid-widget__resize-handle"
-        onPointerDown={(e) => handleResizePointerDown(e, widget)}
-        title="Drag to resize"
-      />
+      
+      {isResizing && (
+        <>
+          <div className="grid-widget__resize-handle grid-widget__resize-handle--tl" />
+          <div className="grid-widget__resize-handle grid-widget__resize-handle--tr" />
+          <div className="grid-widget__resize-handle grid-widget__resize-handle--bl" />
+          <div
+            className="grid-widget__resize-handle grid-widget__resize-handle--br"
+            onPointerDown={(e) => handleResizePointerDown(e, widget)}
+            title="Drag to resize"
+          />
+        </>
+      )}
     </div>
   );
 }

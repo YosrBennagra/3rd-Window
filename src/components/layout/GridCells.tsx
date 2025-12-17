@@ -14,19 +14,14 @@ export default function GridCells({ hoverCell, dragInfo, isDragBlocked, isOutOfB
   const cells: React.ReactNode[] = [];
   for (let row = 0; row < GRID_ROWS; row++) {
     for (let col = 0; col < GRID_COLS; col++) {
-      const isHovered = hoverCell?.col === col && hoverCell?.row === row;
-      const isInvalidHover = Boolean(
-        isHovered &&
-        dragInfo &&
-        (isDragBlocked || isOutOfBounds({ col, row, width: dragInfo.width, height: dragInfo.height }))
-      );
+      // No hover/invalid states - pure live reflow
       cells.push(
         <div
           key={`${col}-${row}`}
-          className={`grid-cell ${isHovered ? 'grid-cell--hover' : ''} ${isInvalidHover ? 'grid-cell--invalid' : ''}`}
+          className="grid-cell"
           style={{
-            gridColumn: col + 1,
-            gridRow: row + 1,
+            gridColumn: col * 2 + 1,
+            gridRow: row * 2 + 1,
           }}
         />
       );

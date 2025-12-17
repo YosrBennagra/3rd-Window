@@ -11,6 +11,8 @@ import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/G
 import { SettingsPanel, WidgetSettingsPanel, AddWidgetPanel } from '../panels';
 import './DraggableGrid.css';
 
+const GAP_SIZE = 12;
+
 const widgetComponents: Record<string, React.ComponentType> = {
   'clock': ClockWidget,
 };
@@ -20,12 +22,13 @@ type ResizeInfo = { id: string; startWidth: number; startHeight: number; startX:
 type PanelType = 'settings' | 'widget-settings' | 'add-widget' | null;
 
 export function DraggableGrid() {
-  const { widgets, updateWidgetPositionWithPush, updateWidgetPosition, removeWidget } = useGridStore();
+  const { widgets, gridLayout, updateWidgetPositionWithPush, updateWidgetPosition, removeWidget, setGridLayout } = useGridStore();
   const { setFullscreen } = useStore();
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const [colWidths, setColWidths] = useState<number[] | null>(null);
   const [rowHeights, setRowHeights] = useState<number[] | null>(null);
+  const hasRestoredLayoutRef = useRef(false);
   
   // Context menu and panel state
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -35,6 +38,10 @@ export function DraggableGrid() {
   const [resizeInfo, setResizeInfo] = useState<ResizeInfo | null>(null);
   const [resizePointerId, setResizePointerId] = useState<number | null>(null);
   const resizeCaptureElemRef = useRef<EventTarget | null>(null);
+  
+  const [resizingWidgetId, setResizingWidgetId] = useState<string | null>(null);
+  const [isAdjustGridMode, setIsAdjustGridMode] = useState(false);
+  const [isGridResizing, setIsGridResizing] = useState(false);
 
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -47,8 +54,9 @@ export function DraggableGrid() {
     const paddingTop = parseFloat(style.paddingTop || '0') || 0;
     const paddingBottom = parseFloat(style.paddingBottom || '0') || 0;
 
-    const columnGap = parseFloat(style.columnGap || style.gap || '0') || 0;
-    const rowGap = parseFloat(style.rowGap || style.gap || '0') || 0;
+    // Use explicit gap size since we are using gutter tracks
+    const columnGap = GAP_SIZE;
+    const rowGap = GAP_SIZE;
 
     const innerWidth = Math.max(0, rect.width - paddingLeft - paddingRight);
     const innerHeight = Math.max(0, rect.height - paddingTop - paddingBottom);
@@ -146,11 +154,8 @@ export function DraggableGrid() {
   // now that helpers are defined, initialize drag hook
   const {
     dragInfo,
-    isDragBlocked,
     ghostStyle,
-    swapCandidateId,
-    hoverCell,
-    handleWidgetPointerDown,
+    handleWidgetPointerDown: originalHandleWidgetPointerDown,
   } = useGridDrag({
     gridRef,
     widgets,
@@ -160,7 +165,12 @@ export function DraggableGrid() {
     getCellFromPointer,
   });
 
-  
+  const handleWidgetPointerDownWrapped = (e: React.PointerEvent, widget: WidgetGridItem) => {
+    if (resizingWidgetId && resizingWidgetId !== widget.id) {
+      setResizingWidgetId(null);
+    }
+    originalHandleWidgetPointerDown(e, widget);
+  };
 
   const isOutOfBounds = (position: { col: number; row: number; width: number; height: number }) => {
     if (position.col < 0 || position.row < 0) return true;
@@ -204,6 +214,14 @@ export function DraggableGrid() {
           setSelectedWidget(widget);
           setActivePanel('widget-settings');
         }
+        break;
+      case 'resize':
+        if (widget) {
+          setResizingWidgetId(widget.id);
+        }
+        break;
+      case 'toggle-adjust-grid':
+        setIsAdjustGridMode(!isAdjustGridMode);
         break;
       case 'remove-widget':
         if (widget) {
@@ -259,22 +277,39 @@ export function DraggableGrid() {
     return Array.from({ length: count }, (_, i) => Math.max(min, base + (i < remainder ? 1 : 0)));
   };
 
-  // initialize equal column/row tracks and keep them in sync with container resizes
+  // Restore grid layout from persisted state on mount OR compute defaults
   useEffect(() => {
-    const compute = () => {
-      const grid = gridRef.current;
-      if (!grid) return;
-      const { innerWidth, innerHeight, columnGap, rowGap } = getGridMetrics(grid) as any;
-      const totalGaps = columnGap * (GRID_COLS - 1);
-      const availableW = Math.max(0, innerWidth - totalGaps);
-      setColWidths(computeEqualTracks(availableW, GRID_COLS, 40));
+    const grid = gridRef.current;
+    if (!grid) return;
+    
+    // Try to restore from saved state
+    if (gridLayout.colWidths && gridLayout.colWidths.length === GRID_COLS &&
+        gridLayout.rowHeights && gridLayout.rowHeights.length === GRID_ROWS) {
+      setColWidths(gridLayout.colWidths);
+      setRowHeights(gridLayout.rowHeights);
+      hasRestoredLayoutRef.current = true;
+      console.info('[grid] Restored layout from saved state');
+      return;
+    }
+    
+    // No saved state - compute defaults
+    const { innerWidth, innerHeight, columnGap, rowGap } = getGridMetrics(grid) as any;
+    const totalColGaps = columnGap * (GRID_COLS - 1);
+    const availableW = Math.max(0, innerWidth - totalColGaps);
+    setColWidths(computeEqualTracks(availableW, GRID_COLS, 40));
 
-      const totalRowGaps = rowGap * (GRID_ROWS - 1);
-      const availableH = Math.max(0, innerHeight - totalRowGaps);
-      setRowHeights(computeEqualTracks(availableH, GRID_ROWS, 32));
-    };
-    compute();
+    const totalRowGaps = rowGap * (GRID_ROWS - 1);
+    const availableH = Math.max(0, innerHeight - totalRowGaps);
+    setRowHeights(computeEqualTracks(availableH, GRID_ROWS, 32));
+    hasRestoredLayoutRef.current = true;
+    console.info('[grid] Computed default layout');
+  }, [gridLayout]); // Re-run if gridLayout changes (from async load)
 
+  // Keep tracks in sync with container resizes (scale proportionally)
+  useEffect(() => {
+    // Don't set up resize handlers until we have initial values
+    if (!colWidths || !rowHeights || !hasRestoredLayoutRef.current) return;
+    
     const scaleTracks = (tracks: number[] | null, available: number, min: number, count: number) => {
       if (!tracks || tracks.length !== count) return computeEqualTracks(available, count, min);
       const currentTotal = tracks.reduce((a, b) => a + b, 0);
@@ -316,7 +351,15 @@ export function DraggableGrid() {
       window.removeEventListener('resize', onResize);
       if (ro) ro.disconnect();
     };
-  }, []);
+  }, []); // Only set up once
+
+  // Persist grid layout when it changes (debounced via store)
+  useEffect(() => {
+    // Only save if we've initialized (don't save during first render)
+    if (colWidths && rowHeights && hasRestoredLayoutRef.current) {
+      setGridLayout(colWidths, rowHeights);
+    }
+  }, [colWidths, rowHeights, setGridLayout]);
 
   useEffect(() => {
     if (!resizeInfo || resizePointerId == null) return;
@@ -420,10 +463,17 @@ export function DraggableGrid() {
 
   // grid cells rendering moved to GridCells component
 
+  const generateGridTemplate = (sizes: number[] | null, count: number) => {
+    if (sizes) {
+      return sizes.map((s, i) => i < sizes.length - 1 ? `${s}px ${GAP_SIZE}px` : `${s}px`).join(' ');
+    }
+    return Array(count).fill('1fr').join(` ${GAP_SIZE}px `);
+  };
+
   const gridStyle: React.CSSProperties = {
     position: 'relative',
-    gridTemplateColumns: colWidths ? colWidths.map((w) => `${w}px`).join(' ') : undefined,
-    gridTemplateRows: rowHeights ? rowHeights.map((h) => `${h}px`).join(' ') : undefined,
+    gridTemplateColumns: generateGridTemplate(colWidths, GRID_COLS),
+    gridTemplateRows: generateGridTemplate(rowHeights, GRID_ROWS),
   };
 
   
@@ -431,13 +481,28 @@ export function DraggableGrid() {
   return (
     <>
       <div 
-        className="draggable-grid"
+        className={`draggable-grid ${isAdjustGridMode ? 'draggable-grid--adjust' : ''} ${isGridResizing ? 'is-resizing-grid' : ''}`}
         ref={gridRef}
         style={gridStyle}
         onContextMenu={handleGridContextMenu}
+        onPointerDown={(e) => {
+          if (!e.defaultPrevented) {
+            setResizingWidgetId(null);
+          }
+        }}
       >
-        <GridCells hoverCell={hoverCell} dragInfo={dragInfo} isDragBlocked={isDragBlocked} isOutOfBounds={isOutOfBounds} />
-        <GridResizers gridRef={gridRef} colWidths={colWidths} rowHeights={rowHeights} setColWidths={setColWidths} setRowHeights={setRowHeights} />
+        <GridCells hoverCell={null} dragInfo={null} isDragBlocked={false} isOutOfBounds={isOutOfBounds} />
+        {isAdjustGridMode && (
+          <GridResizers 
+            gridRef={gridRef} 
+            colWidths={colWidths} 
+            rowHeights={rowHeights} 
+            setColWidths={setColWidths} 
+            setRowHeights={setRowHeights}
+            onResizeStart={() => setIsGridResizing(true)}
+            onResizeEnd={() => setIsGridResizing(false)}
+          />
+        )}
         
         {widgets.map((widget) => {
           const WidgetComponent = widgetComponents[widget.widgetType];
@@ -447,15 +512,16 @@ export function DraggableGrid() {
               key={widget.id}
               widget={widget}
               WidgetComponent={WidgetComponent}
-              handleWidgetPointerDown={handleWidgetPointerDown}
+              handleWidgetPointerDown={handleWidgetPointerDownWrapped}
               handleRemoveWidget={handleRemoveWidget}
               handleResizePointerDown={handleResizePointerDown}
               handleContextMenu={handleContextMenu}
               dragInfo={dragInfo}
+              isResizing={resizingWidgetId === widget.id}
             />
           );
         })}
-        <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} swapCandidateId={swapCandidateId} widgets={widgets} widgetComponents={widgetComponents} />
+        <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} widgets={widgets} widgetComponents={widgetComponents} />
       </div>
 
       {/* Context Menu */}
@@ -463,6 +529,7 @@ export function DraggableGrid() {
         menu={contextMenu}
         onClose={handleCloseContextMenu}
         onAction={handleMenuAction}
+        isAdjustGridMode={isAdjustGridMode}
       />
 
       {/* Panels */}
