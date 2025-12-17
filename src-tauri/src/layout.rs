@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
 const DEFAULT_VERSION: u8 = 1;
