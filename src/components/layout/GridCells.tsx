@@ -1,31 +1,35 @@
-import React from 'react';
-import { GRID_COLS, GRID_ROWS } from '../../store/gridStore';
-
-type Cell = { col: number; row: number } | null;
+import type { GridConfig } from '../../types/layout';
 
 interface Props {
-  hoverCell?: Cell;
-  dragInfo?: any;
-  isDragBlocked?: boolean;
-  isOutOfBounds: (pos: { col: number; row: number; width: number; height: number }) => boolean;
+  grid: GridConfig;
+  highlight?: { x: number; y: number; width: number; height: number } | null;
+  debugGrid?: boolean;
+  isBlocked?: boolean;
 }
 
-export default function GridCells({ hoverCell, dragInfo, isDragBlocked, isOutOfBounds }: Props) {
+export default function GridCells({ grid, highlight, debugGrid, isBlocked }: Props) {
   const cells: React.ReactNode[] = [];
-  for (let row = 0; row < GRID_ROWS; row++) {
-    for (let col = 0; col < GRID_COLS; col++) {
-      // No hover/invalid states - pure live reflow
+
+  const isHighlighted = (col: number, row: number) => {
+    if (!highlight) return false;
+    return col >= highlight.x && col < highlight.x + highlight.width && row >= highlight.y && row < highlight.y + highlight.height;
+  };
+
+  for (let row = 0; row < grid.rows; row++) {
+    for (let col = 0; col < grid.columns; col++) {
+      const active = isHighlighted(col, row);
       cells.push(
         <div
           key={`${col}-${row}`}
-          className="grid-cell"
+          className={`grid-cell${debugGrid || active ? ' grid-cell--visible' : ''}${active ? ' grid-cell--active' : ''}${active && isBlocked ? ' grid-cell--blocked' : ''}`}
           style={{
-            gridColumn: col * 2 + 1,
-            gridRow: row * 2 + 1,
+            gridColumn: col + 1,
+            gridRow: row + 1,
           }}
         />
       );
     }
   }
+
   return <>{cells}</>;
 }

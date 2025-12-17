@@ -1,96 +1,35 @@
 .draggable-grid {
   display: grid;
   /* grid-template-columns/rows are set inline */
-  /* gap is removed to use explicit gutter tracks */
-  gap: 0;
   width: 100%;
   height: 100%;
   padding: 24px;
   position: relative;
   user-select: none;
   touch-action: none;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.04));
+  border-radius: 16px;
 }
 
 .grid-cell {
-  /* Invisible cells - no visual feedback */
   border: 1px dashed transparent;
-  border-radius: 8px;
-  pointer-events: auto;
-  position: relative;
-  z-index: 0;
-}
-
-/* Show grid only in Adjust Mode */
-.draggable-grid--adjust .grid-cell {
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.grid-resizer {
-  position: relative;
-  /* Below widgets (10) but above cells (0) */
-  z-index: 5;
-  touch-action: none;
-  transition: background 0.2s ease;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* The visual resize line */
-.grid-resizer::after {
-  content: '';
-  position: absolute;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 1px;
-  transition: all 0.2s ease;
+  border-radius: 10px;
   pointer-events: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-/* Vertical resizer (Column) */
-.grid-resizer[aria-orientation="vertical"] {
-  cursor: col-resize;
-  height: 100%;
-  width: 100%;
-}
-.grid-resizer[aria-orientation="vertical"]::after {
-  width: 1px;
-  height: 100%;
-  top: 0;
+.grid-cell--visible {
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Horizontal resizer (Row) */
-.grid-resizer[aria-orientation="horizontal"] {
-  cursor: row-resize;
-  width: 100%;
-  height: 100%;
-}
-.grid-resizer[aria-orientation="horizontal"]::after {
-  width: 100%;
-  height: 1px;
-  left: 0;
+.grid-cell--active {
+  background: rgba(99, 102, 241, 0.14);
+  border-color: rgba(99, 102, 241, 0.5);
 }
 
-/* Hover & Active States */
-.grid-resizer:hover::after,
-.grid-resizer--active::after {
-  background: #6366f1;
-  box-shadow: 0 0 6px rgba(99, 102, 241, 0.4);
-}
-
-/* Optional: Highlight the track slightly on hover for better hit area feedback */
-.grid-resizer:hover {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.grid-cell--hover {
-  /* No visual preview - live reflow communicates position */
-}
-
-.grid-cell--invalid {
-  /* No visual preview - live reflow communicates position */
+.grid-cell--blocked {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.6);
 }
 
 .grid-widget {
@@ -121,10 +60,16 @@
   pointer-events: none;
 }
 
+.grid-widget--ghost {
+  opacity: 0.9;
+  pointer-events: none;
+}
+
 .grid-widget__content .widget {
   width: 100%;
   height: 100%;
   margin: 0;
+  border-radius: 12px;
 }
 
 .grid-widget__remove {
@@ -159,8 +104,8 @@
 
 .grid-widget__resize-handle {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: #6366f1;
   border: 2px solid white;
   border-radius: 50%;
@@ -196,6 +141,31 @@
   bottom: -6px;
   right: -6px;
   cursor: se-resize;
+}
+
+.grid-overlay-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(17, 24, 39, 0.75);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 40;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.grid-overlay-toggle:hover {
+  background: rgba(99, 102, 241, 0.8);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.draggable-grid.is-move-blocked .grid-cell--active {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.6);
 }
 
 .grid-widget--resizing {

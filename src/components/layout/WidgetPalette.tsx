@@ -6,8 +6,7 @@ export function WidgetPalette() {
   const { addWidget, widgets } = useGridStore();
 
   const handleAddWidget = (widgetId: string) => {
-    // Default position, in a real app we'd find the first free slot
-    addWidget(widgetId, { col: 0, row: 0, width: 2, height: 2 });
+    void addWidget(widgetId);
   };
 
   /*

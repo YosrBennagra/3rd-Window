@@ -1,14 +1,16 @@
-import type { WidgetGridItem } from '../../store/gridStore';
+import type { WidgetLayout } from '../../types/layout';
 import './Panel.css';
 
 const widgetNames: Record<string, string> = {
   'clock': 'Clock',
   'cpu-temp': 'CPU Temperature',
   'gpu-temp': 'GPU Temperature',
+  'mail': 'Mail',
+  'chart': 'Chart',
 };
 
 interface Props {
-  widget: WidgetGridItem;
+  widget: WidgetLayout;
   onClose: () => void;
 }
 

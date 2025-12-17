@@ -87,6 +87,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
+ "uuid",
  "winreg 0.52.0",
  "wmi",
 ]
