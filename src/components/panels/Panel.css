@@ -16,6 +16,8 @@
 }
 
 .panel {
+  display: flex;
+  flex-direction: column;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
@@ -37,6 +39,13 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+.panel__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .panel__header {
@@ -75,9 +84,38 @@
 }
 
 .panel__content {
+  flex: 1;
   padding: 24px 20px;
   overflow-y: auto;
-  max-height: calc(80vh - 70px);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  scrollbar-gutter: stable;
+}
+
+.panel__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel__content::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.panel__content:hover::-webkit-scrollbar-thumb,
+.panel__content::-webkit-scrollbar-thumb:active {
+  background: rgba(148, 163, 184, 0.55);
+}
+
+.panel__footer {
+  padding: 16px 20px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(13, 18, 32, 0.65);
 }
 
 .panel__placeholder {
@@ -165,7 +203,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 0;
 }
 
 .panel__stack {
@@ -223,12 +261,53 @@
 .panel__option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   color: #cbd5f5;
   font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  user-select: none;
 }
 
-.panel__option input {
-  width: 16px;
-  height: 16px;
+.panel__option:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.panel__option input[type='radio'] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.7);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  position: relative;
+}
+
+.panel__option input[type='radio']::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.panel__option input[type='radio']:checked {
+  border-color: rgba(59, 130, 246, 0.85);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.45);
+  background: rgba(37, 99, 235, 0.25);
+}
+
+.panel__option input[type='radio']:checked::after {
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+}
+
+.panel__option input[type='radio']:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
 }

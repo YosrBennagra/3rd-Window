@@ -337,16 +337,18 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
             X
           </button>
         </div>
-        <div className="panel__content">
-          {renderContent()}
+        <div className="panel__body">
+          <div className="panel__content">{renderContent()}</div>
           {showActions && (
-            <div className="panel__actions">
-              <button className="panel__button panel__button--ghost" onClick={handleCancel} disabled={isSubmitting}>
-                Cancel
-              </button>
-              <button className="panel__button" onClick={handleApply} disabled={isSubmitting}>
-                Apply
-              </button>
+            <div className="panel__footer">
+              <div className="panel__actions">
+                <button className="panel__button panel__button--ghost" onClick={handleCancel} disabled={isSubmitting}>
+                  Cancel
+                </button>
+                <button className="panel__button" onClick={handleApply} disabled={isSubmitting}>
+                  Apply
+                </button>
+              </div>
             </div>
           )}
         </div>
