@@ -1,4 +1,20 @@
 import { useStore } from '../../store';
+import type { Monitor } from '../../types/system';
+
+const RAW_MONITOR_ID_PATTERN = /^\\\\\.\\DISPLAY\\d+$/i;
+
+const formatMonitorLabel = (monitor: Monitor, index: number) => {
+  const fallbackName = `Monitor ${index + 1}`;
+  const trimmedName = monitor.name?.trim();
+  const baseName = trimmedName && !RAW_MONITOR_ID_PATTERN.test(trimmedName) ? trimmedName : fallbackName;
+  const label = `${index + 1} - ${baseName}`;
+
+  if (monitor.is_primary) {
+    return `${label} (Primary)`;
+  }
+
+  return label;
+};
 
 export function SettingsPanel() {
   const { 
@@ -30,7 +46,7 @@ export function SettingsPanel() {
             >
               {monitors.map((monitor, index) => (
                 <option key={index} value={index}>
-                  {monitor.name}
+                  {formatMonitorLabel(monitor, index)}
                 </option>
               ))}
             </select>

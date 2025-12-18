@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { WidgetLayout } from '../../types/layout';
 import './GridContextMenu.css';
 
@@ -36,6 +36,60 @@ const defaultWidgetNames: Record<string, string> = {
 
 export default function GridContextMenu({ menu, onClose, onAction, widgetDisplayName, isAdjustGridMode }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ left: -9999, top: -9999 });
+
+  useEffect(() => {
+    if (!menu) {
+      setPosition({ left: -9999, top: -9999 });
+    }
+  }, [menu]);
+
+  useLayoutEffect(() => {
+    if (!menu || !menuRef.current) return;
+
+    const menuElement = menuRef.current;
+    const { width, height } = menuElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const SAFE_MARGIN = 10;
+
+    const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+    let top = menu.y;
+    let left = menu.x;
+
+    const fitsBelow = menu.y + height + SAFE_MARGIN <= viewportHeight;
+    const fitsAbove = menu.y - height - SAFE_MARGIN >= 0;
+    const fitsRight = menu.x + width + SAFE_MARGIN <= viewportWidth;
+    const fitsLeft = menu.x - width - SAFE_MARGIN >= 0;
+
+    if (fitsBelow) {
+      top = menu.y;
+    } else if (fitsAbove) {
+      top = menu.y - height;
+    } else {
+      top = menu.y - height / 2;
+    }
+
+    if (fitsRight) {
+      left = menu.x;
+    } else if (fitsLeft) {
+      left = menu.x - width;
+    } else {
+      left = menu.x - width / 2;
+    }
+
+    const maxTop = Math.max(SAFE_MARGIN, viewportHeight - SAFE_MARGIN - height);
+    const maxLeft = Math.max(SAFE_MARGIN, viewportWidth - SAFE_MARGIN - width);
+
+    top = clamp(top, SAFE_MARGIN, maxTop);
+    left = clamp(left, SAFE_MARGIN, maxLeft);
+
+    setPosition((prev) => {
+      if (prev.left === left && prev.top === top) return prev;
+      return { left, top };
+    });
+  }, [menu]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -81,7 +135,7 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
     <div
       ref={menuRef}
       className="grid-context-menu"
-      style={{ left: menu.x, top: menu.y }}
+      style={{ left: position.left, top: position.top }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* Exit Fullscreen */}

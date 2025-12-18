@@ -6,6 +6,7 @@ export interface SystemTemperatures {
 }
 
 export interface Monitor {
+  identifier?: string | null;
   name: string;
   size: { width: number; height: number };
   position: { x: number; y: number };

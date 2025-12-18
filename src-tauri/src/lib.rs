@@ -1,7 +1,6 @@
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::PathBuf;
+use std::{collections::HashMap, fs, path::PathBuf};
 use sysinfo::System;
 use tauri::{Manager, Window};
 
@@ -11,6 +10,12 @@ use layout::{LayoutOperation, LayoutService, LayoutState};
 const GRID_COLUMNS: u8 = 24;
 const GRID_ROWS: u8 = 12;
 
+#[cfg(windows)]
+use windows::core::PCWSTR;
+#[cfg(windows)]
+use windows::Win32::Graphics::Gdi::{
+    EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE, DISPLAY_DEVICE_MIRRORING_DRIVER,
+};
 #[cfg(windows)]
 use wmi::{COMLibrary, Variant, WMIConnection};
 
@@ -32,6 +37,7 @@ impl Default for AppSettings {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Monitor {
+    identifier: Option<String>,
     name: String,
     size: MonitorSize,
     position: MonitorPosition,
@@ -48,6 +54,157 @@ pub struct MonitorSize {
 pub struct MonitorPosition {
     x: i32,
     y: i32,
+}
+
+fn extract_display_identifier(value: &str) -> Option<String> {
+    let upper = value.to_ascii_uppercase();
+    if let Some(pos) = upper.find("DISPLAY") {
+        let remainder = &upper[pos + "DISPLAY".len()..];
+        let digits: String = remainder
+            .chars()
+            .skip_while(|c| !c.is_ascii_digit())
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
+        if digits.is_empty() {
+            None
+        } else {
+            Some(format!("DISPLAY{}", digits))
+        }
+    } else {
+        None
+    }
+}
+
+fn is_raw_display_identifier(value: &str) -> bool {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    let upper = trimmed.to_ascii_uppercase();
+    let without_prefix = upper.strip_prefix("\\\\.\\").unwrap_or(&upper);
+    if let Some(rest) = without_prefix.strip_prefix("DISPLAY") {
+        !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit())
+    } else {
+        false
+    }
+}
+
+#[cfg(windows)]
+fn utf16_buffer_to_string(buffer: &[u16]) -> String {
+    let len = buffer.iter().position(|&c| c == 0).unwrap_or(buffer.len());
+    if len == 0 {
+        String::new()
+    } else {
+        String::from_utf16_lossy(&buffer[..len])
+    }
+}
+
+#[cfg(windows)]
+fn collect_monitor_friendly_names() -> HashMap<String, String> {
+    let mut friendly_names = HashMap::new();
+    let mut adapter_index = 0;
+
+    loop {
+        let mut adapter = DISPLAY_DEVICEW::default();
+        adapter.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
+
+        let adapter_found = unsafe {
+            EnumDisplayDevicesW(PCWSTR::null(), adapter_index, &mut adapter, 0).as_bool()
+        };
+        if !adapter_found {
+            break;
+        }
+
+        let adapter_name = utf16_buffer_to_string(&adapter.DeviceName);
+        if adapter_name.is_empty() {
+            adapter_index += 1;
+            continue;
+        }
+
+        let adapter_ptr = PCWSTR(adapter.DeviceName.as_ptr());
+
+        let mut monitor_index = 0;
+        loop {
+            let mut monitor = DISPLAY_DEVICEW::default();
+            monitor.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
+
+            let monitor_found = unsafe {
+                EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool()
+            };
+
+            if !monitor_found {
+                break;
+            }
+
+            if monitor.StateFlags & DISPLAY_DEVICE_ACTIVE == 0 {
+                monitor_index += 1;
+                continue;
+            }
+
+            let monitor_identifier = utf16_buffer_to_string(&monitor.DeviceName);
+            let mut friendly_name = utf16_buffer_to_string(&monitor.DeviceString);
+
+            if monitor.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER != 0 {
+                friendly_name = if friendly_name.trim().is_empty() {
+                    "Mirror Display".to_string()
+                } else {
+                    format!("Mirror {}", friendly_name.trim())
+                };
+            }
+
+            let friendly_name = friendly_name.trim().to_string();
+            if friendly_name.is_empty() {
+                monitor_index += 1;
+                continue;
+            }
+
+            if let Some(identifier) = extract_display_identifier(&monitor_identifier) {
+                friendly_names
+                    .entry(identifier)
+                    .or_insert_with(|| friendly_name.clone());
+            }
+
+            monitor_index += 1;
+        }
+
+        adapter_index += 1;
+    }
+
+    friendly_names
+}
+
+#[cfg(not(windows))]
+fn collect_monitor_friendly_names() -> HashMap<String, String> {
+    HashMap::new()
+}
+
+fn resolve_monitor_display_name(
+    raw_identifier: Option<&str>,
+    index: usize,
+    friendly_names: &HashMap<String, String>,
+) -> String {
+    let fallback = format!("Monitor {}", index + 1);
+
+    if let Some(raw) = raw_identifier {
+        let trimmed = raw.trim();
+        if let Some(identifier) = extract_display_identifier(trimmed) {
+            if let Some(mapped) = friendly_names.get(&identifier) {
+                return mapped.clone();
+            }
+        }
+
+        if !is_raw_display_identifier(trimmed) && !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+
+    let key_from_index = format!("DISPLAY{}", index + 1);
+    if let Some(mapped) = friendly_names.get(&key_from_index) {
+        return mapped.clone();
+    }
+
+    fallback
 }
 
 fn get_settings_path(app: tauri::AppHandle) -> Result<PathBuf, String> {
@@ -177,22 +334,24 @@ async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String> {
         .available_monitors()
         .map_err(|e| format!("Failed to get available monitors: {}", e))?;
 
-    let primary_name = monitors
-        .and_then(|m| m.name().map(|s| s.to_string()))
-        .unwrap_or_else(|| "Unknown".to_string());
+    let primary_identifier = monitors.and_then(|m| m.name().map(|s| s.to_string()));
+    let friendly_names = collect_monitor_friendly_names();
 
     let mut result = Vec::new();
 
     for (index, monitor) in available_monitors.iter().enumerate() {
-        let name = monitor
-            .name()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| format!("Monitor {}", index + 1));
+        let raw_identifier = monitor.name().map(|s| s.to_string());
+        let name = resolve_monitor_display_name(raw_identifier.as_deref(), index, &friendly_names);
         let size = monitor.size();
         let position = monitor.position();
-        let is_primary = name == primary_name;
+        let is_primary = match (&raw_identifier, &primary_identifier) {
+            (Some(current), Some(primary)) => current == primary,
+            (None, None) => index == 0,
+            _ => false,
+        };
 
         result.push(Monitor {
+            identifier: raw_identifier,
             name,
             size: MonitorSize {
                 width: size.width,
@@ -208,6 +367,7 @@ async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String> {
 
     if result.is_empty() {
         result.push(Monitor {
+            identifier: None,
             name: "Primary Monitor".to_string(),
             size: MonitorSize {
                 width: 1920,
