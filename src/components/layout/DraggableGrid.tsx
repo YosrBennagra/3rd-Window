@@ -296,10 +296,6 @@ export function DraggableGrid() {
         })}
 
         <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} widgets={widgets} widgetComponents={widgetComponents} />
-
-        <button className="grid-overlay-toggle" onClick={toggleDebugGrid} title="Toggle grid overlay">
-          {debugGrid ? 'Hide Grid' : 'Show Grid'}
-        </button>
       </div>
 
       <GridContextMenu
