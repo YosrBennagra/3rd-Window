@@ -9,7 +9,8 @@ export type MenuAction =
   | 'remove-widget'
   | 'add-widget'
   | 'resize'
-  | 'toggle-adjust-grid';
+  | 'toggle-adjust-grid'
+  | 'toggle-lock';
 
 export interface ContextMenuState {
   x: number;
@@ -29,7 +30,7 @@ const defaultWidgetNames: Record<string, string> = {
   'clock': 'Clock',
   'cpu-temp': 'CPU Temperature',
   'gpu-temp': 'GPU Temperature',
-  'mail': 'Mail',
+  'notifications': 'Notifications',
   'chart': 'Chart',
 };
 
@@ -68,6 +69,8 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
     if (widgetDisplayName) return widgetDisplayName(type);
     return defaultWidgetNames[type] || type;
   };
+
+  const isWidgetLocked = menu.widget?.locked ?? false;
 
   const handleItemClick = (action: MenuAction) => {
     onAction(action, menu.widget);
@@ -109,6 +112,14 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
           >
             <span className="grid-context-menu__icon">↔</span>
             Resize
+          </button>
+
+          <button
+            className="grid-context-menu__item"
+            onClick={() => handleItemClick('toggle-lock')}
+          >
+            <span className="grid-context-menu__icon">{isWidgetLocked ? '🔓' : '🔒'}</span>
+            {isWidgetLocked ? 'Unlock Widget' : 'Lock Widget'}
           </button>
 
           <button

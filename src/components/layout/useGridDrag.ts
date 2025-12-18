@@ -112,7 +112,9 @@ export default function useGridDrag({ widgets, moveWidget, getCellFromPointer }:
         top: `${y}px`,
       }));
 
-      const { x: cellX, y: cellY } = getCellFromPointer(ev.clientX, ev.clientY, {
+      const widgetLeft = ev.clientX - dragOffsetRef.current.x;
+      const widgetTop = ev.clientY - dragOffsetRef.current.y;
+      const { x: cellX, y: cellY } = getCellFromPointer(widgetLeft, widgetTop, {
         width: dragInfo.width,
         height: dragInfo.height,
       });

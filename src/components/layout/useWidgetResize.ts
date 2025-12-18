@@ -14,9 +14,16 @@ export interface ResizeState {
   resizingWidgetId: string | null;
   preview: { x: number; y: number; width: number; height: number } | null;
   isResizeBlocked: boolean;
-  setResizingWidgetId: (id: string | null) => void;
+  canConfirmResize: boolean;
+  beginResize: (widget: WidgetLayout) => void;
+  cancelResize: () => void;
+  confirmResize: () => Promise<boolean>;
   handleResizePointerDown: (e: React.PointerEvent, widget: WidgetLayout) => void;
 }
+
+const rectanglesOverlap = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) => {
+  return !(a.x >= b.x + b.width || a.x + a.width <= b.x || a.y >= b.y + b.height || a.y + a.height <= b.y);
+};
 
 export function useWidgetResize({
   grid,
@@ -34,31 +41,54 @@ export function useWidgetResize({
     id: string;
     startX: number;
     startY: number;
-    startWidth: number;
-    startHeight: number;
     widgetType: string;
   } | null>(null);
-  const queuedSizeRef = useRef<{ width: number; height: number } | null>(null);
-  const processingRef = useRef(false);
+  const originalLayoutRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const pendingSizeRef = useRef<{ width: number; height: number } | null>(null);
 
-  const enqueueResize = useCallback(() => {
-    if (processingRef.current || !resizeInfo.current || !queuedSizeRef.current) return;
-    const target = queuedSizeRef.current;
-    queuedSizeRef.current = null;
-    processingRef.current = true;
+  const cancelResize = useCallback(() => {
+    resizePointerId.current = null;
+    resizeInfo.current = null;
+    originalLayoutRef.current = null;
+    pendingSizeRef.current = null;
+    setPreview(null);
+    setResizingWidgetId(null);
+    setIsResizeBlocked(false);
+  }, []);
 
-    resizeWidget(resizeInfo.current.id, target)
-      .then((ok) => setIsResizeBlocked(!ok))
-      .catch(() => setIsResizeBlocked(true))
-      .finally(() => {
-        processingRef.current = false;
-        if (queuedSizeRef.current) enqueueResize();
-      });
-  }, [resizeWidget]);
+  const beginResize = useCallback((widget: WidgetLayout) => {
+    resizePointerId.current = null;
+    resizeInfo.current = null;
+    originalLayoutRef.current = { x: widget.x, y: widget.y, width: widget.width, height: widget.height };
+    pendingSizeRef.current = { width: widget.width, height: widget.height };
+    setPreview({ x: widget.x, y: widget.y, width: widget.width, height: widget.height });
+    setIsResizeBlocked(false);
+    setResizingWidgetId(widget.id);
+  }, []);
+
+  const confirmResize = useCallback(async () => {
+    if (!resizingWidgetId || !preview) return false;
+    if (isResizeBlocked) return false;
+    const original = originalLayoutRef.current;
+    const pending = pendingSizeRef.current ?? { width: preview.width, height: preview.height };
+    if (!pending) return false;
+    if (original && original.width === pending.width && original.height === pending.height) {
+      cancelResize();
+      return true;
+    }
+    const ok = await resizeWidget(resizingWidgetId, pending);
+    if (ok) {
+      cancelResize();
+    } else {
+      setIsResizeBlocked(true);
+    }
+    return ok;
+  }, [cancelResize, isResizeBlocked, preview, resizeWidget, resizingWidgetId]);
 
   const handleResizePointerDown = useCallback(
     (e: React.PointerEvent, widget: WidgetLayout) => {
       if (e.button !== 0) return;
+      if (widget.id !== resizingWidgetId) return;
       e.preventDefault();
       e.stopPropagation();
 
@@ -67,12 +97,8 @@ export function useWidgetResize({
         id: widget.id,
         startX: widget.x,
         startY: widget.y,
-        startWidth: widget.width,
-        startHeight: widget.height,
         widgetType: widget.widgetType,
       };
-      setResizingWidgetId(widget.id);
-      setPreview({ x: widget.x, y: widget.y, width: widget.width, height: widget.height });
 
       try {
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -80,7 +106,7 @@ export function useWidgetResize({
         // ignore
       }
     },
-    [],
+    [resizingWidgetId],
   );
 
   useEffect(() => {
@@ -94,7 +120,7 @@ export function useWidgetResize({
       const widget = widgets.find((w) => w.id === info.id);
       if (!widget) return;
 
-      const constraints = getConstraints(widget.widgetType);
+      const constraints = getConstraints(info.widgetType);
       const minWidth = constraints?.minWidth ?? 1;
       const minHeight = constraints?.minHeight ?? 1;
       const maxWidth = constraints?.maxWidth ?? grid.columns;
@@ -104,12 +130,17 @@ export function useWidgetResize({
       const targetWidth = clampToRange(targetCell.x - info.startX + 1, minWidth, Math.min(maxWidth, grid.columns - info.startX));
       const targetHeight = clampToRange(targetCell.y - info.startY + 1, minHeight, Math.min(maxHeight, grid.rows - info.startY));
 
-      if (targetWidth === widget.width && targetHeight === widget.height) return;
+      const candidate = { x: info.startX, y: info.startY, width: targetWidth, height: targetHeight };
+      setPreview(candidate);
 
-      const nextPreview = { x: widget.x, y: widget.y, width: targetWidth, height: targetHeight };
-      setPreview(nextPreview);
-      queuedSizeRef.current = { width: targetWidth, height: targetHeight };
-      enqueueResize();
+      const overlaps = widgets.some((other) => other.id !== info.id && rectanglesOverlap(candidate, other));
+      if (overlaps) {
+        setIsResizeBlocked(true);
+        pendingSizeRef.current = null;
+      } else {
+        setIsResizeBlocked(false);
+        pendingSizeRef.current = { width: targetWidth, height: targetHeight };
+      }
     };
 
     const onEnd = (ev: PointerEvent) => {
@@ -124,11 +155,6 @@ export function useWidgetResize({
       }
       resizePointerId.current = null;
       resizeInfo.current = null;
-      queuedSizeRef.current = null;
-      processingRef.current = false;
-      setResizingWidgetId(null);
-      setPreview(null);
-      setIsResizeBlocked(false);
     };
 
     window.addEventListener('pointermove', onMove);
@@ -140,20 +166,33 @@ export function useWidgetResize({
       window.removeEventListener('pointerup', onEnd);
       window.removeEventListener('pointercancel', onEnd);
     };
-  }, [enqueueResize, getCellFromPointer, grid.columns, grid.rows, getConstraints, widgets]);
+  }, [getCellFromPointer, grid.columns, grid.rows, getConstraints, widgets]);
 
   useEffect(() => {
     if (resizingWidgetId && !widgets.find((w) => w.id === resizingWidgetId)) {
-      setResizingWidgetId(null);
-      setPreview(null);
+      cancelResize();
     }
-  }, [widgets, resizingWidgetId]);
+  }, [widgets, resizingWidgetId, cancelResize]);
+
+  const canConfirmResize =
+    Boolean(
+      resizingWidgetId &&
+        preview &&
+        pendingSizeRef.current &&
+        originalLayoutRef.current &&
+        !isResizeBlocked &&
+        (pendingSizeRef.current.width !== originalLayoutRef.current.width ||
+          pendingSizeRef.current.height !== originalLayoutRef.current.height),
+    );
 
   return {
     resizingWidgetId,
     preview,
     isResizeBlocked,
-    setResizingWidgetId,
+    canConfirmResize,
+    beginResize,
+    cancelResize,
+    confirmResize,
     handleResizePointerDown,
   };
 }

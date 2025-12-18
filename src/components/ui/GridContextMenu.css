@@ -37,6 +37,15 @@
   transition: background 0.15s ease;
 }
 
+.grid-context-menu__item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.grid-context-menu__item:disabled:hover {
+  background: none;
+}
+
 .grid-context-menu__item:hover {
   background: rgba(99, 102, 241, 0.2);
 }

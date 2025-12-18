@@ -1,13 +1,13 @@
 import type { WidgetConfig } from '../types/widget';
-import { ChartWidget, ClockWidget, MailWidget } from '../components/widgets';
+import { ChartWidget, ClockWidget, NotificationsWidget } from '../components/widgets';
 
 export const widgetRegistry: WidgetConfig[] = [
   {
-    id: 'mail',
-    name: 'Mail',
-    description: 'Unread messages and triage tools',
-    icon: '📨',
-    component: MailWidget,
+    id: 'notifications',
+    name: 'Notifications',
+    description: 'Unread alerts and mentions',
+    icon: 'ĐY"ù',
+    component: NotificationsWidget,
     defaultSize: 'large',
     minSize: { width: 3, height: 2 },
     maxSize: { width: 5, height: 4 },
@@ -16,7 +16,7 @@ export const widgetRegistry: WidgetConfig[] = [
     id: 'clock',
     name: 'Date & Time',
     description: 'Displays current time and date',
-    icon: '🕐',
+    icon: 'ĐY?',
     component: ClockWidget,
     defaultSize: 'medium',
   },
@@ -24,7 +24,7 @@ export const widgetRegistry: WidgetConfig[] = [
     id: 'chart',
     name: 'Chart',
     description: 'Mini KPI card with sparkline',
-    icon: '📈',
+    icon: 'ĐY"^',
     component: ChartWidget,
     defaultSize: 'medium',
     minSize: { width: 3, height: 2 },
@@ -33,5 +33,5 @@ export const widgetRegistry: WidgetConfig[] = [
 ];
 
 export function getWidgetById(id: string): WidgetConfig | undefined {
-  return widgetRegistry.find(widget => widget.id === id);
+  return widgetRegistry.find((widget) => widget.id === id);
 }

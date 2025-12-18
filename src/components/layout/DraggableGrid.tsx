@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGridStore } from '../../store/gridStore';
 import { useStore } from '../../store';
 import GridGhost from './GridGhost';
@@ -11,12 +11,12 @@ import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/G
 import { WidgetSettingsPanel, AddWidgetPanel } from '../panels';
 import type { WidgetLayout } from '../../types/layout';
 import { clampToRange } from './gridMath';
-import { ClockWidget, ChartWidget, MailWidget } from '../widgets';
+import { ClockWidget, ChartWidget, NotificationsWidget } from '../widgets';
 
 const GAP_SIZE = 12;
 
 const widgetComponents: Record<string, React.ComponentType> = {
-  mail: MailWidget,
+  notifications: NotificationsWidget,
   clock: ClockWidget,
   chart: ChartWidget,
 };
@@ -34,6 +34,7 @@ export function DraggableGrid() {
     debugGrid,
     toggleDebugGrid,
     getConstraints,
+    setWidgetLock,
   } = useGridStore();
   const { setFullscreen, toggleSettings } = useStore();
 
@@ -115,7 +116,10 @@ export function DraggableGrid() {
     resizingWidgetId,
     preview: resizePreview,
     isResizeBlocked,
-    setResizingWidgetId,
+    canConfirmResize,
+    beginResize,
+    cancelResize: cancelResizeMode,
+    confirmResize,
     handleResizePointerDown,
   } = useWidgetResize({
     grid,
@@ -127,11 +131,26 @@ export function DraggableGrid() {
 
   const previewArea = resizePreview ?? dragPreview;
   const isBlocked = isDragBlocked || isResizeBlocked;
+  const handleResizeConfirmAction = useCallback(() => {
+    void confirmResize();
+  }, [confirmResize]);
 
-  const handleRemoveWidget = (id: string) => {
-    void removeWidget(id);
-  };
+  const handleWidgetPointerDownSafe = useCallback(
+    (e: React.PointerEvent, widget: WidgetLayout) => {
+      if (widget.locked) return;
+      if (resizingWidgetId) return;
+      handleWidgetPointerDown(e, widget);
+    },
+    [handleWidgetPointerDown, resizingWidgetId],
+  );
 
+  const handleResizePointerDownSafe = useCallback(
+    (e: React.PointerEvent, widget: WidgetLayout) => {
+      if (widget.locked) return;
+      handleResizePointerDown(e, widget);
+    },
+    [handleResizePointerDown],
+  );
   const handleContextMenu = (e: React.MouseEvent, widget: WidgetLayout | null) => {
     e.preventDefault();
     e.stopPropagation();
@@ -140,6 +159,9 @@ export function DraggableGrid() {
 
   const handleGridContextMenu = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.grid-widget')) return;
+    if (resizingWidgetId) {
+      cancelResizeMode();
+    }
     handleContextMenu(e, null);
   };
 
@@ -162,8 +184,8 @@ export function DraggableGrid() {
         }
         break;
       case 'resize':
-        if (widget) {
-          setResizingWidgetId(widget.id);
+        if (widget && !widget.locked) {
+          beginResize(widget);
         }
         break;
       case 'toggle-adjust-grid':
@@ -177,6 +199,14 @@ export function DraggableGrid() {
       case 'add-widget':
         setActivePanel('add-widget');
         break;
+      case 'toggle-lock':
+        if (widget) {
+          if (resizingWidgetId === widget.id) {
+            cancelResizeMode();
+          }
+          void setWidgetLock(widget.id, !(widget.locked ?? false));
+        }
+        break;
     }
   };
 
@@ -187,28 +217,28 @@ export function DraggableGrid() {
   const handleClosePanel = () => {
     setActivePanel(null);
     setSelectedWidget(null);
-    setResizingWidgetId(null);
+    cancelResizeMode();
   };
 
   const availableWidgets = useMemo(
     () => [
       {
-        id: 'mail',
-        name: 'Mail',
-        description: 'Unread messages and quick triage',
-        isActive: widgets.some((widget) => widget.widgetType === 'mail'),
+        id: 'notifications',
+        name: 'Notifications',
+        description: 'Latest alerts and mentions',
+        isActive: false,
       },
       {
         id: 'clock',
         name: 'Clock',
         description: 'Analog + digital clock',
-        isActive: widgets.some((widget) => widget.widgetType === 'clock'),
+        isActive: false,
       },
       {
         id: 'chart',
         name: 'Chart',
         description: 'Compact sparkline + KPI',
-        isActive: widgets.some((widget) => widget.widgetType === 'chart'),
+        isActive: false,
       },
     ],
     [widgets],
@@ -224,6 +254,16 @@ export function DraggableGrid() {
     [grid.columns, grid.rows],
   );
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && resizingWidgetId) {
+        cancelResizeMode();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cancelResizeMode, resizingWidgetId]);
+
   return (
     <>
       <div
@@ -233,8 +273,11 @@ export function DraggableGrid() {
         onContextMenu={handleGridContextMenu}
         onPointerDown={(e) => {
           if (!e.defaultPrevented) {
-            setResizingWidgetId(null);
             cancelDrag();
+            const clickedWidget = (e.target as HTMLElement).closest('.grid-widget');
+            if (!clickedWidget && resizingWidgetId) {
+              cancelResizeMode();
+            }
           }
         }}
       >
@@ -248,12 +291,14 @@ export function DraggableGrid() {
               key={widget.id}
               widget={widget}
               WidgetComponent={WidgetComponent}
-              handleWidgetPointerDown={handleWidgetPointerDown}
-              handleRemoveWidget={handleRemoveWidget}
-              handleResizePointerDown={handleResizePointerDown}
+              handleWidgetPointerDown={handleWidgetPointerDownSafe}
+              handleResizePointerDown={handleResizePointerDownSafe}
               handleContextMenu={handleContextMenu}
               dragInfo={dragInfo}
               isResizing={resizingWidgetId === widget.id}
+              onResizeConfirm={handleResizeConfirmAction}
+              onResizeCancel={cancelResizeMode}
+              canConfirmResize={canConfirmResize}
             />
           );
         })}

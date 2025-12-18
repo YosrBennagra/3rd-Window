@@ -1,3 +1,3 @@
 export { ClockWidget } from './ClockWidget';
-export { MailWidget } from './MailWidget';
+export { NotificationsWidget } from './NotificationsWidget';
 export { ChartWidget } from './ChartWidget';

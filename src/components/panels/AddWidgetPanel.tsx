@@ -15,7 +15,6 @@ interface Props {
 
 export default function AddWidgetPanel({ onClose, onAdd, widgets }: Props) {
   const handleAdd = (widgetType: string, isActive: boolean) => {
-    if (isActive) return;
     onAdd(widgetType);
     onClose();
   };

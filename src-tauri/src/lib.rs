@@ -8,8 +8,8 @@ use tauri::{Manager, Window};
 mod layout;
 use layout::{LayoutOperation, LayoutService, LayoutState};
 
-const GRID_COLUMNS: u8 = 5;
-const GRID_ROWS: u8 = 4;
+const GRID_COLUMNS: u8 = 24;
+const GRID_ROWS: u8 = 12;
 
 #[cfg(windows)]
 use wmi::{COMLibrary, Variant, WMIConnection};

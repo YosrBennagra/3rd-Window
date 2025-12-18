@@ -66,11 +66,30 @@ body {
   padding: var(--space-lg);
   box-shadow: var(--shadow-md);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
 }
 
 .widget:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
+}
+
+.widget ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.widget ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.widget ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+}
+
+.widget ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
 }
 
 .widget--small {
@@ -130,19 +149,33 @@ body {
   color: var(--color-text-muted);
 }
 
-.mail-widget {
+.notifications-widget {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transform: none;
+  box-shadow: inset 0 0 0 1px var(--glass-border);
 }
 
-.mail-widget__list {
+.notifications-widget:hover {
+  transform: none;
+}
+
+.notifications-widget__list {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
-.mail-widget__item {
+.notifications-widget__item {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
@@ -151,17 +184,17 @@ body {
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.mail-widget__item:hover {
+.notifications-widget__item:hover {
   border-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
 }
 
-.mail-widget__item--unread {
+.notifications-widget__item--unread {
   border-color: rgba(99, 102, 241, 0.5);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
 }
 
-.mail-widget__meta {
+.notifications-widget__meta {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
@@ -169,15 +202,15 @@ body {
   margin-bottom: 4px;
 }
 
-.mail-widget__from {
+.notifications-widget__source {
   font-weight: 600;
 }
 
-.mail-widget__time {
+.notifications-widget__time {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.mail-widget__subject {
+.notifications-widget__message {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.95);
 }

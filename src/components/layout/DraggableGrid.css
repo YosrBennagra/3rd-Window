@@ -43,6 +43,14 @@
   will-change: transform;
 }
 
+.grid-widget--locked {
+  cursor: default;
+}
+
+.grid-widget--locked .grid-widget__content {
+  opacity: 0.85;
+}
+
 .grid-widget:hover {
   z-index: 2;
 }
@@ -102,6 +110,16 @@
   transform: scale(1.1);
 }
 
+.grid-widget__lock-indicator {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 14px;
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 12;
+}
+
 .grid-widget__resize-handle {
   position: absolute;
   width: 14px;
@@ -141,6 +159,42 @@
   bottom: -6px;
   right: -6px;
   cursor: se-resize;
+}
+
+.grid-widget__resize-controls {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  display: flex;
+  gap: 6px;
+  z-index: 50;
+}
+
+.grid-widget__resize-control {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grid-widget__resize-control:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.grid-widget__resize-control--confirm {
+  background: #10b981;
+}
+
+.grid-widget__resize-control--cancel {
+  background: #ef4444;
 }
 
 .grid-overlay-toggle {

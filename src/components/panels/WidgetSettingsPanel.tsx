@@ -2,11 +2,11 @@ import type { WidgetLayout } from '../../types/layout';
 import './Panel.css';
 
 const widgetNames: Record<string, string> = {
-  'clock': 'Clock',
+  clock: 'Clock',
   'cpu-temp': 'CPU Temperature',
   'gpu-temp': 'GPU Temperature',
-  'mail': 'Mail',
-  'chart': 'Chart',
+  notifications: 'Notifications',
+  chart: 'Chart',
 };
 
 interface Props {

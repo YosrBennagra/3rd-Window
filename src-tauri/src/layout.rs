@@ -25,6 +25,8 @@ pub struct WidgetLayout {
     pub y: u8,
     pub width: u8,
     pub height: u8,
+    #[serde(default)]
+    pub locked: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +45,8 @@ pub struct WidgetSlot {
     pub y: u8,
     pub width: u8,
     pub height: u8,
+    #[serde(default)]
+    pub locked: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -65,6 +69,10 @@ pub enum LayoutOperation {
     RemoveWidget {
         id: String,
     },
+    SetWidgetLock {
+        id: String,
+        locked: bool,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -82,6 +90,7 @@ pub enum LayoutError {
     Collision(String),
     OutOfBounds(String),
     InvalidSize(String),
+    Locked(String),
 }
 
 impl std::fmt::Display for LayoutError {
@@ -92,6 +101,7 @@ impl std::fmt::Display for LayoutError {
             LayoutError::Collision(msg) => write!(f, "Collision: {}", msg),
             LayoutError::OutOfBounds(msg) => write!(f, "Out of bounds: {}", msg),
             LayoutError::InvalidSize(msg) => write!(f, "Invalid size: {}", msg),
+            LayoutError::Locked(id) => write!(f, "Widget is locked: {}", id),
         }
     }
 }
@@ -107,30 +117,39 @@ impl WidgetRegistry {
     pub fn new() -> Self {
         let mut constraints = HashMap::new();
         constraints.insert(
+            "notifications".to_string(),
+            WidgetConstraints {
+                min_width: 6,
+                min_height: 4,
+                max_width: 24,
+                max_height: 12,
+            },
+        );
+        constraints.insert(
             "mail".to_string(),
             WidgetConstraints {
-                min_width: 3,
-                min_height: 2,
-                max_width: 5,
-                max_height: 4,
+                min_width: 6,
+                min_height: 4,
+                max_width: 24,
+                max_height: 12,
             },
         );
         constraints.insert(
             "clock".to_string(),
             WidgetConstraints {
-                min_width: 1,
-                min_height: 1,
-                max_width: 3,
-                max_height: 3,
+                min_width: 4,
+                min_height: 2,
+                max_width: 12,
+                max_height: 8,
             },
         );
         constraints.insert(
             "chart".to_string(),
             WidgetConstraints {
-                min_width: 3,
-                min_height: 2,
-                max_width: 5,
-                max_height: 4,
+                min_width: 6,
+                min_height: 4,
+                max_width: 24,
+                max_height: 12,
             },
         );
 
@@ -320,6 +339,7 @@ impl GridManager {
                     y: layout.y,
                     width: layout.width,
                     height: layout.height,
+                    locked: layout.locked.unwrap_or(false),
                 };
                 self.upsert_widget(widget)
             }
@@ -330,6 +350,9 @@ impl GridManager {
                     .find(|w| w.id == id)
                     .cloned()
                     .ok_or_else(|| LayoutError::UnknownId(id.clone()))?;
+                if widget.locked {
+                    return Err(LayoutError::Locked(id));
+                }
                 widget.x = x;
                 widget.y = y;
                 self.upsert_widget(widget)
@@ -341,11 +364,24 @@ impl GridManager {
                     .find(|w| w.id == id)
                     .cloned()
                     .ok_or_else(|| LayoutError::UnknownId(id.clone()))?;
+                if widget.locked {
+                    return Err(LayoutError::Locked(id));
+                }
                 widget.width = width;
                 widget.height = height;
                 self.upsert_widget(widget)
             }
             LayoutOperation::RemoveWidget { id } => self.remove_widget(&id),
+            LayoutOperation::SetWidgetLock { id, locked } => {
+                let mut widget = self
+                    .widgets
+                    .iter()
+                    .find(|w| w.id == id)
+                    .cloned()
+                    .ok_or_else(|| LayoutError::UnknownId(id.clone()))?;
+                widget.locked = locked;
+                self.upsert_widget(widget)
+            }
         };
 
         match result {
@@ -369,28 +405,31 @@ impl GridManager {
 fn default_widgets(grid: &GridConfig) -> Vec<WidgetLayout> {
     vec![
         WidgetLayout {
-            id: "mail-demo".to_string(),
-            widget_type: "mail".to_string(),
+            id: "notifications-demo".to_string(),
+            widget_type: "notifications".to_string(),
             x: 0,
             y: 0,
-            width: 3,
-            height: 2,
+            width: 6,
+            height: 4,
+            locked: false,
         },
         WidgetLayout {
             id: "clock-demo".to_string(),
             widget_type: "clock".to_string(),
-            x: grid.columns.saturating_sub(2),
+            x: grid.columns.saturating_sub(4),
             y: 0,
-            width: 2,
+            width: 4,
             height: 2,
+            locked: false,
         },
         WidgetLayout {
             id: "chart-demo".to_string(),
             widget_type: "chart".to_string(),
             x: 0,
-            y: grid.rows.saturating_sub(2),
-            width: 3,
-            height: 2,
+            y: grid.rows.saturating_sub(4),
+            width: 6,
+            height: 4,
+            locked: false,
         },
     ]
 }

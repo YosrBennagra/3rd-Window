@@ -10,6 +10,7 @@ export interface WidgetLayout {
   y: number;
   width: number;
   height: number;
+  locked?: boolean;
 }
 
 export interface LayoutState {
@@ -35,8 +36,10 @@ export type LayoutOperation =
         y: number;
         width: number;
         height: number;
+        locked?: boolean;
       };
     }
   | { type: 'moveWidget'; id: string; x: number; y: number }
   | { type: 'resizeWidget'; id: string; width: number; height: number }
-  | { type: 'removeWidget'; id: string };
+  | { type: 'removeWidget'; id: string }
+  | { type: 'setWidgetLock'; id: string; locked: boolean };
