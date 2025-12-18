@@ -119,3 +119,67 @@ export function ensureClockWidgetSettings(settings?: unknown): ClockWidgetSettin
 
   return merged as ClockWidgetSettings;
 }
+
+// Notification Widget Settings (Source-Based Architecture)
+export type NotificationSource = 'discord' | 'mail' | 'system' | 'custom';
+export type NotificationTimeFormat = 'relative' | 'absolute';
+
+export interface NotificationWidgetSettings {
+  source: NotificationSource;
+  // Discord-specific settings
+  showMentionsOnly: boolean;
+  includeDMs: boolean;
+  timeFormat: NotificationTimeFormat;
+  openOnClick: boolean;
+  // Future: Mail/System specific settings can be added here
+  [key: string]: unknown;
+}
+
+export const NOTIFICATION_WIDGET_DEFAULT_SETTINGS: NotificationWidgetSettings = {
+  source: 'discord',
+  showMentionsOnly: false,
+  includeDMs: true,
+  timeFormat: 'relative',
+  openOnClick: false,
+};
+
+export function ensureNotificationWidgetSettings(settings?: unknown): NotificationWidgetSettings {
+  if (!settings || typeof settings !== 'object') {
+    return { ...NOTIFICATION_WIDGET_DEFAULT_SETTINGS };
+  }
+
+  const candidate = settings as Partial<NotificationWidgetSettings>;
+  const merged: Record<string, unknown> = {
+    ...NOTIFICATION_WIDGET_DEFAULT_SETTINGS,
+    ...(candidate as Record<string, unknown>),
+  };
+
+  // Source selection
+  const validSources: NotificationSource[] = ['discord', 'mail', 'system', 'custom'];
+  merged.source = validSources.includes(candidate.source as NotificationSource)
+    ? (candidate.source as NotificationSource)
+    : NOTIFICATION_WIDGET_DEFAULT_SETTINGS.source;
+
+  // Discord-specific settings
+  merged.showMentionsOnly = typeof candidate.showMentionsOnly === 'boolean' 
+    ? candidate.showMentionsOnly 
+    : NOTIFICATION_WIDGET_DEFAULT_SETTINGS.showMentionsOnly;
+  
+  merged.includeDMs = typeof candidate.includeDMs === 'boolean'
+    ? candidate.includeDMs
+    : NOTIFICATION_WIDGET_DEFAULT_SETTINGS.includeDMs;
+  
+  merged.timeFormat = candidate.timeFormat === 'absolute' ? 'absolute' : 'relative';
+  
+  merged.openOnClick = typeof candidate.openOnClick === 'boolean'
+    ? candidate.openOnClick
+    : NOTIFICATION_WIDGET_DEFAULT_SETTINGS.openOnClick;
+
+  return merged as NotificationWidgetSettings;
+}
+
+// Legacy Discord-only settings (for backward compatibility)
+export type DiscordTimeFormat = NotificationTimeFormat;
+export interface DiscordNotificationsSettings extends NotificationWidgetSettings {}
+export const DISCORD_NOTIFICATIONS_DEFAULT_SETTINGS = NOTIFICATION_WIDGET_DEFAULT_SETTINGS;
+export const ensureDiscordNotificationsSettings = ensureNotificationWidgetSettings;

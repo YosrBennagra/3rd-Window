@@ -20,7 +20,7 @@ export default function GridGhost({ ghostStyle, dragInfo, widgets, widgetCompone
     <div className="grid-widget grid-widget--ghost" style={ghostStyle}>
       {movingWidget && (
         <div className="grid-widget__content" aria-hidden="true">
-          {Comp ? <Comp /> : null}
+          {Comp ? <Comp widget={movingWidget} /> : null}
         </div>
       )}
     </div>

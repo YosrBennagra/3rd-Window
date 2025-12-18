@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { WidgetLayout } from '../../types/layout';
-import type { ClockWidgetSettings } from '../../types/widgets';
-import { ensureClockWidgetSettings } from '../../types/widgets';
+import type { ClockWidgetSettings, NotificationWidgetSettings } from '../../types/widgets';
+import { ensureClockWidgetSettings, ensureNotificationWidgetSettings } from '../../types/widgets';
 import './Panel.css';
 
 const widgetNames: Record<string, string> = {
@@ -13,9 +13,9 @@ const widgetNames: Record<string, string> = {
 
 interface Props {
   widget: WidgetLayout;
-  previewSettings?: ClockWidgetSettings;
-  onPreviewChange: (settings: ClockWidgetSettings) => void;
-  onApply: (settings: ClockWidgetSettings) => Promise<void> | void;
+  previewSettings?: ClockWidgetSettings | NotificationWidgetSettings;
+  onPreviewChange: (settings: ClockWidgetSettings | NotificationWidgetSettings) => void;
+  onApply: (settings: ClockWidgetSettings | NotificationWidgetSettings) => Promise<void> | void;
   onCancel: () => void;
 }
 
@@ -319,14 +319,173 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
     </>
   );
 
+  const renderNotificationSettings = () => {
+    const notifSettings = ensureNotificationWidgetSettings(previewSettings ?? widget.settings);
+    const [notifDraft, setNotifDraft] = useState(notifSettings);
+
+    useEffect(() => {
+      setNotifDraft(ensureNotificationWidgetSettings(previewSettings ?? widget.settings));
+    }, [previewSettings, widget]);
+
+    const handleNotifUpdate = (partial: Partial<NotificationWidgetSettings>) => {
+      const next = ensureNotificationWidgetSettings({ ...notifDraft, ...partial });
+      setNotifDraft(next);
+      onPreviewChange(next);
+    };
+
+    const sourceLabels = {
+      discord: 'Discord',
+      mail: 'Mail',
+      system: 'System',
+      custom: 'Custom',
+    };
+
+    return (
+      <>
+        <section className="panel__section">
+          <h3 className="panel__section-title">Notification Source</h3>
+          <div className="panel__control-group">
+            <label className="panel__control-label">Select Source</label>
+            <div className="panel__options panel__options--column">
+              {(Object.keys(sourceLabels) as Array<keyof typeof sourceLabels>).map((source) => (
+                <label key={source} className="panel__option">
+                  <input
+                    type="radio"
+                    name={`${widget.id}-source`}
+                    checked={notifDraft.source === source}
+                    onChange={() => handleNotifUpdate({ source })}
+                  />
+                  {sourceLabels[source]}
+                  {source !== 'discord' && <span style={{ marginLeft: '8px', opacity: 0.5 }}>(Coming soon)</span>}
+                </label>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {notifDraft.source === 'discord' && (
+          <>
+            <section className="panel__section">
+              <h3 className="panel__section-title">Content Filtering</h3>
+              <div className="panel__control-group">
+                <label className="panel__control-label">Show Notifications</label>
+                <div className="panel__options panel__options--column">
+                  <label className="panel__option">
+                    <input
+                      type="radio"
+                      name={`${widget.id}-filter`}
+                      checked={!notifDraft.showMentionsOnly}
+                      onChange={() => handleNotifUpdate({ showMentionsOnly: false })}
+                    />
+                    All notifications
+                  </label>
+                  <label className="panel__option">
+                    <input
+                      type="radio"
+                      name={`${widget.id}-filter`}
+                      checked={notifDraft.showMentionsOnly}
+                      onChange={() => handleNotifUpdate({ showMentionsOnly: true })}
+                    />
+                    Mentions only
+                  </label>
+                </div>
+              </div>
+
+              <div className="panel__control-group">
+                <label className="panel__control-label">Direct Messages</label>
+                <div className="panel__options panel__options--column">
+                  <label className="panel__option">
+                    <input
+                      type="radio"
+                      name={`${widget.id}-dms`}
+                      checked={notifDraft.includeDMs}
+                      onChange={() => handleNotifUpdate({ includeDMs: true })}
+                    />
+                    Include DMs
+                  </label>
+                  <label className="panel__option">
+                    <input
+                      type="radio"
+                      name={`${widget.id}-dms`}
+                      checked={!notifDraft.includeDMs}
+                      onChange={() => handleNotifUpdate({ includeDMs: false })}
+                    />
+                    Hide DMs
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section className="panel__section">
+              <h3 className="panel__section-title">Display</h3>
+              <div className="panel__control-group">
+                <label className="panel__control-label">Time Format</label>
+                <div className="panel__options panel__options--column">
+                  <label className="panel__option">
+                    <input
+                      type="radio"
+                      name={`${widget.id}-time-format`}
+                      checked={notifDraft.timeFormat === 'relative'}
+                      onChange={() => handleNotifUpdate({ timeFormat: 'relative' })}
+                    />
+                    Relative (2m ago, 1h ago)
+                  </label>
+                  <label className="panel__option">
+                    <input
+                      type="radio"
+                      name={`${widget.id}-time-format`}
+                      checked={notifDraft.timeFormat === 'absolute'}
+                      onChange={() => handleNotifUpdate({ timeFormat: 'absolute' })}
+                    />
+                    Absolute (3:45 PM)
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section className="panel__section">
+              <h3 className="panel__section-title">Interaction</h3>
+              <div className="panel__control-group">
+                <label className="panel__control-label">On Click</label>
+                <div className="panel__options panel__options--column">
+                  <label className="panel__option">
+                    <input
+                      type="radio"
+                      name={`${widget.id}-click`}
+                      checked={notifDraft.openOnClick}
+                      onChange={() => handleNotifUpdate({ openOnClick: true })}
+                    />
+                    Open Discord
+                  </label>
+                  <label className="panel__option">
+                    <input
+                      type="radio"
+                      name={`${widget.id}-click`}
+                      checked={!notifDraft.openOnClick}
+                      onChange={() => handleNotifUpdate({ openOnClick: false })}
+                    />
+                    Do nothing
+                  </label>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+      </>
+    );
+  };
+
   const renderContent = () => {
     if (widget.widgetType === 'clock') {
       return renderClockSettings();
     }
+    if (widget.widgetType === 'notifications') {
+      return renderNotificationSettings();
+    }
     return <p className="panel__placeholder">Widget settings for "{widgetName}" coming soon...</p>;
   };
 
-  const showActions = widget.widgetType === 'clock';
+  const showActions = widget.widgetType === 'clock' || widget.widgetType === 'notifications';
 
   return (
     <div className="panel-overlay" onClick={handleCancel}>

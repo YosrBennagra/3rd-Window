@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 import type { GridConfig, LayoutOperation, LayoutState, WidgetConstraints, WidgetLayout } from '../types/layout';
-import { CLOCK_WIDGET_DEFAULT_SETTINGS, ensureClockWidgetSettings } from '../types/widgets';
+import { 
+  CLOCK_WIDGET_DEFAULT_SETTINGS, 
+  ensureClockWidgetSettings,
+  NOTIFICATION_WIDGET_DEFAULT_SETTINGS,
+  ensureNotificationWidgetSettings 
+} from '../types/widgets';
 
 export const DEFAULT_GRID: GridConfig = { columns: 24, rows: 12 };
 export const GRID_COLS = DEFAULT_GRID.columns;
@@ -38,13 +43,16 @@ const isTauriRuntime = (() => {
 })();
 
 const WIDGET_CONSTRAINTS: Record<string, WidgetConstraints> = {
-  notifications: { minWidth: 6, minHeight: 4, maxWidth: 24, maxHeight: 12 },
+  notifications: { minWidth: 3, minHeight: 2, maxWidth: 24, maxHeight: 12 },
   clock: { minWidth: CLOCK_MIN_WIDTH, minHeight: CLOCK_MIN_HEIGHT, maxWidth: 12, maxHeight: 8 },
 };
 
 const getDefaultWidgetSettings = (widgetType: string): Record<string, unknown> | undefined => {
   if (widgetType === 'clock') {
     return { ...CLOCK_WIDGET_DEFAULT_SETTINGS };
+  }
+  if (widgetType === 'notifications') {
+    return { ...NOTIFICATION_WIDGET_DEFAULT_SETTINGS };
   }
   return undefined;
 };
@@ -58,12 +66,14 @@ const clampLayoutToGrid = (widget: WidgetLayout, grid: GridConfig): WidgetLayout
 };
 
 const normalizeWidget = (widget: WidgetLayout, grid: GridConfig = DEFAULT_GRID): WidgetLayout => {
-  const nextType = widget.widgetType === 'mail' ? 'notifications' : widget.widgetType;
+  const nextType = widget.widgetType === 'mail' || widget.widgetType === 'discord' ? 'notifications' : widget.widgetType;
   const defaultSettings = getDefaultWidgetSettings(nextType);
   let settings: Record<string, unknown> | undefined;
 
   if (nextType === 'clock') {
     settings = ensureClockWidgetSettings(widget.settings) as unknown as Record<string, unknown>;
+  } else if (nextType === 'notifications') {
+    settings = ensureNotificationWidgetSettings(widget.settings) as unknown as Record<string, unknown>;
   } else if (widget.settings) {
     settings = { ...widget.settings };
   } else if (defaultSettings) {
@@ -333,7 +343,7 @@ export const useGridStore = create<GridState>((set, get) => ({
 
       // Migrate old grids to 24×12
       if (state?.grid && ((state.grid.columns === 5 && state.grid.rows === 4) || (state.grid.columns === 12 && state.grid.rows === 24))) {
-        console.log(`[dashboard] migrating ${state.grid.columns}×${state.grid.rows} layout to 24×12`);
+        // Migration from old grid size to 24×12
         const scaleX = state.grid.columns === 5 ? 4.8 : 2;
         const scaleY = state.grid.rows === 4 ? 3 : 0.5;
         const migratedState = {
@@ -393,7 +403,6 @@ export const useGridStore = create<GridState>((set, get) => ({
     const gridState = get().grid ?? DEFAULT_GRID;
     const localWidgets = tryApplyLocalOperation(operation, gridState, get().widgets);
     if (localWidgets) {
-      console.warn('[dashboard] applied layout operation locally (persist later)');
       const normalizedWidgets = normalizeWidgets(localWidgets, gridState);
       set({ widgets: normalizedWidgets, isLoaded: true });
       schedulePersist(buildLayoutState(gridState, normalizedWidgets));
@@ -417,15 +426,11 @@ export const useGridStore = create<GridState>((set, get) => ({
       grid,
     );
 
-    console.log('[dashboard] addWidget:', { widgetType, baseSize, grid, widgetCount: get().widgets.length });
-
     const slot = findFirstSlot(grid, get().widgets, baseSize);
     if (!slot) {
-      console.error('[dashboard] no free slot for widget', widgetType, 'size:', baseSize, 'current widgets:', get().widgets);
+      console.error('[dashboard] no free slot for widget', widgetType, 'size:', baseSize);
       return false;
     }
-
-    console.log('[dashboard] found slot:', slot);
 
     const result = await get().applyOperation({
       type: 'addWidget',
@@ -440,7 +445,6 @@ export const useGridStore = create<GridState>((set, get) => ({
       },
     });
 
-    console.log('[dashboard] applyOperation result:', result);
     return result;
   },
 

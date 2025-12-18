@@ -13,7 +13,7 @@ import { WidgetSettingsPanel, AddWidgetPanel } from '../panels';
 import type { WidgetLayout } from '../../types/layout';
 import { clampToRange } from './gridMath';
 import { ClockWidget, NotificationsWidget } from '../widgets';
-import type { ClockWidgetSettings } from '../../types/widgets';
+import type { ClockWidgetSettings, NotificationWidgetSettings } from '../../types/widgets';
 
 const GAP_SIZE = 12;
 
@@ -48,13 +48,13 @@ export function DraggableGrid() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
-  const [widgetPreviewSettings, setWidgetPreviewSettings] = useState<Record<string, ClockWidgetSettings>>({});
+  const [widgetPreviewSettings, setWidgetPreviewSettings] = useState<Record<string, ClockWidgetSettings | NotificationWidgetSettings>>({});
   const selectedWidget = useMemo(
     () => (selectedWidgetId ? widgets.find((widget) => widget.id === selectedWidgetId) ?? null : null),
     [selectedWidgetId, widgets],
   );
 
-  const handlePreviewSettingsChange = useCallback((widgetId: string, settings: ClockWidgetSettings) => {
+  const handlePreviewSettingsChange = useCallback((widgetId: string, settings: ClockWidgetSettings | NotificationWidgetSettings) => {
     setWidgetPreviewSettings((prev) => ({
       ...prev,
       [widgetId]: settings,
@@ -166,7 +166,7 @@ export function DraggableGrid() {
   }, [clearPreviewSettings, closeSettingsPanel, selectedWidgetId]);
 
   const handlePanelApply = useCallback(
-    async (settings: ClockWidgetSettings) => {
+    async (settings: ClockWidgetSettings | NotificationWidgetSettings) => {
       if (!selectedWidgetId) return;
       const success = await updateWidgetSettings(selectedWidgetId, settings as unknown as Record<string, unknown>);
       if (success) {
@@ -272,7 +272,7 @@ export function DraggableGrid() {
       {
         id: 'notifications',
         name: 'Notifications',
-        description: 'Latest alerts and mentions',
+        description: 'Configurable notification feed',
         isActive: false,
       },
       {
@@ -319,7 +319,7 @@ export function DraggableGrid() {
         ref={gridRef}
         style={gridStyle}
       >
-        <GridCells grid={grid} highlight={null} debugGrid={debugGrid} isBlocked={false} />
+        <GridCells grid={grid} highlight={null} debugGrid={debugGrid} isBlocked={false} isDragging={false} isResizing={false} />
       </div>
     );
   }
@@ -341,7 +341,7 @@ export function DraggableGrid() {
           }
         }}
       >
-        <GridCells grid={grid} highlight={previewArea} debugGrid={debugGrid} isBlocked={isBlocked} />
+        <GridCells grid={grid} highlight={previewArea} debugGrid={debugGrid} isBlocked={isBlocked} isDragging={!!dragInfo} isResizing={!!resizingWidgetId} />
 
         {widgets.map((widget) => {
           const WidgetComponent = widgetComponents[widget.widgetType];
