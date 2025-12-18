@@ -116,10 +116,8 @@ export function DraggableGrid() {
     resizingWidgetId,
     preview: resizePreview,
     isResizeBlocked,
-    canConfirmResize,
     beginResize,
     cancelResize: cancelResizeMode,
-    confirmResize,
     handleResizePointerDown,
   } = useWidgetResize({
     grid,
@@ -131,9 +129,6 @@ export function DraggableGrid() {
 
   const previewArea = resizePreview ?? dragPreview;
   const isBlocked = isDragBlocked || isResizeBlocked;
-  const handleResizeConfirmAction = useCallback(() => {
-    void confirmResize();
-  }, [confirmResize]);
 
   const handleWidgetPointerDownSafe = useCallback(
     (e: React.PointerEvent, widget: WidgetLayout) => {
@@ -296,9 +291,6 @@ export function DraggableGrid() {
               handleContextMenu={handleContextMenu}
               dragInfo={dragInfo}
               isResizing={resizingWidgetId === widget.id}
-              onResizeConfirm={handleResizeConfirmAction}
-              onResizeCancel={cancelResizeMode}
-              canConfirmResize={canConfirmResize}
             />
           );
         })}

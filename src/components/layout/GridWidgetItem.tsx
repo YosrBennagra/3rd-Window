@@ -8,9 +8,6 @@ interface Props {
   handleContextMenu: (e: React.MouseEvent, widget: WidgetLayout) => void;
   dragInfo?: { id: string } | null;
   isResizing?: boolean;
-  onResizeConfirm?: () => void;
-  onResizeCancel?: () => void;
-  canConfirmResize?: boolean;
 }
 
 export default function GridWidgetItem({
@@ -21,16 +18,11 @@ export default function GridWidgetItem({
   handleContextMenu,
   dragInfo,
   isResizing,
-  onResizeConfirm,
-  onResizeCancel,
-  canConfirmResize,
 }: Props) {
-  const isLocked = widget.locked ?? false;
-
   return (
     <div
       key={widget.id}
-      className={`grid-widget ${dragInfo?.id === widget.id ? 'grid-widget--dragging' : ''} ${isResizing ? 'grid-widget--resizing' : ''} ${isLocked ? 'grid-widget--locked' : ''}`}
+      className={`grid-widget ${dragInfo?.id === widget.id ? 'grid-widget--dragging' : ''} ${isResizing ? 'grid-widget--resizing' : ''}`}
       onPointerDown={(e) => handleWidgetPointerDown(e, widget)}
       onContextMenu={(e) => handleContextMenu(e, widget)}
       style={{
@@ -42,12 +34,6 @@ export default function GridWidgetItem({
         <WidgetComponent />
       </div>
 
-      {isLocked && (
-        <span className="grid-widget__lock-indicator" title="Widget locked">
-          🔒
-        </span>
-      )}
-
       {isResizing && (
         <>
           <div
@@ -55,31 +41,6 @@ export default function GridWidgetItem({
             onPointerDown={(e) => handleResizePointerDown(e, widget)}
             title="Drag to resize"
           />
-          <div className="grid-widget__resize-controls">
-            <button
-              className="grid-widget__resize-control grid-widget__resize-control--confirm"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (canConfirmResize) {
-                  onResizeConfirm?.();
-                }
-              }}
-              disabled={!canConfirmResize}
-              title="Confirm resize"
-            >
-              ✓
-            </button>
-            <button
-              className="grid-widget__resize-control grid-widget__resize-control--cancel"
-              onClick={(e) => {
-                e.stopPropagation();
-                onResizeCancel?.();
-              }}
-              title="Cancel resize"
-            >
-              ✕
-            </button>
-          </div>
         </>
       )}
     </div>

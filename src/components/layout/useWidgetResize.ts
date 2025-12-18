@@ -14,10 +14,8 @@ export interface ResizeState {
   resizingWidgetId: string | null;
   preview: { x: number; y: number; width: number; height: number } | null;
   isResizeBlocked: boolean;
-  canConfirmResize: boolean;
   beginResize: (widget: WidgetLayout) => void;
   cancelResize: () => void;
-  confirmResize: () => Promise<boolean>;
   handleResizePointerDown: (e: React.PointerEvent, widget: WidgetLayout) => void;
 }
 
@@ -66,15 +64,15 @@ export function useWidgetResize({
     setResizingWidgetId(widget.id);
   }, []);
 
-  const confirmResize = useCallback(async () => {
-    if (!resizingWidgetId || !preview) return false;
-    if (isResizeBlocked) return false;
+  const applyPendingResize = useCallback(async () => {
+    if (!resizingWidgetId) return;
+    if (isResizeBlocked) return;
+    const pending = pendingSizeRef.current;
     const original = originalLayoutRef.current;
-    const pending = pendingSizeRef.current ?? { width: preview.width, height: preview.height };
-    if (!pending) return false;
-    if (original && original.width === pending.width && original.height === pending.height) {
+    if (!pending || !original) return;
+    if (pending.width === original.width && pending.height === original.height) {
       cancelResize();
-      return true;
+      return;
     }
     const ok = await resizeWidget(resizingWidgetId, pending);
     if (ok) {
@@ -82,8 +80,7 @@ export function useWidgetResize({
     } else {
       setIsResizeBlocked(true);
     }
-    return ok;
-  }, [cancelResize, isResizeBlocked, preview, resizeWidget, resizingWidgetId]);
+  }, [cancelResize, isResizeBlocked, resizeWidget, resizingWidgetId]);
 
   const handleResizePointerDown = useCallback(
     (e: React.PointerEvent, widget: WidgetLayout) => {
@@ -110,10 +107,9 @@ export function useWidgetResize({
   );
 
   useEffect(() => {
-    if (resizePointerId.current == null) return;
-
     const onMove = (ev: PointerEvent) => {
-      if (ev.pointerId !== resizePointerId.current) return;
+      const activePointer = resizePointerId.current;
+      if (activePointer == null || ev.pointerId !== activePointer) return;
       const info = resizeInfo.current;
       if (!info) return;
 
@@ -144,7 +140,8 @@ export function useWidgetResize({
     };
 
     const onEnd = (ev: PointerEvent) => {
-      if (ev.pointerId !== resizePointerId.current) return;
+      const activePointer = resizePointerId.current;
+      if (activePointer == null || ev.pointerId !== activePointer) return;
       try {
         const el = ev.target as HTMLElement;
         if (el && typeof el.releasePointerCapture === 'function') {
@@ -155,6 +152,7 @@ export function useWidgetResize({
       }
       resizePointerId.current = null;
       resizeInfo.current = null;
+      void applyPendingResize();
     };
 
     window.addEventListener('pointermove', onMove);
@@ -166,7 +164,7 @@ export function useWidgetResize({
       window.removeEventListener('pointerup', onEnd);
       window.removeEventListener('pointercancel', onEnd);
     };
-  }, [getCellFromPointer, grid.columns, grid.rows, getConstraints, widgets]);
+  }, [applyPendingResize, getCellFromPointer, grid.columns, grid.rows, getConstraints, widgets]);
 
   useEffect(() => {
     if (resizingWidgetId && !widgets.find((w) => w.id === resizingWidgetId)) {
@@ -174,25 +172,12 @@ export function useWidgetResize({
     }
   }, [widgets, resizingWidgetId, cancelResize]);
 
-  const canConfirmResize =
-    Boolean(
-      resizingWidgetId &&
-        preview &&
-        pendingSizeRef.current &&
-        originalLayoutRef.current &&
-        !isResizeBlocked &&
-        (pendingSizeRef.current.width !== originalLayoutRef.current.width ||
-          pendingSizeRef.current.height !== originalLayoutRef.current.height),
-    );
-
   return {
     resizingWidgetId,
     preview,
     isResizeBlocked,
-    canConfirmResize,
     beginResize,
     cancelResize,
-    confirmResize,
     handleResizePointerDown,
   };
 }
