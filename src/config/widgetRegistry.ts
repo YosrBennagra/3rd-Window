@@ -1,12 +1,12 @@
-import type { WidgetConfig } from '../types/widget';
-import { ChartWidget, ClockWidget, NotificationsWidget } from '../components/widgets';
+﻿import type { WidgetConfig } from '../types/widget';
+import { ClockWidget, NotificationsWidget } from '../components/widgets';
 
 export const widgetRegistry: WidgetConfig[] = [
   {
     id: 'notifications',
     name: 'Notifications',
     description: 'Unread alerts and mentions',
-    icon: 'ĐY"ù',
+    icon: 'bell',
     component: NotificationsWidget,
     defaultSize: 'large',
     minSize: { width: 3, height: 2 },
@@ -16,19 +16,9 @@ export const widgetRegistry: WidgetConfig[] = [
     id: 'clock',
     name: 'Date & Time',
     description: 'Displays current time and date',
-    icon: 'ĐY?',
+    icon: 'clock',
     component: ClockWidget,
     defaultSize: 'medium',
-  },
-  {
-    id: 'chart',
-    name: 'Chart',
-    description: 'Mini KPI card with sparkline',
-    icon: 'ĐY"^',
-    component: ChartWidget,
-    defaultSize: 'medium',
-    minSize: { width: 3, height: 2 },
-    maxSize: { width: 5, height: 4 },
   },
 ];
 

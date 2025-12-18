@@ -24,6 +24,7 @@ interface Props {
   onAction: (action: MenuAction, widget?: WidgetLayout | null) => void;
   widgetDisplayName?: (widgetType: string) => string;
   isAdjustGridMode?: boolean;
+  isFullscreen?: boolean;
 }
 
 const defaultWidgetNames: Record<string, string> = {
@@ -31,10 +32,9 @@ const defaultWidgetNames: Record<string, string> = {
   'cpu-temp': 'CPU Temperature',
   'gpu-temp': 'GPU Temperature',
   'notifications': 'Notifications',
-  'chart': 'Chart',
 };
 
-export default function GridContextMenu({ menu, onClose, onAction, widgetDisplayName, isAdjustGridMode }: Props) {
+export default function GridContextMenu({ menu, onClose, onAction, widgetDisplayName, isAdjustGridMode, isFullscreen = false }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: -9999, top: -9999 });
 
@@ -138,13 +138,13 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
       style={{ left: position.left, top: position.top }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Exit Fullscreen */}
+      {/* Fullscreen Toggle */}
       <button
         className="grid-context-menu__item"
         onClick={() => handleItemClick('exit-fullscreen')}
       >
         <span className="grid-context-menu__icon">⛶</span>
-        Exit Fullscreen
+        {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
       </button>
 
       <div className="grid-context-menu__divider" />
@@ -218,3 +218,4 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
     </div>
   );
 }
+

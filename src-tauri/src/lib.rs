@@ -1,6 +1,6 @@
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 use sysinfo::System;
 use tauri::{Manager, Window};
 
@@ -569,6 +569,35 @@ async fn move_to_monitor(
     Ok(())
 }
 
+#[tauri::command]
+async fn open_system_clock() -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", "ms-clock:"])
+            .spawn()
+            .map_err(|e| format!("Failed to open system clock: {}", e))?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.datetime")
+            .spawn()
+            .map_err(|e| format!("Failed to open system clock: {}", e))?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        return Err("Opening the system clock is not supported on this platform".to_string());
+    }
+
+    #[allow(unreachable_code)]
+    Err("Unsupported platform".to_string())
+}
+
 #[derive(Debug, Serialize)]
 struct SystemTemps {
     cpu_temp: Option<f32>,
@@ -718,6 +747,7 @@ pub fn run() {
             apply_fullscreen,
             get_monitors,
             move_to_monitor,
+            open_system_clock,
             get_system_temps,
             get_layout,
             apply_layout_operation

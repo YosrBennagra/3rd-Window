@@ -5,20 +5,21 @@ import GridGhost from './GridGhost';
 import GridCells from './GridCells';
 import useGridDrag from './useGridDrag';
 import { useWidgetResize } from './useWidgetResize';
+import type { ResizeHandle } from './useWidgetResize';
 import './DraggableGrid.css';
 import GridWidgetItem from './GridWidgetItem';
 import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/GridContextMenu';
 import { WidgetSettingsPanel, AddWidgetPanel } from '../panels';
 import type { WidgetLayout } from '../../types/layout';
 import { clampToRange } from './gridMath';
-import { ClockWidget, ChartWidget, NotificationsWidget } from '../widgets';
+import { ClockWidget, NotificationsWidget } from '../widgets';
+import type { ClockWidgetSettings } from '../../types/widgets';
 
 const GAP_SIZE = 12;
 
 const widgetComponents: Record<string, React.ComponentType> = {
   notifications: NotificationsWidget,
   clock: ClockWidget,
-  chart: ChartWidget,
 };
 
 type PanelType = 'widget-settings' | 'add-widget' | null;
@@ -27,6 +28,7 @@ export function DraggableGrid() {
   const {
     widgets,
     grid,
+    isLoaded,
     moveWidget,
     resizeWidget,
     removeWidget,
@@ -35,14 +37,39 @@ export function DraggableGrid() {
     toggleDebugGrid,
     getConstraints,
     setWidgetLock,
+    updateWidgetSettings,
   } = useGridStore();
-  const { setFullscreen, toggleSettings } = useStore();
+  const setFullscreen = useStore((state) => state.setFullscreen);
+  const toggleSettings = useStore((state) => state.toggleSettings);
+  const settingsState = useStore((state) => state.settings);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [activePanel, setActivePanel] = useState<PanelType>(null);
-  const [selectedWidget, setSelectedWidget] = useState<WidgetLayout | null>(null);
+  const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
+  const [widgetPreviewSettings, setWidgetPreviewSettings] = useState<Record<string, ClockWidgetSettings>>({});
+  const selectedWidget = useMemo(
+    () => (selectedWidgetId ? widgets.find((widget) => widget.id === selectedWidgetId) ?? null : null),
+    [selectedWidgetId, widgets],
+  );
+
+  const handlePreviewSettingsChange = useCallback((widgetId: string, settings: ClockWidgetSettings) => {
+    setWidgetPreviewSettings((prev) => ({
+      ...prev,
+      [widgetId]: settings,
+    }));
+  }, []);
+
+  const clearPreviewSettings = useCallback((widgetId: string | null) => {
+    if (!widgetId) return;
+    setWidgetPreviewSettings((prev) => {
+      if (!prev[widgetId]) return prev;
+      const next = { ...prev };
+      delete next[widgetId];
+      return next;
+    });
+  }, []);
 
   const getGridMetrics = useCallback(() => {
     const gridElement = gridRef.current;
@@ -127,6 +154,29 @@ export function DraggableGrid() {
     getConstraints,
   });
 
+  const closeSettingsPanel = useCallback(() => {
+    setActivePanel(null);
+    setSelectedWidgetId(null);
+    cancelResizeMode();
+  }, [cancelResizeMode]);
+
+  const handlePanelCancel = useCallback(() => {
+    clearPreviewSettings(selectedWidgetId);
+    closeSettingsPanel();
+  }, [clearPreviewSettings, closeSettingsPanel, selectedWidgetId]);
+
+  const handlePanelApply = useCallback(
+    async (settings: ClockWidgetSettings) => {
+      if (!selectedWidgetId) return;
+      const success = await updateWidgetSettings(selectedWidgetId, settings as unknown as Record<string, unknown>);
+      if (success) {
+        clearPreviewSettings(selectedWidgetId);
+        closeSettingsPanel();
+      }
+    },
+    [selectedWidgetId, updateWidgetSettings, clearPreviewSettings, closeSettingsPanel],
+  );
+
   const previewArea = resizePreview ?? dragPreview;
   const isBlocked = isDragBlocked || isResizeBlocked;
 
@@ -140,9 +190,9 @@ export function DraggableGrid() {
   );
 
   const handleResizePointerDownSafe = useCallback(
-    (e: React.PointerEvent, widget: WidgetLayout) => {
+    (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => {
       if (widget.locked) return;
-      handleResizePointerDown(e, widget);
+      handleResizePointerDown(e, widget, handle);
     },
     [handleResizePointerDown],
   );
@@ -167,14 +217,14 @@ export function DraggableGrid() {
   const handleMenuAction = (action: MenuAction, widget?: WidgetLayout | null) => {
     switch (action) {
       case 'exit-fullscreen':
-        setFullscreen(false);
+        void setFullscreen(settingsState?.isFullscreen ? false : true);
         break;
       case 'settings':
         toggleSettings();
         break;
       case 'widget-settings':
         if (widget) {
-          setSelectedWidget(widget);
+          setSelectedWidgetId(widget.id);
           setActivePanel('widget-settings');
         }
         break;
@@ -188,6 +238,10 @@ export function DraggableGrid() {
         break;
       case 'remove-widget':
         if (widget) {
+          if (widget.id === selectedWidgetId) {
+            setSelectedWidgetId(null);
+            setActivePanel(null);
+          }
           void removeWidget(widget.id);
         }
         break;
@@ -210,9 +264,7 @@ export function DraggableGrid() {
   };
 
   const handleClosePanel = () => {
-    setActivePanel(null);
-    setSelectedWidget(null);
-    cancelResizeMode();
+    closeSettingsPanel();
   };
 
   const availableWidgets = useMemo(
@@ -227,12 +279,6 @@ export function DraggableGrid() {
         id: 'clock',
         name: 'Clock',
         description: 'Analog + digital clock',
-        isActive: false,
-      },
-      {
-        id: 'chart',
-        name: 'Chart',
-        description: 'Compact sparkline + KPI',
         isActive: false,
       },
     ],
@@ -259,6 +305,25 @@ export function DraggableGrid() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [cancelResizeMode, resizingWidgetId]);
 
+  useEffect(() => {
+    if (activePanel === 'widget-settings' && selectedWidgetId && !selectedWidget) {
+      setActivePanel(null);
+      setSelectedWidgetId(null);
+    }
+  }, [activePanel, selectedWidget, selectedWidgetId]);
+
+  if (!isLoaded) {
+    return (
+      <div
+        className={`draggable-grid ${debugGrid ? 'draggable-grid--debug' : ''} draggable-grid--loading`}
+        ref={gridRef}
+        style={gridStyle}
+      >
+        <GridCells grid={grid} highlight={null} debugGrid={debugGrid} isBlocked={false} />
+      </div>
+    );
+  }
+
   return (
     <>
       <div
@@ -281,10 +346,17 @@ export function DraggableGrid() {
         {widgets.map((widget) => {
           const WidgetComponent = widgetComponents[widget.widgetType];
           if (!WidgetComponent) return null;
+          const previewSettings = widgetPreviewSettings[widget.id];
+          let widgetToRender: WidgetLayout = previewSettings
+            ? { ...widget, settings: previewSettings as unknown as Record<string, unknown> }
+            : widget;
+          if (resizingWidgetId === widget.id && resizePreview) {
+            widgetToRender = { ...widgetToRender, ...resizePreview };
+          }
           return (
             <GridWidgetItem
               key={widget.id}
-              widget={widget}
+              widget={widgetToRender}
               WidgetComponent={WidgetComponent}
               handleWidgetPointerDown={handleWidgetPointerDownSafe}
               handleResizePointerDown={handleResizePointerDownSafe}
@@ -303,9 +375,18 @@ export function DraggableGrid() {
         onClose={handleCloseContextMenu}
         onAction={handleMenuAction}
         isAdjustGridMode={debugGrid}
+        isFullscreen={settingsState?.isFullscreen ?? false}
       />
 
-      {activePanel === 'widget-settings' && selectedWidget && <WidgetSettingsPanel widget={selectedWidget} onClose={handleClosePanel} />}
+      {activePanel === 'widget-settings' && selectedWidget && (
+        <WidgetSettingsPanel
+          widget={selectedWidget}
+          previewSettings={widgetPreviewSettings[selectedWidget.id]}
+          onPreviewChange={(settings) => handlePreviewSettingsChange(selectedWidget.id, settings)}
+          onApply={handlePanelApply}
+          onCancel={handlePanelCancel}
+        />
+      )}
       {activePanel === 'add-widget' && (
         <AddWidgetPanel
           onClose={handleClosePanel}

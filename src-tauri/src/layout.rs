@@ -1,5 +1,6 @@
 use log::info;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -27,6 +28,8 @@ pub struct WidgetLayout {
     pub height: u8,
     #[serde(default)]
     pub locked: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settings: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,6 +50,8 @@ pub struct WidgetSlot {
     pub height: u8,
     #[serde(default)]
     pub locked: Option<bool>,
+    #[serde(default)]
+    pub settings: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -65,6 +70,10 @@ pub enum LayoutOperation {
         id: String,
         width: u8,
         height: u8,
+        #[serde(default)]
+        x: Option<u8>,
+        #[serde(default)]
+        y: Option<u8>,
     },
     RemoveWidget {
         id: String,
@@ -72,6 +81,10 @@ pub enum LayoutOperation {
     SetWidgetLock {
         id: String,
         locked: bool,
+    },
+    SetWidgetSettings {
+        id: String,
+        settings: Value,
     },
 }
 
@@ -81,6 +94,54 @@ pub struct WidgetConstraints {
     pub min_height: u8,
     pub max_width: u8,
     pub max_height: u8,
+}
+
+fn default_settings_for(widget_type: &str) -> Option<Value> {
+    match widget_type {
+        "clock" => Some(json!({
+            "timeFormat": "12h",
+            "showSeconds": true,
+            "dateFormat": "long",
+            "layoutStyle": "stacked",
+            "alignment": "center",
+            "fontSizeMode": "auto",
+            "timezone": "system",
+            "updateFrequency": "second",
+            "clickBehavior": "open-system-clock",
+            "minGridSize": { "width": 3, "height": 2 }
+        })),
+        _ => None,
+    }
+}
+
+fn merge_settings(defaults: Value, overrides: Option<Value>) -> Value {
+    match (defaults, overrides) {
+        (Value::Object(mut base), Some(Value::Object(overrides))) => {
+            for (key, value) in overrides {
+                base.insert(key, value);
+            }
+            Value::Object(base)
+        }
+        (_defaults, Some(Value::Object(overrides))) => {
+            let mut base = serde_json::Map::new();
+            for (key, value) in overrides {
+                base.insert(key, value);
+            }
+            Value::Object(base)
+        }
+        (defaults, Some(value)) if value.is_null() => defaults,
+        (_, Some(value)) => value,
+        (defaults, None) => defaults,
+    }
+}
+
+fn apply_widget_defaults(widget: &mut WidgetLayout) {
+    if let Some(defaults) = default_settings_for(&widget.widget_type) {
+        let merged = merge_settings(defaults, widget.settings.clone());
+        widget.settings = Some(merged);
+    } else if widget.settings.is_none() {
+        widget.settings = None;
+    }
 }
 
 #[derive(Debug)]
@@ -137,22 +198,12 @@ impl WidgetRegistry {
         constraints.insert(
             "clock".to_string(),
             WidgetConstraints {
-                min_width: 4,
+                min_width: 3,
                 min_height: 2,
                 max_width: 12,
                 max_height: 8,
             },
         );
-        constraints.insert(
-            "chart".to_string(),
-            WidgetConstraints {
-                min_width: 6,
-                min_height: 4,
-                max_width: 24,
-                max_height: 12,
-            },
-        );
-
         Self { constraints }
     }
 
@@ -270,7 +321,8 @@ impl GridManager {
 
     pub fn set_widgets(&mut self, widgets: Vec<WidgetLayout>) {
         let mut next = Vec::new();
-        for widget in widgets {
+        for mut widget in widgets {
+            apply_widget_defaults(&mut widget);
             if self.validate_with(&next, &widget).is_ok() {
                 next.push(widget);
             }
@@ -279,7 +331,8 @@ impl GridManager {
         self.last_valid = next;
     }
 
-    fn upsert_widget(&mut self, widget: WidgetLayout) -> Result<LayoutState, LayoutError> {
+    fn upsert_widget(&mut self, mut widget: WidgetLayout) -> Result<LayoutState, LayoutError> {
+        apply_widget_defaults(&mut widget);
         self.validate_with(&self.widgets, &widget)?;
 
         let mut next = Vec::new();
@@ -313,11 +366,6 @@ impl GridManager {
         Ok(self.state())
     }
 
-    fn restore_last_valid(&mut self) -> LayoutState {
-        self.widgets = self.last_valid.clone();
-        self.state()
-    }
-
     pub fn apply_operation(
         &mut self,
         operation: LayoutOperation,
@@ -329,6 +377,10 @@ impl GridManager {
                 widget_type,
                 layout,
             } => {
+                let settings = layout
+                    .settings
+                    .clone()
+                    .or_else(|| default_settings_for(&widget_type));
                 let id = layout
                     .id
                     .unwrap_or_else(|| format!("{}-{}", widget_type, Uuid::new_v4()));
@@ -340,6 +392,7 @@ impl GridManager {
                     width: layout.width,
                     height: layout.height,
                     locked: layout.locked.unwrap_or(false),
+                    settings,
                 };
                 self.upsert_widget(widget)
             }
@@ -357,7 +410,7 @@ impl GridManager {
                 widget.y = y;
                 self.upsert_widget(widget)
             }
-            LayoutOperation::ResizeWidget { id, width, height } => {
+            LayoutOperation::ResizeWidget { id, width, height, x, y } => {
                 let mut widget = self
                     .widgets
                     .iter()
@@ -369,6 +422,12 @@ impl GridManager {
                 }
                 widget.width = width;
                 widget.height = height;
+                if let Some(next_x) = x {
+                    widget.x = next_x;
+                }
+                if let Some(next_y) = y {
+                    widget.y = next_y;
+                }
                 self.upsert_widget(widget)
             }
             LayoutOperation::RemoveWidget { id } => self.remove_widget(&id),
@@ -380,6 +439,16 @@ impl GridManager {
                     .cloned()
                     .ok_or_else(|| LayoutError::UnknownId(id.clone()))?;
                 widget.locked = locked;
+                self.upsert_widget(widget)
+            }
+            LayoutOperation::SetWidgetSettings { id, settings } => {
+                let mut widget = self
+                    .widgets
+                    .iter()
+                    .find(|w| w.id == id)
+                    .cloned()
+                    .ok_or_else(|| LayoutError::UnknownId(id.clone()))?;
+                widget.settings = Some(settings);
                 self.upsert_widget(widget)
             }
         };
@@ -412,6 +481,7 @@ fn default_widgets(grid: &GridConfig) -> Vec<WidgetLayout> {
             width: 6,
             height: 4,
             locked: false,
+            settings: None,
         },
         WidgetLayout {
             id: "clock-demo".to_string(),
@@ -421,15 +491,7 @@ fn default_widgets(grid: &GridConfig) -> Vec<WidgetLayout> {
             width: 4,
             height: 2,
             locked: false,
-        },
-        WidgetLayout {
-            id: "chart-demo".to_string(),
-            widget_type: "chart".to_string(),
-            x: 0,
-            y: grid.rows.saturating_sub(4),
-            width: 6,
-            height: 4,
-            locked: false,
+            settings: default_settings_for("clock"),
         },
     ]
 }

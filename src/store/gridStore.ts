@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 import type { GridConfig, LayoutOperation, LayoutState, WidgetConstraints, WidgetLayout } from '../types/layout';
+import { CLOCK_WIDGET_DEFAULT_SETTINGS, ensureClockWidgetSettings } from '../types/widgets';
 
 export const DEFAULT_GRID: GridConfig = { columns: 24, rows: 12 };
 export const GRID_COLS = DEFAULT_GRID.columns;
@@ -11,16 +12,95 @@ type GridBox = { x: number; y: number; width: number; height: number };
 const clampValue = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const generateWidgetId = (widgetType: string) => `${widgetType}-${Math.random().toString(36).slice(2, 10)}`;
 
-const normalizeWidget = (widget: WidgetLayout): WidgetLayout => {
+const CLOCK_MIN_WIDTH = 3;
+const CLOCK_MIN_HEIGHT = 2;
+const isTauriRuntime = (() => {
+  let cached: boolean | null = null;
+  return () => {
+    if (cached !== null) return cached;
+    if (typeof window === 'undefined') {
+      cached = false;
+      return cached;
+    }
+    const candidate = window as unknown as {
+      __TAURI__?: { invoke?: unknown; core?: { invoke?: unknown } };
+      __TAURI_IPC__?: unknown;
+      __TAURI_INTERNALS__?: { invoke?: unknown; invokeHandler?: unknown };
+    };
+    cached =
+      typeof candidate.__TAURI_IPC__ === 'function' ||
+      typeof candidate.__TAURI__?.invoke === 'function' ||
+      typeof candidate.__TAURI__?.core?.invoke === 'function' ||
+      typeof candidate.__TAURI_INTERNALS__?.invoke === 'function' ||
+      typeof candidate.__TAURI_INTERNALS__?.invokeHandler === 'function';
+    return cached;
+  };
+})();
+
+const WIDGET_CONSTRAINTS: Record<string, WidgetConstraints> = {
+  notifications: { minWidth: 6, minHeight: 4, maxWidth: 24, maxHeight: 12 },
+  clock: { minWidth: CLOCK_MIN_WIDTH, minHeight: CLOCK_MIN_HEIGHT, maxWidth: 12, maxHeight: 8 },
+};
+
+const getDefaultWidgetSettings = (widgetType: string): Record<string, unknown> | undefined => {
+  if (widgetType === 'clock') {
+    return { ...CLOCK_WIDGET_DEFAULT_SETTINGS };
+  }
+  return undefined;
+};
+
+const clampLayoutToGrid = (widget: WidgetLayout, grid: GridConfig): WidgetLayout => {
+  const width = clampValue(widget.width, 1, grid.columns);
+  const height = clampValue(widget.height, 1, grid.rows);
+  const x = clampValue(widget.x, 0, Math.max(0, grid.columns - width));
+  const y = clampValue(widget.y, 0, Math.max(0, grid.rows - height));
+  return { ...widget, x, y, width, height };
+};
+
+const normalizeWidget = (widget: WidgetLayout, grid: GridConfig = DEFAULT_GRID): WidgetLayout => {
   const nextType = widget.widgetType === 'mail' ? 'notifications' : widget.widgetType;
-  return {
+  const defaultSettings = getDefaultWidgetSettings(nextType);
+  let settings: Record<string, unknown> | undefined;
+
+  if (nextType === 'clock') {
+    settings = ensureClockWidgetSettings(widget.settings) as unknown as Record<string, unknown>;
+  } else if (widget.settings) {
+    settings = { ...widget.settings };
+  } else if (defaultSettings) {
+    settings = defaultSettings;
+  }
+
+  const normalized: WidgetLayout = {
     ...widget,
     widgetType: nextType,
     locked: widget.locked ?? false,
+    settings,
   };
+
+  if (normalized.widgetType === 'clock') {
+    normalized.width = Math.max(CLOCK_MIN_WIDTH, normalized.width);
+    normalized.height = Math.max(CLOCK_MIN_HEIGHT, normalized.height);
+  }
+
+  const constraints = WIDGET_CONSTRAINTS[normalized.widgetType];
+  if (constraints) {
+    normalized.width = clampValue(
+      normalized.width,
+      constraints.minWidth,
+      Math.min(constraints.maxWidth, grid.columns),
+    );
+    normalized.height = clampValue(
+      normalized.height,
+      constraints.minHeight,
+      Math.min(constraints.maxHeight, grid.rows),
+    );
+  }
+
+  return clampLayoutToGrid(normalized, grid);
 };
 
-const normalizeWidgets = (widgets: WidgetLayout[]): WidgetLayout[] => widgets.map(normalizeWidget);
+const normalizeWidgets = (widgets: WidgetLayout[], grid: GridConfig = DEFAULT_GRID): WidgetLayout[] =>
+  widgets.map((widget) => normalizeWidget(widget, grid));
 
 const DEFAULT_WIDGETS: WidgetLayout[] = [
   {
@@ -40,17 +120,9 @@ const DEFAULT_WIDGETS: WidgetLayout[] = [
     width: 4,
     height: 2,
     locked: false,
+    settings: { ...CLOCK_WIDGET_DEFAULT_SETTINGS },
   },
-  {
-    id: 'chart-demo',
-    widgetType: 'chart',
-    x: 0,
-    y: 8,
-    width: 6,
-    height: 4,
-    locked: false,
-  },
-];
+].map((widget) => normalizeWidget(widget, DEFAULT_GRID));
 
 const DEFAULT_LAYOUT_STATE: LayoutState = {
   grid: DEFAULT_GRID,
@@ -58,11 +130,26 @@ const DEFAULT_LAYOUT_STATE: LayoutState = {
   version: 1,
 };
 
-const constraintsByType: Record<string, WidgetConstraints> = {
-  notifications: { minWidth: 6, minHeight: 4, maxWidth: 24, maxHeight: 12 },
-  clock: { minWidth: 4, minHeight: 2, maxWidth: 12, maxHeight: 8 },
-  chart: { minWidth: 6, minHeight: 4, maxWidth: 24, maxHeight: 12 },
-};
+const buildLayoutState = (grid: GridConfig, widgets: WidgetLayout[]): LayoutState => ({
+  grid,
+  widgets,
+  version: DEFAULT_LAYOUT_STATE.version,
+});
+
+const schedulePersist = (() => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return (state: LayoutState) => {
+    if (!isTauriRuntime()) return;
+    if (timer) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(() => {
+      void invoke('save_dashboard', { dashboard: state }).catch((error) => {
+        console.error('[dashboard] failed to persist layout', error);
+      });
+    }, 250);
+  };
+})();
 
 const rectanglesOverlap = (a: GridBox, b: GridBox) => {
   return !(
@@ -89,7 +176,7 @@ const clampSizeToConstraints = (
   size: { width: number; height: number },
   grid: GridConfig,
 ): { width: number; height: number } => {
-  const constraints = constraintsByType[widgetType];
+  const constraints = WIDGET_CONSTRAINTS[widgetType];
   if (!constraints) return size;
 
   return {
@@ -149,6 +236,10 @@ const tryApplyLocalOperation = (
         width: size.width,
         height: size.height,
         locked: operation.layout.locked ?? false,
+        settings:
+          operation.layout.settings && operation.widgetType === 'clock'
+            ? (ensureClockWidgetSettings(operation.layout.settings) as unknown as Record<string, unknown>)
+            : operation.layout.settings ?? getDefaultWidgetSettings(operation.widgetType),
       };
       if (!isWithinBounds(grid, newWidget)) return null;
       if (collides(newWidget)) return null;
@@ -170,7 +261,15 @@ const tryApplyLocalOperation = (
       if (!widget) return null;
       if (widget.locked) return null;
       const size = clampSizeToConstraints(widget.widgetType, { width: operation.width, height: operation.height }, grid);
-      const resized: WidgetLayout = { ...widget, width: size.width, height: size.height };
+      const x =
+        typeof operation.x === 'number'
+          ? clampValue(operation.x, 0, Math.max(0, grid.columns - size.width))
+          : widget.x;
+      const y =
+        typeof operation.y === 'number'
+          ? clampValue(operation.y, 0, Math.max(0, grid.rows - size.height))
+          : widget.y;
+      const resized: WidgetLayout = { ...widget, x, y, width: size.width, height: size.height };
       if (!isWithinBounds(grid, resized)) return null;
       if (collides(resized, widget.id)) return null;
       return widgets.map((w) => (w.id === widget.id ? resized : w));
@@ -183,6 +282,15 @@ const tryApplyLocalOperation = (
       const widget = widgets.find((w) => w.id === operation.id);
       if (!widget) return null;
       return widgets.map((w) => (w.id === operation.id ? { ...w, locked: operation.locked } : w));
+    }
+    case 'setWidgetSettings': {
+      const widget = widgets.find((w) => w.id === operation.id);
+      if (!widget) return null;
+      const nextSettings =
+        widget.widgetType === 'clock'
+          ? (ensureClockWidgetSettings(operation.settings) as unknown as Record<string, unknown>)
+          : operation.settings;
+      return widgets.map((w) => (w.id === operation.id ? { ...w, settings: nextSettings } : w));
     }
     default:
       return null;
@@ -198,9 +306,10 @@ interface GridState {
   applyOperation: (operation: LayoutOperation) => Promise<boolean>;
   addWidget: (widgetType: string, layout?: Partial<WidgetLayout>) => Promise<boolean>;
   moveWidget: (id: string, coords: { x: number; y: number }) => Promise<boolean>;
-  resizeWidget: (id: string, size: { width: number; height: number }) => Promise<boolean>;
+  resizeWidget: (id: string, size: { width: number; height: number; x?: number; y?: number }) => Promise<boolean>;
   removeWidget: (id: string) => Promise<boolean>;
   setWidgetLock: (id: string, locked: boolean) => Promise<boolean>;
+  updateWidgetSettings: (id: string, settings: Record<string, unknown>) => Promise<boolean>;
   isPositionOccupied: (pos: { x: number; y: number; width: number; height: number }, excludeId?: string) => boolean;
   getConstraints: (widgetType: string) => WidgetConstraints | undefined;
   toggleDebugGrid: () => void;
@@ -208,14 +317,20 @@ interface GridState {
 
 export const useGridStore = create<GridState>((set, get) => ({
   grid: DEFAULT_GRID,
-  widgets: DEFAULT_WIDGETS,
+  widgets: [],
   debugGrid: false,
   isLoaded: false,
 
   async loadDashboard() {
     try {
+      if (!isTauriRuntime()) {
+        console.warn('[dashboard] loadDashboard skipped – Tauri runtime unavailable, using defaults');
+        set({ grid: DEFAULT_GRID, widgets: DEFAULT_WIDGETS, isLoaded: true });
+        return;
+      }
       const state = await invoke<LayoutState>('load_dashboard');
-      
+      const sourceGrid = state?.grid ?? DEFAULT_GRID;
+
       // Migrate old grids to 24×12
       if (state?.grid && ((state.grid.columns === 5 && state.grid.rows === 4) || (state.grid.columns === 12 && state.grid.rows === 24))) {
         console.log(`[dashboard] migrating ${state.grid.columns}×${state.grid.rows} layout to 24×12`);
@@ -232,17 +347,19 @@ export const useGridStore = create<GridState>((set, get) => ({
             height: Math.round(w.height * scaleY),
           })),
         };
+        const normalizedWidgets = normalizeWidgets(migratedState.widgets, migratedState.grid);
+        const persistedState: LayoutState = { ...migratedState, widgets: normalizedWidgets };
         set({
-          grid: migratedState.grid,
-          widgets: normalizeWidgets(migratedState.widgets),
+          grid: persistedState.grid,
+          widgets: normalizedWidgets,
           isLoaded: true,
         });
         // Save migrated layout
-        await invoke('save_dashboard', { dashboard: migratedState });
+        await invoke('save_dashboard', { dashboard: persistedState });
       } else {
-        const nextWidgets = state?.widgets ? normalizeWidgets(state.widgets) : DEFAULT_WIDGETS;
+        const nextWidgets = state?.widgets ? normalizeWidgets(state.widgets, sourceGrid) : DEFAULT_WIDGETS;
         set({
-          grid: state?.grid ?? DEFAULT_GRID,
+          grid: sourceGrid,
           widgets: nextWidgets,
           isLoaded: true,
         });
@@ -250,36 +367,46 @@ export const useGridStore = create<GridState>((set, get) => ({
     } catch (error) {
       console.error('[dashboard] load fallback to defaults', error);
       set({ grid: DEFAULT_GRID, widgets: DEFAULT_WIDGETS, isLoaded: true });
-      try {
-        await invoke('save_dashboard', { dashboard: DEFAULT_LAYOUT_STATE });
-      } catch (persistError) {
-        console.warn('[dashboard] failed to persist default layout', persistError);
+      if (isTauriRuntime()) {
+        try {
+          await invoke('save_dashboard', { dashboard: DEFAULT_LAYOUT_STATE });
+        } catch (persistError) {
+          console.warn('[dashboard] failed to persist default layout', persistError);
+        }
       }
     }
   },
 
   async applyOperation(operation) {
-    try {
-      const state = await invoke<LayoutState>('apply_layout_operation', { operation });
-      set({ grid: state.grid ?? get().grid, widgets: normalizeWidgets(state.widgets), isLoaded: true });
-      return true;
-    } catch (error) {
-      console.error('[dashboard] failed to apply layout operation', error);
-      const localWidgets = tryApplyLocalOperation(operation, get().grid ?? DEFAULT_GRID, get().widgets);
-      if (localWidgets) {
-        console.warn('[dashboard] applied layout operation locally (persist later)');
-        set({ widgets: normalizeWidgets(localWidgets), isLoaded: true });
+    if (isTauriRuntime()) {
+      try {
+        const state = await invoke<LayoutState>('apply_layout_operation', { operation });
+        const gridState = state.grid ?? get().grid ?? DEFAULT_GRID;
+        const normalizedWidgets = normalizeWidgets(state.widgets, gridState);
+        set({ grid: gridState, widgets: normalizedWidgets, isLoaded: true });
         return true;
+      } catch (error) {
+        console.error('[dashboard] failed to apply layout operation', error);
       }
-      return false;
     }
+
+    const gridState = get().grid ?? DEFAULT_GRID;
+    const localWidgets = tryApplyLocalOperation(operation, gridState, get().widgets);
+    if (localWidgets) {
+      console.warn('[dashboard] applied layout operation locally (persist later)');
+      const normalizedWidgets = normalizeWidgets(localWidgets, gridState);
+      set({ widgets: normalizedWidgets, isLoaded: true });
+      schedulePersist(buildLayoutState(gridState, normalizedWidgets));
+      return true;
+    }
+    return false;
   },
 
   async addWidget(widgetType, layout) {
     const grid = get().grid ?? DEFAULT_GRID;
     
     // Use widget-specific defaults or provided size
-    const constraints = constraintsByType[widgetType];
+    const constraints = WIDGET_CONSTRAINTS[widgetType];
     const defaultSize = constraints 
       ? { width: constraints.minWidth, height: constraints.minHeight }
       : { width: 4, height: 4 };
@@ -322,7 +449,14 @@ export const useGridStore = create<GridState>((set, get) => ({
   },
 
   async resizeWidget(id, size) {
-    return get().applyOperation({ type: 'resizeWidget', id, width: size.width, height: size.height });
+    return get().applyOperation({
+      type: 'resizeWidget',
+      id,
+      width: size.width,
+      height: size.height,
+      ...(typeof size.x === 'number' ? { x: size.x } : {}),
+      ...(typeof size.y === 'number' ? { y: size.y } : {}),
+    });
   },
 
   async removeWidget(id) {
@@ -333,6 +467,13 @@ export const useGridStore = create<GridState>((set, get) => ({
     return get().applyOperation({ type: 'setWidgetLock', id, locked });
   },
 
+  async updateWidgetSettings(id, settings) {
+    const widget = get().widgets.find((w) => w.id === id);
+    const normalized =
+      widget?.widgetType === 'clock' ? (ensureClockWidgetSettings(settings) as unknown as Record<string, unknown>) : settings;
+    return get().applyOperation({ type: 'setWidgetSettings', id, settings: normalized });
+  },
+
   isPositionOccupied(pos, excludeId) {
     return get().widgets.some((widget) => {
       if (excludeId && widget.id === excludeId) return false;
@@ -341,7 +482,7 @@ export const useGridStore = create<GridState>((set, get) => ({
   },
 
   getConstraints(widgetType) {
-    return constraintsByType[widgetType];
+    return WIDGET_CONSTRAINTS[widgetType];
   },
 
   toggleDebugGrid() {

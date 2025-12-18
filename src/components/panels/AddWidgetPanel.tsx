@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function AddWidgetPanel({ onClose, onAdd, widgets }: Props) {
-  const handleAdd = (widgetType: string, isActive: boolean) => {
+  const handleAdd = (widgetType: string) => {
     onAdd(widgetType);
     onClose();
   };
@@ -42,7 +42,7 @@ export default function AddWidgetPanel({ onClose, onAdd, widgets }: Props) {
                   <button
                     className="panel__button"
                     disabled={widget.isActive}
-                    onClick={() => handleAdd(widget.id, widget.isActive)}
+                    onClick={() => handleAdd(widget.id)}
                   >
                     {widget.isActive ? 'Already Added' : 'Add'}
                   </button>

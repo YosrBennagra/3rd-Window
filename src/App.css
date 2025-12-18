@@ -215,24 +215,6 @@ body {
   color: rgba(255, 255, 255, 0.95);
 }
 
-.chart-widget__body {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-md);
-  text-align: left;
-}
-
-.chart-widget__value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #22d3ee;
-}
-
-.chart-widget__sparkline svg {
-  width: 100%;
-  height: 48px;
-}
-
 /* Settings Overlay */
 .settings-overlay {
   position: fixed;

@@ -2,13 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GridConfig, WidgetConstraints, WidgetLayout } from '../../types/layout';
 import { clampToRange } from './gridMath';
 
+export type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
 interface ResizeParams {
   grid: GridConfig;
   widgets: WidgetLayout[];
-  resizeWidget: (id: string, size: { width: number; height: number }) => Promise<boolean>;
+  resizeWidget: (id: string, size: { width: number; height: number; x?: number; y?: number }) => Promise<boolean>;
   getCellFromPointer: (clientX: number, clientY: number) => { x: number; y: number };
   getConstraints: (widgetType: string) => WidgetConstraints | undefined;
 }
+
+type PendingLayout = { x: number; y: number; width: number; height: number };
 
 export interface ResizeState {
   resizingWidgetId: string | null;
@@ -16,7 +20,7 @@ export interface ResizeState {
   isResizeBlocked: boolean;
   beginResize: (widget: WidgetLayout) => void;
   cancelResize: () => void;
-  handleResizePointerDown: (e: React.PointerEvent, widget: WidgetLayout) => void;
+  handleResizePointerDown: (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => void;
 }
 
 const rectanglesOverlap = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) => {
@@ -37,12 +41,11 @@ export function useWidgetResize({
   const resizePointerId = useRef<number | null>(null);
   const resizeInfo = useRef<{
     id: string;
-    startX: number;
-    startY: number;
     widgetType: string;
+    handle: ResizeHandle;
   } | null>(null);
-  const originalLayoutRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
-  const pendingSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const originalLayoutRef = useRef<PendingLayout | null>(null);
+  const pendingSizeRef = useRef<PendingLayout | null>(null);
 
   const cancelResize = useCallback(() => {
     resizePointerId.current = null;
@@ -58,7 +61,7 @@ export function useWidgetResize({
     resizePointerId.current = null;
     resizeInfo.current = null;
     originalLayoutRef.current = { x: widget.x, y: widget.y, width: widget.width, height: widget.height };
-    pendingSizeRef.current = { width: widget.width, height: widget.height };
+    pendingSizeRef.current = { x: widget.x, y: widget.y, width: widget.width, height: widget.height };
     setPreview({ x: widget.x, y: widget.y, width: widget.width, height: widget.height });
     setIsResizeBlocked(false);
     setResizingWidgetId(widget.id);
@@ -70,7 +73,12 @@ export function useWidgetResize({
     const pending = pendingSizeRef.current;
     const original = originalLayoutRef.current;
     if (!pending || !original) return;
-    if (pending.width === original.width && pending.height === original.height) {
+    const unchanged =
+      pending.width === original.width &&
+      pending.height === original.height &&
+      pending.x === original.x &&
+      pending.y === original.y;
+    if (unchanged) {
       cancelResize();
       return;
     }
@@ -83,18 +91,18 @@ export function useWidgetResize({
   }, [cancelResize, isResizeBlocked, resizeWidget, resizingWidgetId]);
 
   const handleResizePointerDown = useCallback(
-    (e: React.PointerEvent, widget: WidgetLayout) => {
+    (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => {
       if (e.button !== 0) return;
       if (widget.id !== resizingWidgetId) return;
+      if (!originalLayoutRef.current) return;
       e.preventDefault();
       e.stopPropagation();
 
       resizePointerId.current = e.pointerId;
       resizeInfo.current = {
         id: widget.id,
-        startX: widget.x,
-        startY: widget.y,
         widgetType: widget.widgetType,
+        handle,
       };
 
       try {
@@ -111,22 +119,69 @@ export function useWidgetResize({
       const activePointer = resizePointerId.current;
       if (activePointer == null || ev.pointerId !== activePointer) return;
       const info = resizeInfo.current;
-      if (!info) return;
-
-      const widget = widgets.find((w) => w.id === info.id);
-      if (!widget) return;
+      const original = originalLayoutRef.current;
+      if (!info || !original) return;
 
       const constraints = getConstraints(info.widgetType);
       const minWidth = constraints?.minWidth ?? 1;
       const minHeight = constraints?.minHeight ?? 1;
-      const maxWidth = constraints?.maxWidth ?? grid.columns;
-      const maxHeight = constraints?.maxHeight ?? grid.rows;
+      const maxWidth = Math.min(constraints?.maxWidth ?? grid.columns, grid.columns);
+      const maxHeight = Math.min(constraints?.maxHeight ?? grid.rows, grid.rows);
 
       const targetCell = getCellFromPointer(ev.clientX, ev.clientY);
-      const targetWidth = clampToRange(targetCell.x - info.startX + 1, minWidth, Math.min(maxWidth, grid.columns - info.startX));
-      const targetHeight = clampToRange(targetCell.y - info.startY + 1, minHeight, Math.min(maxHeight, grid.rows - info.startY));
 
-      const candidate = { x: info.startX, y: info.startY, width: targetWidth, height: targetHeight };
+      const affectsWest = info.handle.includes('w');
+      const affectsEast = info.handle.includes('e');
+      const affectsNorth = info.handle.includes('n');
+      const affectsSouth = info.handle.includes('s');
+
+      let nextX = original.x;
+      let nextY = original.y;
+      let nextWidth = original.width;
+      let nextHeight = original.height;
+
+      const anchorRight = original.x + original.width;
+      const anchorBottom = original.y + original.height;
+
+      if (affectsEast) {
+        const minRight = original.x + minWidth;
+        const maxRight = Math.min(original.x + maxWidth, grid.columns);
+        const newRight = clampToRange(targetCell.x + 1, minRight, Math.max(minRight, maxRight));
+        nextWidth = Math.max(minWidth, newRight - nextX);
+      }
+
+      if (affectsWest) {
+        const maxWidthAllowed = Math.min(maxWidth, grid.columns);
+        const minLeft = Math.max(0, anchorRight - maxWidthAllowed);
+        const maxLeft = Math.max(minLeft, anchorRight - minWidth);
+        const newLeft = clampToRange(targetCell.x, minLeft, maxLeft);
+        nextX = newLeft;
+        nextWidth = Math.max(minWidth, anchorRight - newLeft);
+      }
+
+      if (affectsSouth) {
+        const minBottom = original.y + minHeight;
+        const maxBottom = Math.min(original.y + maxHeight, grid.rows);
+        const newBottom = clampToRange(targetCell.y + 1, minBottom, Math.max(minBottom, maxBottom));
+        nextHeight = Math.max(minHeight, newBottom - nextY);
+      }
+
+      if (affectsNorth) {
+        const maxHeightAllowed = Math.min(maxHeight, grid.rows);
+        const minTop = Math.max(0, anchorBottom - maxHeightAllowed);
+        const maxTop = Math.max(minTop, anchorBottom - minHeight);
+        const newTop = clampToRange(targetCell.y, minTop, maxTop);
+        nextY = newTop;
+        nextHeight = Math.max(minHeight, anchorBottom - newTop);
+      }
+
+      // Clamp final layout to grid bounds just in case
+      nextX = clampToRange(nextX, 0, Math.max(0, grid.columns - nextWidth));
+      nextY = clampToRange(nextY, 0, Math.max(0, grid.rows - nextHeight));
+      nextWidth = clampToRange(nextWidth, minWidth, Math.min(maxWidth, grid.columns - nextX));
+      nextHeight = clampToRange(nextHeight, minHeight, Math.min(maxHeight, grid.rows - nextY));
+
+      const candidate: PendingLayout = { x: nextX, y: nextY, width: nextWidth, height: nextHeight };
       setPreview(candidate);
 
       const overlaps = widgets.some((other) => other.id !== info.id && rectanglesOverlap(candidate, other));
@@ -135,7 +190,7 @@ export function useWidgetResize({
         pendingSizeRef.current = null;
       } else {
         setIsResizeBlocked(false);
-        pendingSizeRef.current = { width: targetWidth, height: targetHeight };
+        pendingSizeRef.current = candidate;
       }
     };
 
