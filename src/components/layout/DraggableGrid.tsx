@@ -1,90 +1,212 @@
-import { useMemo, useRef, useState } from 'react';
-import { useGridStore, type WidgetGridItem, GRID_COLS, GRID_ROWS } from '../../store/gridStore';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useGridStore } from '../../store/gridStore';
 import { useStore } from '../../store';
-import GridResizers from './GridResizers';
 import GridGhost from './GridGhost';
-import useGridDrag from './useGridDrag';
-import { ClockWidget } from '../widgets';
 import GridCells from './GridCells';
+import useGridDrag from './useGridDrag';
+import { useWidgetResize } from './useWidgetResize';
+import type { ResizeHandle } from './useWidgetResize';
+import './DraggableGrid.css';
 import GridWidgetItem from './GridWidgetItem';
 import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/GridContextMenu';
-import { SettingsPanel, WidgetSettingsPanel, AddWidgetPanel } from '../panels';
-import { useGridTracks } from './useGridTracks';
-import { useWidgetResize } from './useWidgetResize';
-import './DraggableGrid.css';
+import { WidgetSettingsPanel, AddWidgetPanel } from '../panels';
+import type { WidgetLayout } from '../../types/layout';
+import { clampToRange } from './gridMath';
+import { ClockWidget, NotificationsWidget } from '../widgets';
+import type { ClockWidgetSettings, NotificationWidgetSettings } from '../../types/widgets';
 
 const GAP_SIZE = 12;
 
-const widgetComponents: Record<string, React.ComponentType> = {
-  'clock': ClockWidget,
+const widgetComponents: Record<string, React.ComponentType<{ widget: WidgetLayout }>> = {
+  notifications: NotificationsWidget,
+  clock: ClockWidget,
 };
-
 
 type PanelType = 'widget-settings' | 'add-widget' | null;
 
 export function DraggableGrid() {
-  const { widgets, gridLayout, updateWidgetPositionWithPush, updateWidgetPosition, removeWidget, setGridLayout, addWidget, isPositionOccupied } = useGridStore();
-  const { setFullscreen, toggleSettings } = useStore();
+  const {
+    widgets,
+    grid,
+    isLoaded,
+    moveWidget,
+    resizeWidget,
+    removeWidget,
+    addWidget,
+    debugGrid,
+    toggleDebugGrid,
+    getConstraints,
+    setWidgetLock,
+    updateWidgetSettings,
+  } = useGridStore();
+  const setFullscreen = useStore((state) => state.setFullscreen);
+  const toggleSettings = useStore((state) => state.toggleSettings);
+  const settingsState = useStore((state) => state.settings);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
 
-  const {
-    colWidths,
-    rowHeights,
-    setColWidths,
-    setRowHeights,
-    getGridMetrics,
-    getCellFromPointer,
-    gridStyle,
-  } = useGridTracks({
-    gridRef,
-    gridLayout,
-    gapSize: GAP_SIZE,
-    onPersist: setGridLayout,
-  });
-
-  // Context menu and panel state
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [activePanel, setActivePanel] = useState<PanelType>(null);
-  const [selectedWidget, setSelectedWidget] = useState<WidgetGridItem | null>(null);
-  
-  const [isAdjustGridMode, setIsAdjustGridMode] = useState(false);
-  const [isGridResizing, setIsGridResizing] = useState(false);
+  const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
+  const [widgetPreviewSettings, setWidgetPreviewSettings] = useState<Record<string, ClockWidgetSettings | NotificationWidgetSettings>>({});
+  const selectedWidget = useMemo(
+    () => (selectedWidgetId ? widgets.find((widget) => widget.id === selectedWidgetId) ?? null : null),
+    [selectedWidgetId, widgets],
+  );
+
+  const handlePreviewSettingsChange = useCallback((widgetId: string, settings: ClockWidgetSettings | NotificationWidgetSettings) => {
+    setWidgetPreviewSettings((prev) => ({
+      ...prev,
+      [widgetId]: settings,
+    }));
+  }, []);
+
+  const clearPreviewSettings = useCallback((widgetId: string | null) => {
+    if (!widgetId) return;
+    setWidgetPreviewSettings((prev) => {
+      if (!prev[widgetId]) return prev;
+      const next = { ...prev };
+      delete next[widgetId];
+      return next;
+    });
+  }, []);
+
+  const getGridMetrics = useCallback(() => {
+    const gridElement = gridRef.current;
+    if (!gridElement) return null;
+
+    const rect = gridElement.getBoundingClientRect();
+    const style = getComputedStyle(gridElement);
+
+    const paddingLeft = parseFloat(style.paddingLeft || '0') || 0;
+    const paddingRight = parseFloat(style.paddingRight || '0') || 0;
+    const paddingTop = parseFloat(style.paddingTop || '0') || 0;
+    const paddingBottom = parseFloat(style.paddingBottom || '0') || 0;
+    const columnGap = parseFloat(style.columnGap || `${GAP_SIZE}`) || GAP_SIZE;
+    const rowGap = parseFloat(style.rowGap || `${GAP_SIZE}`) || GAP_SIZE;
+
+    const innerWidth = Math.max(0, rect.width - paddingLeft - paddingRight);
+    const innerHeight = Math.max(0, rect.height - paddingTop - paddingBottom);
+    const cellWidth = (innerWidth - columnGap * (grid.columns - 1)) / grid.columns;
+    const cellHeight = (innerHeight - rowGap * (grid.rows - 1)) / grid.rows;
+
+    return {
+      rect,
+      paddingLeft,
+      paddingTop,
+      cellWidth,
+      cellHeight,
+      columnGap,
+      rowGap,
+    };
+  }, [grid.columns, grid.rows]);
+
+  const getCellFromPointer = useCallback(
+    (clientX: number, clientY: number, size?: { width: number; height: number }) => {
+      const metrics = getGridMetrics();
+      if (!metrics) return { x: 0, y: 0 };
+
+      const { rect, paddingLeft, paddingTop, cellWidth, cellHeight, columnGap, rowGap } = metrics;
+      if (cellWidth <= 0 || cellHeight <= 0) return { x: 0, y: 0 };
+
+      const x = clampToRange(clientX - rect.left - paddingLeft, 0, Math.max(0, rect.width));
+      const y = clampToRange(clientY - rect.top - paddingTop, 0, Math.max(0, rect.height));
+
+      const colStride = cellWidth + columnGap;
+      const rowStride = cellHeight + rowGap;
+
+      const maxX = grid.columns - (size?.width ?? 1);
+      const maxY = grid.rows - (size?.height ?? 1);
+
+      return {
+        x: clampToRange(Math.floor(x / colStride), 0, maxX),
+        y: clampToRange(Math.floor(y / rowStride), 0, maxY),
+      };
+    },
+    [getGridMetrics, grid.columns, grid.rows],
+  );
+
   const {
     dragInfo,
     ghostStyle,
-    handleWidgetPointerDown: originalHandleWidgetPointerDown,
+    preview: dragPreview,
+    isDragBlocked,
+    handleWidgetPointerDown,
+    cancelDrag,
   } = useGridDrag({
-    gridRef,
     widgets,
-    updateWidgetPositionWithPush,
-    updateWidgetPosition,
-    getGridMetrics,
+    moveWidget,
     getCellFromPointer,
   });
 
-  const isOutOfBounds = (position: { col: number; row: number; width: number; height: number }) => {
-    if (position.col < 0 || position.row < 0) return true;
-    if (position.width < 1 || position.height < 1) return true;
-    if (position.col + position.width > GRID_COLS) return true;
-    if (position.row + position.height > GRID_ROWS) return true;
-    return false;
-  };
+  const {
+    resizingWidgetId,
+    preview: resizePreview,
+    isResizeBlocked,
+    beginResize,
+    cancelResize: cancelResizeMode,
+    handleResizePointerDown,
+  } = useWidgetResize({
+    grid,
+    widgets,
+    resizeWidget,
+    getCellFromPointer: (x: number, y: number) => getCellFromPointer(x, y, undefined),
+    getConstraints,
+  });
 
-  const handleRemoveWidget = (id: string) => {
-    removeWidget(id);
-  };
+  const closeSettingsPanel = useCallback(() => {
+    setActivePanel(null);
+    setSelectedWidgetId(null);
+    cancelResizeMode();
+  }, [cancelResizeMode]);
 
-  // Context menu handlers
-  const handleContextMenu = (e: React.MouseEvent, widget: WidgetGridItem | null) => {
+  const handlePanelCancel = useCallback(() => {
+    clearPreviewSettings(selectedWidgetId);
+    closeSettingsPanel();
+  }, [clearPreviewSettings, closeSettingsPanel, selectedWidgetId]);
+
+  const handlePanelApply = useCallback(
+    async (settings: ClockWidgetSettings | NotificationWidgetSettings) => {
+      if (!selectedWidgetId) return;
+      const success = await updateWidgetSettings(selectedWidgetId, settings as unknown as Record<string, unknown>);
+      if (success) {
+        clearPreviewSettings(selectedWidgetId);
+        closeSettingsPanel();
+      }
+    },
+    [selectedWidgetId, updateWidgetSettings, clearPreviewSettings, closeSettingsPanel],
+  );
+
+  const previewArea = resizePreview ?? dragPreview;
+  const isBlocked = isDragBlocked || isResizeBlocked;
+
+  const handleWidgetPointerDownSafe = useCallback(
+    (e: React.PointerEvent, widget: WidgetLayout) => {
+      if (widget.locked) return;
+      if (resizingWidgetId) return;
+      handleWidgetPointerDown(e, widget);
+    },
+    [handleWidgetPointerDown, resizingWidgetId],
+  );
+
+  const handleResizePointerDownSafe = useCallback(
+    (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => {
+      if (widget.locked) return;
+      handleResizePointerDown(e, widget, handle);
+    },
+    [handleResizePointerDown],
+  );
+  const handleContextMenu = (e: React.MouseEvent, widget: WidgetLayout | null) => {
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, widget });
   };
 
   const handleGridContextMenu = (e: React.MouseEvent) => {
-    // Only show if clicking on empty grid area (not on a widget)
     if ((e.target as HTMLElement).closest('.grid-widget')) return;
+    if (resizingWidgetId) {
+      cancelResizeMode();
+    }
     handleContextMenu(e, null);
   };
 
@@ -92,149 +214,178 @@ export function DraggableGrid() {
     setContextMenu(null);
   };
 
-  const handleMenuAction = (action: MenuAction, widget?: WidgetGridItem | null) => {
+  const handleMenuAction = (action: MenuAction, widget?: WidgetLayout | null) => {
     switch (action) {
       case 'exit-fullscreen':
-        setFullscreen(false);
+        void setFullscreen(settingsState?.isFullscreen ? false : true);
         break;
       case 'settings':
         toggleSettings();
         break;
       case 'widget-settings':
         if (widget) {
-          setSelectedWidget(widget);
+          setSelectedWidgetId(widget.id);
           setActivePanel('widget-settings');
         }
         break;
       case 'resize':
-        if (widget) {
-          setResizingWidgetId(widget.id);
+        if (widget && !widget.locked) {
+          beginResize(widget);
         }
         break;
       case 'toggle-adjust-grid':
-        setIsAdjustGridMode(!isAdjustGridMode);
+        toggleDebugGrid();
         break;
       case 'remove-widget':
         if (widget) {
-          removeWidget(widget.id);
+          if (widget.id === selectedWidgetId) {
+            setSelectedWidgetId(null);
+            setActivePanel(null);
+          }
+          void removeWidget(widget.id);
         }
         break;
       case 'add-widget':
         setActivePanel('add-widget');
         break;
+      case 'toggle-lock':
+        if (widget) {
+          if (resizingWidgetId === widget.id) {
+            cancelResizeMode();
+          }
+          void setWidgetLock(widget.id, !(widget.locked ?? false));
+        }
+        break;
     }
   };
 
+  const handleAddWidget = (widgetType: string) => {
+    void addWidget(widgetType);
+  };
+
   const handleClosePanel = () => {
-    setActivePanel(null);
-    setSelectedWidget(null);
+    closeSettingsPanel();
   };
 
   const availableWidgets = useMemo(
     () => [
       {
+        id: 'notifications',
+        name: 'Notifications',
+        description: 'Configurable notification feed',
+        isActive: false,
+      },
+      {
         id: 'clock',
         name: 'Clock',
         description: 'Analog + digital clock',
-        isActive: widgets.some((widget) => widget.widgetType === 'clock'),
+        isActive: false,
       },
     ],
     [widgets],
   );
 
-  const addWidgetToFirstFreeSpot = (widgetType: string) => {
-    for (let row = 0; row < GRID_ROWS; row++) {
-      for (let col = 0; col < GRID_COLS; col++) {
-        const position = { col, row, width: 1, height: 1 };
-        if (!isPositionOccupied(position)) {
-          addWidget(widgetType, position);
-          return true;
-        }
+  const gridStyle = useMemo(
+    () => ({
+      position: 'relative' as const,
+      gridTemplateColumns: `repeat(${grid.columns}, 1fr)`,
+      gridTemplateRows: `repeat(${grid.rows}, 1fr)`,
+      gap: `${GAP_SIZE}px`,
+    }),
+    [grid.columns, grid.rows],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && resizingWidgetId) {
+        cancelResizeMode();
       }
-    }
-    return false;
-  };
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cancelResizeMode, resizingWidgetId]);
 
-  const handleAddWidget = (widgetType: string) => {
-    const added = addWidgetToFirstFreeSpot(widgetType);
-    if (!added) {
-      console.warn('[grid] No space available to add widget', widgetType);
+  useEffect(() => {
+    if (activePanel === 'widget-settings' && selectedWidgetId && !selectedWidget) {
+      setActivePanel(null);
+      setSelectedWidgetId(null);
     }
-  };
+  }, [activePanel, selectedWidget, selectedWidgetId]);
 
-  const { resizingWidgetId, setResizingWidgetId, handleResizePointerDown } = useWidgetResize({
-    gridRef,
-    widgets,
-    getGridMetrics,
-    updateWidgetPositionWithPush,
-    dragInfo,
-  });
-
-  const handleWidgetPointerDownWrapped = (e: React.PointerEvent, widget: WidgetGridItem) => {
-    if (resizingWidgetId && resizingWidgetId !== widget.id) {
-      setResizingWidgetId(null);
-    }
-    originalHandleWidgetPointerDown(e, widget);
-  };
-  
+  if (!isLoaded) {
+    return (
+      <div
+        className={`draggable-grid ${debugGrid ? 'draggable-grid--debug' : ''} draggable-grid--loading`}
+        ref={gridRef}
+        style={gridStyle}
+      >
+        <GridCells grid={grid} highlight={null} debugGrid={debugGrid} isBlocked={false} isDragging={false} isResizing={false} />
+      </div>
+    );
+  }
 
   return (
     <>
-      <div 
-        className={`draggable-grid ${isAdjustGridMode ? 'draggable-grid--adjust' : ''} ${isGridResizing ? 'is-resizing-grid' : ''}`}
+      <div
+        className={`draggable-grid ${debugGrid ? 'draggable-grid--debug' : ''} ${isBlocked ? 'is-move-blocked' : ''}`}
         ref={gridRef}
         style={gridStyle}
         onContextMenu={handleGridContextMenu}
         onPointerDown={(e) => {
           if (!e.defaultPrevented) {
-            setResizingWidgetId(null);
+            cancelDrag();
+            const clickedWidget = (e.target as HTMLElement).closest('.grid-widget');
+            if (!clickedWidget && resizingWidgetId) {
+              cancelResizeMode();
+            }
           }
         }}
       >
-        <GridCells hoverCell={null} dragInfo={null} isDragBlocked={false} isOutOfBounds={isOutOfBounds} />
-        {isAdjustGridMode && (
-          <GridResizers 
-            gridRef={gridRef} 
-            colWidths={colWidths} 
-            rowHeights={rowHeights} 
-            setColWidths={setColWidths} 
-            setRowHeights={setRowHeights}
-            onResizeStart={() => setIsGridResizing(true)}
-            onResizeEnd={() => setIsGridResizing(false)}
-          />
-        )}
-        
+        <GridCells grid={grid} highlight={previewArea} debugGrid={debugGrid} isBlocked={isBlocked} isDragging={!!dragInfo} isResizing={!!resizingWidgetId} />
+
         {widgets.map((widget) => {
           const WidgetComponent = widgetComponents[widget.widgetType];
           if (!WidgetComponent) return null;
+          const previewSettings = widgetPreviewSettings[widget.id];
+          let widgetToRender: WidgetLayout = previewSettings
+            ? { ...widget, settings: previewSettings as unknown as Record<string, unknown> }
+            : widget;
+          if (resizingWidgetId === widget.id && resizePreview) {
+            widgetToRender = { ...widgetToRender, ...resizePreview };
+          }
           return (
             <GridWidgetItem
               key={widget.id}
-              widget={widget}
+              widget={widgetToRender}
               WidgetComponent={WidgetComponent}
-              handleWidgetPointerDown={handleWidgetPointerDownWrapped}
-              handleRemoveWidget={handleRemoveWidget}
-              handleResizePointerDown={handleResizePointerDown}
+              handleWidgetPointerDown={handleWidgetPointerDownSafe}
+              handleResizePointerDown={handleResizePointerDownSafe}
               handleContextMenu={handleContextMenu}
               dragInfo={dragInfo}
               isResizing={resizingWidgetId === widget.id}
             />
           );
         })}
+
         <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} widgets={widgets} widgetComponents={widgetComponents} />
       </div>
 
-      {/* Context Menu */}
       <GridContextMenu
         menu={contextMenu}
         onClose={handleCloseContextMenu}
         onAction={handleMenuAction}
-        isAdjustGridMode={isAdjustGridMode}
+        isAdjustGridMode={debugGrid}
+        isFullscreen={settingsState?.isFullscreen ?? false}
       />
 
-      {/* Panels */}
       {activePanel === 'widget-settings' && selectedWidget && (
-        <WidgetSettingsPanel widget={selectedWidget} onClose={handleClosePanel} />
+        <WidgetSettingsPanel
+          widget={selectedWidget}
+          previewSettings={widgetPreviewSettings[selectedWidget.id]}
+          onPreviewChange={(settings) => handlePreviewSettingsChange(selectedWidget.id, settings)}
+          onApply={handlePanelApply}
+          onCancel={handlePanelCancel}
+        />
       )}
       {activePanel === 'add-widget' && (
         <AddWidgetPanel

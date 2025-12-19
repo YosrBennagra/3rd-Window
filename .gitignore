@@ -2,3 +2,20 @@ node_modules
 dist
 *.log
 .DS_Store
+
+# Environment and secrets
+.env
+.env.local
+*.secret
+secrets.toml
+
+# Discord credentials (if moved to separate file in future)
+src-tauri/discord_credentials.rs
+
+# Tauri build artifacts
+src-tauri/target
+
+# Note: Discord credentials are currently in:
+# - src-tauri/src/discord.rs (DISCORD_CLIENT_ID)
+# - src-tauri/src/discord_commands.rs (DISCORD_CLIENT_SECRET)
+# ⚠️ DO NOT commit these files with real credentials to public repos!

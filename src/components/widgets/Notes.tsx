@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNotes } from '../../state/selectors';
 
 export default function Notes() {

@@ -1,164 +1,238 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { WidgetGridItem } from '../../store/gridStore';
-import type useGridDrag from './useGridDrag';
-import type { GridMetrics } from './useGridTracks';
+import type { GridConfig, WidgetConstraints, WidgetLayout } from '../../types/layout';
 import { clampToRange } from './gridMath';
-import { GRID_COLS, GRID_ROWS } from '../../store/gridStore';
 
-type ResizeInfo = { id: string; startWidth: number; startHeight: number; startX: number; startY: number };
+export type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
-interface UseWidgetResizeParams {
-  gridRef: React.RefObject<HTMLDivElement | null>;
-  widgets: WidgetGridItem[];
-  getGridMetrics: () => GridMetrics | null;
-  updateWidgetPositionWithPush: (id: string, position: WidgetGridItem['position']) => boolean;
-  dragInfo: ReturnType<typeof useGridDrag>['dragInfo'];
+interface ResizeParams {
+  grid: GridConfig;
+  widgets: WidgetLayout[];
+  resizeWidget: (id: string, size: { width: number; height: number; x?: number; y?: number }) => Promise<boolean>;
+  getCellFromPointer: (clientX: number, clientY: number) => { x: number; y: number };
+  getConstraints: (widgetType: string) => WidgetConstraints | undefined;
 }
 
+type PendingLayout = { x: number; y: number; width: number; height: number };
+
+export interface ResizeState {
+  resizingWidgetId: string | null;
+  preview: { x: number; y: number; width: number; height: number } | null;
+  isResizeBlocked: boolean;
+  beginResize: (widget: WidgetLayout) => void;
+  cancelResize: () => void;
+  handleResizePointerDown: (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => void;
+}
+
+const rectanglesOverlap = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) => {
+  return !(a.x >= b.x + b.width || a.x + a.width <= b.x || a.y >= b.y + b.height || a.y + a.height <= b.y);
+};
+
 export function useWidgetResize({
-  gridRef,
+  grid,
   widgets,
-  getGridMetrics,
-  updateWidgetPositionWithPush,
-  dragInfo,
-}: UseWidgetResizeParams) {
-  const [resizeInfo, setResizeInfo] = useState<ResizeInfo | null>(null);
-  const [resizePointerId, setResizePointerId] = useState<number | null>(null);
-  const resizeCaptureElemRef = useRef<EventTarget | null>(null);
+  resizeWidget,
+  getCellFromPointer,
+  getConstraints,
+}: ResizeParams): ResizeState {
   const [resizingWidgetId, setResizingWidgetId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isResizeBlocked, setIsResizeBlocked] = useState(false);
+
+  const resizePointerId = useRef<number | null>(null);
+  const resizeInfo = useRef<{
+    id: string;
+    widgetType: string;
+    handle: ResizeHandle;
+  } | null>(null);
+  const originalLayoutRef = useRef<PendingLayout | null>(null);
+  const pendingSizeRef = useRef<PendingLayout | null>(null);
+
+  const cancelResize = useCallback(() => {
+    resizePointerId.current = null;
+    resizeInfo.current = null;
+    originalLayoutRef.current = null;
+    pendingSizeRef.current = null;
+    setPreview(null);
+    setResizingWidgetId(null);
+    setIsResizeBlocked(false);
+  }, []);
+
+  const beginResize = useCallback((widget: WidgetLayout) => {
+    resizePointerId.current = null;
+    resizeInfo.current = null;
+    originalLayoutRef.current = { x: widget.x, y: widget.y, width: widget.width, height: widget.height };
+    pendingSizeRef.current = { x: widget.x, y: widget.y, width: widget.width, height: widget.height };
+    setPreview({ x: widget.x, y: widget.y, width: widget.width, height: widget.height });
+    setIsResizeBlocked(false);
+    setResizingWidgetId(widget.id);
+  }, []);
+
+  const applyPendingResize = useCallback(async () => {
+    if (!resizingWidgetId) return;
+    if (isResizeBlocked) return;
+    const pending = pendingSizeRef.current;
+    const original = originalLayoutRef.current;
+    if (!pending || !original) return;
+    const unchanged =
+      pending.width === original.width &&
+      pending.height === original.height &&
+      pending.x === original.x &&
+      pending.y === original.y;
+    if (unchanged) {
+      cancelResize();
+      return;
+    }
+    const ok = await resizeWidget(resizingWidgetId, pending);
+    if (ok) {
+      cancelResize();
+    } else {
+      setIsResizeBlocked(true);
+    }
+  }, [cancelResize, isResizeBlocked, resizeWidget, resizingWidgetId]);
 
   const handleResizePointerDown = useCallback(
-    (e: React.PointerEvent, widget: WidgetGridItem) => {
+    (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => {
       if (e.button !== 0) return;
-      if (dragInfo) return;
+      if (widget.id !== resizingWidgetId) return;
+      if (!originalLayoutRef.current) return;
       e.preventDefault();
       e.stopPropagation();
-      setResizingWidgetId(widget.id);
-      setResizeInfo({
+
+      resizePointerId.current = e.pointerId;
+      resizeInfo.current = {
         id: widget.id,
-        startWidth: widget.position.width,
-        startHeight: widget.position.height,
-        startX: e.clientX,
-        startY: e.clientY,
-      });
-      setResizePointerId(e.pointerId);
+        widgetType: widget.widgetType,
+        handle,
+      };
+
       try {
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        resizeCaptureElemRef.current = e.currentTarget;
       } catch {
-        resizeCaptureElemRef.current = null;
+        // ignore
       }
     },
-    [dragInfo],
+    [resizingWidgetId],
   );
 
   useEffect(() => {
-    if (!resizeInfo || resizePointerId == null) return;
-
-    const endResize = () => {
-      setResizeInfo(null);
-      setResizePointerId(null);
-      setResizingWidgetId(null);
-    };
-
     const onMove = (ev: PointerEvent) => {
-      if (ev.pointerId !== resizePointerId) return;
-      const grid = gridRef.current;
-      if (!grid) return;
+      const activePointer = resizePointerId.current;
+      if (activePointer == null || ev.pointerId !== activePointer) return;
+      const info = resizeInfo.current;
+      const original = originalLayoutRef.current;
+      if (!info || !original) return;
 
-      const widget = widgets.find((w) => w.id === resizeInfo.id);
-      if (!widget) return;
+      const constraints = getConstraints(info.widgetType);
+      const minWidth = constraints?.minWidth ?? 1;
+      const minHeight = constraints?.minHeight ?? 1;
+      const maxWidth = Math.min(constraints?.maxWidth ?? grid.columns, grid.columns);
+      const maxHeight = Math.min(constraints?.maxHeight ?? grid.rows, grid.rows);
 
-      const metrics = getGridMetrics();
-      if (!metrics) return;
-      const { cellWidth, cellHeight, customColWidths, customRowHeights, rowGap, columnGap } = metrics;
-      if ((!cellWidth && !customColWidths) || !cellHeight) return;
+      const targetCell = getCellFromPointer(ev.clientX, ev.clientY);
 
-      const deltaX = ev.clientX - resizeInfo.startX;
-      const deltaY = ev.clientY - resizeInfo.startY;
+      const affectsWest = info.handle.includes('w');
+      const affectsEast = info.handle.includes('e');
+      const affectsNorth = info.handle.includes('n');
+      const affectsSouth = info.handle.includes('s');
 
-      let newWidth = widget.position.width;
-      if (customColWidths && customColWidths.length === GRID_COLS) {
-        const startCol = widget.position.col;
-        const startCount = resizeInfo.startWidth;
-        let startPixel = 0;
-        for (let index = 0; index < startCount; index++) {
-          startPixel += customColWidths[startCol + index] + (index > 0 ? columnGap : 0);
-        }
-        const desiredPixel = Math.max(1, startPixel + deltaX);
-        let acc = 0;
-        let cols = 0;
-        while (cols < GRID_COLS - startCol && acc < desiredPixel) {
-          acc += customColWidths[startCol + cols] + (cols > 0 ? columnGap : 0);
-          cols++;
-        }
-        newWidth = clampToRange(cols, 1, GRID_COLS - widget.position.col);
-      } else if (cellWidth) {
-        newWidth = Math.max(
-          1,
-          Math.min(Math.round(resizeInfo.startWidth + deltaX / cellWidth), GRID_COLS - widget.position.col),
-        );
+      let nextX = original.x;
+      let nextY = original.y;
+      let nextWidth = original.width;
+      let nextHeight = original.height;
+
+      const anchorRight = original.x + original.width;
+      const anchorBottom = original.y + original.height;
+
+      if (affectsEast) {
+        const minRight = original.x + minWidth;
+        const maxRight = Math.min(original.x + maxWidth, grid.columns);
+        const newRight = clampToRange(targetCell.x + 1, minRight, Math.max(minRight, maxRight));
+        nextWidth = Math.max(minWidth, newRight - nextX);
       }
 
-      let newHeight = widget.position.height;
-      if (customRowHeights && customRowHeights.length === GRID_ROWS) {
-        const startRow = widget.position.row;
-        const startCount = resizeInfo.startHeight;
-        let startPixel = 0;
-        for (let index = 0; index < startCount; index++) {
-          startPixel += customRowHeights[startRow + index] + (index > 0 ? rowGap : 0);
-        }
-        const desiredPixel = Math.max(1, startPixel + deltaY);
-        let acc = 0;
-        let rows = 0;
-        while (rows < GRID_ROWS - startRow && acc < desiredPixel) {
-          acc += customRowHeights[startRow + rows] + (rows > 0 ? rowGap : 0);
-          rows++;
-        }
-        newHeight = clampToRange(rows, 1, GRID_ROWS - widget.position.row);
-      } else if (cellHeight) {
-        newHeight = Math.max(
-          1,
-          Math.min(Math.round(resizeInfo.startHeight + deltaY / cellHeight), GRID_ROWS - widget.position.row),
-        );
+      if (affectsWest) {
+        const maxWidthAllowed = Math.min(maxWidth, grid.columns);
+        const minLeft = Math.max(0, anchorRight - maxWidthAllowed);
+        const maxLeft = Math.max(minLeft, anchorRight - minWidth);
+        const newLeft = clampToRange(targetCell.x, minLeft, maxLeft);
+        nextX = newLeft;
+        nextWidth = Math.max(minWidth, anchorRight - newLeft);
       }
 
-      if (newWidth === widget.position.width && newHeight === widget.position.height) return;
+      if (affectsSouth) {
+        const minBottom = original.y + minHeight;
+        const maxBottom = Math.min(original.y + maxHeight, grid.rows);
+        const newBottom = clampToRange(targetCell.y + 1, minBottom, Math.max(minBottom, maxBottom));
+        nextHeight = Math.max(minHeight, newBottom - nextY);
+      }
 
-      updateWidgetPositionWithPush(widget.id, {
-        ...widget.position,
-        width: newWidth,
-        height: newHeight,
-      });
+      if (affectsNorth) {
+        const maxHeightAllowed = Math.min(maxHeight, grid.rows);
+        const minTop = Math.max(0, anchorBottom - maxHeightAllowed);
+        const maxTop = Math.max(minTop, anchorBottom - minHeight);
+        const newTop = clampToRange(targetCell.y, minTop, maxTop);
+        nextY = newTop;
+        nextHeight = Math.max(minHeight, anchorBottom - newTop);
+      }
+
+      // Clamp final layout to grid bounds just in case
+      nextX = clampToRange(nextX, 0, Math.max(0, grid.columns - nextWidth));
+      nextY = clampToRange(nextY, 0, Math.max(0, grid.rows - nextHeight));
+      nextWidth = clampToRange(nextWidth, minWidth, Math.min(maxWidth, grid.columns - nextX));
+      nextHeight = clampToRange(nextHeight, minHeight, Math.min(maxHeight, grid.rows - nextY));
+
+      const candidate: PendingLayout = { x: nextX, y: nextY, width: nextWidth, height: nextHeight };
+      setPreview(candidate);
+
+      const overlaps = widgets.some((other) => other.id !== info.id && rectanglesOverlap(candidate, other));
+      if (overlaps) {
+        setIsResizeBlocked(true);
+        pendingSizeRef.current = null;
+      } else {
+        setIsResizeBlocked(false);
+        pendingSizeRef.current = candidate;
+      }
     };
 
     const onEnd = (ev: PointerEvent) => {
-      if (ev.pointerId !== resizePointerId) return;
+      const activePointer = resizePointerId.current;
+      if (activePointer == null || ev.pointerId !== activePointer) return;
       try {
-        const el = resizeCaptureElemRef.current as HTMLElement | null;
+        const el = ev.target as HTMLElement;
         if (el && typeof el.releasePointerCapture === 'function') {
-          el.releasePointerCapture(resizePointerId);
+          el.releasePointerCapture(ev.pointerId);
         }
       } catch {
         // ignore
       }
-      resizeCaptureElemRef.current = null;
-      endResize();
+      resizePointerId.current = null;
+      resizeInfo.current = null;
+      void applyPendingResize();
     };
 
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onEnd);
     window.addEventListener('pointercancel', onEnd);
+
     return () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onEnd);
       window.removeEventListener('pointercancel', onEnd);
     };
-  }, [dragInfo, getGridMetrics, gridRef, resizeInfo, resizePointerId, updateWidgetPositionWithPush, widgets]);
+  }, [applyPendingResize, getCellFromPointer, grid.columns, grid.rows, getConstraints, widgets]);
+
+  useEffect(() => {
+    if (resizingWidgetId && !widgets.find((w) => w.id === resizingWidgetId)) {
+      cancelResize();
+    }
+  }, [widgets, resizingWidgetId, cancelResize]);
 
   return {
     resizingWidgetId,
-    setResizingWidgetId,
+    preview,
+    isResizeBlocked,
+    beginResize,
+    cancelResize,
     handleResizePointerDown,
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRefresh, usePowerSaving, useTheme } from '../state/selectors';
 import { useAppStore } from '../state/store';
 import AlertRulesManager from './AlertRulesManager';

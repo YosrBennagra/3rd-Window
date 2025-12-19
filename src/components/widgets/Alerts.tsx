@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useAlerts } from '../../state/selectors';
 import { formatRelative } from '../../utils/system';
 
@@ -20,7 +20,7 @@ export default function Alerts() {
           <div>
             <p className="list-title">{a.title}</p>
             <p className="muted tiny">{a.message}</p>
-            <p className="muted tiny">{formatRelative(a.createdAt)}</p>
+            <p className="muted tiny">{formatRelative(a.createdAt.getTime())}</p>
           </div>
           <span className={`badge badge--${a.severity}`}>{severityLabel[a.severity]}</span>
         </div>

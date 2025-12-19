@@ -1,17 +1,25 @@
-import type { WidgetGridItem } from '../../store/gridStore';
+import type { WidgetLayout } from '../../types/layout';
+import type { ResizeHandle } from './useWidgetResize';
 
 interface Props {
-  widget: WidgetGridItem;
+  widget: WidgetLayout;
   WidgetComponent: React.ComponentType<any>;
-  handleWidgetPointerDown: (e: React.PointerEvent, widget: WidgetGridItem) => void;
-  handleRemoveWidget: (id: string) => void;
-  handleResizePointerDown: (e: React.PointerEvent, widget: WidgetGridItem) => void;
-  handleContextMenu: (e: React.MouseEvent, widget: WidgetGridItem) => void;
-  dragInfo?: any;
+  handleWidgetPointerDown: (e: React.PointerEvent, widget: WidgetLayout) => void;
+  handleResizePointerDown: (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => void;
+  handleContextMenu: (e: React.MouseEvent, widget: WidgetLayout) => void;
+  dragInfo?: { id: string } | null;
   isResizing?: boolean;
 }
 
-export default function GridWidgetItem({ widget, WidgetComponent, handleWidgetPointerDown, handleRemoveWidget, handleResizePointerDown, handleContextMenu, dragInfo, isResizing }: Props) {
+export default function GridWidgetItem({
+  widget,
+  WidgetComponent,
+  handleWidgetPointerDown,
+  handleResizePointerDown,
+  handleContextMenu,
+  dragInfo,
+  isResizing,
+}: Props) {
   return (
     <div
       key={widget.id}
@@ -19,31 +27,36 @@ export default function GridWidgetItem({ widget, WidgetComponent, handleWidgetPo
       onPointerDown={(e) => handleWidgetPointerDown(e, widget)}
       onContextMenu={(e) => handleContextMenu(e, widget)}
       style={{
-        gridColumn: `${widget.position.col * 2 + 1} / span ${widget.position.width * 2 - 1}`,
-        gridRow: `${widget.position.row * 2 + 1} / span ${widget.position.height * 2 - 1}`,
+        gridColumn: `${widget.x + 1} / span ${widget.width}`,
+        gridRow: `${widget.y + 1} / span ${widget.height}`,
       }}
     >
       <div className="grid-widget__content">
-        <WidgetComponent />
+        <WidgetComponent widget={widget} />
       </div>
-      <button
-        className="grid-widget__remove"
-        onClick={() => handleRemoveWidget(widget.id)}
-        title="Remove widget"
-      >
-        ✕
-      </button>
-      
       {isResizing && (
         <>
-          <div className="grid-widget__resize-handle grid-widget__resize-handle--tl" />
-          <div className="grid-widget__resize-handle grid-widget__resize-handle--tr" />
-          <div className="grid-widget__resize-handle grid-widget__resize-handle--bl" />
-          <div
-            className="grid-widget__resize-handle grid-widget__resize-handle--br"
-            onPointerDown={(e) => handleResizePointerDown(e, widget)}
-            title="Drag to resize"
-          />
+          {[
+            { handle: 'nw', className: 'grid-widget__resize-handle grid-widget__resize-handle--tl' },
+            { handle: 'ne', className: 'grid-widget__resize-handle grid-widget__resize-handle--tr' },
+            { handle: 'sw', className: 'grid-widget__resize-handle grid-widget__resize-handle--bl' },
+            { handle: 'se', className: 'grid-widget__resize-handle grid-widget__resize-handle--br' },
+          ].map(({ handle, className }) => (
+            <div
+              key={handle}
+              className={className}
+              onPointerDown={(e) => handleResizePointerDown(e, widget, handle as ResizeHandle)}
+              title="Resize"
+            />
+          ))}
+          {(['n', 's', 'e', 'w'] as ResizeHandle[]).map((handle) => (
+            <div
+              key={handle}
+              className={`grid-widget__resize-edge grid-widget__resize-edge--${handle}`}
+              onPointerDown={(e) => handleResizePointerDown(e, widget, handle)}
+              title="Resize"
+            />
+          ))}
         </>
       )}
     </div>

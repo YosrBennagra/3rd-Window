@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useMetrics } from '../../state/selectors';
 import { formatBytes } from '../../utils/system';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import WidgetFrame from './WidgetFrame';
 import { widgetDefinitions } from '../config/widgets';
 import Notifications from './widgets/Notifications';
@@ -15,7 +14,7 @@ import Pipelines from './widgets/Pipelines';
 import PowerMode from './widgets/PowerMode';
 import { useAppStore } from '../state/store';
 
-const widgetMap = {
+const widgetMap: Record<string, React.ComponentType> = {
   Notifications,
   Temperature,
   RamUsage,

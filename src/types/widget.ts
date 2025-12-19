@@ -1,9 +1,15 @@
+import type { WidgetLayout } from './layout';
+
+export interface WidgetProps {
+  widget: WidgetLayout;
+}
+
 export interface WidgetConfig {
   id: string;
   name: string;
   description: string;
   icon: string;
-  component: React.ComponentType;
+  component: React.ComponentType<{ widget: WidgetLayout }>;
   defaultSize?: 'small' | 'medium' | 'large';
   minSize?: { width: number; height: number };
   maxSize?: { width: number; height: number };
