@@ -324,6 +324,7 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
     const [notifDraft, setNotifDraft] = useState(notifSettings);
     const [discordAuth, setDiscordAuth] = useState<any>(null);
     const [isConnecting, setIsConnecting] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
 
     // Load Discord auth state
     useEffect(() => {
@@ -346,27 +347,34 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
 
     const handleDiscordConnect = async () => {
       setIsConnecting(true);
+      setConnectionStatus('Opening browser for Discord authorization...');
+      
       try {
         const { discordService } = await import('../../services/discord');
-        await discordService.startOAuthFlow();
         
-        // In a real app, we'd need a callback handler
-        // For now, show instructions
-        alert('Please complete the Discord authorization in your browser, then paste the authorization code here.');
-        const code = prompt('Enter authorization code:');
+        // Start automatic OAuth flow (opens browser and waits for callback)
+        const result = await discordService.startOAuthFlow();
         
-        if (code) {
-          const result = await discordService.connect(code);
-          if (result.connected) {
-            const auth = await discordService.getAuthState();
-            setDiscordAuth(auth);
-          } else {
-            alert('Failed to connect: ' + (result.error || 'Unknown error'));
-          }
+        if (result.connected) {
+          const auth = await discordService.getAuthState();
+          setDiscordAuth(auth);
+          setConnectionStatus('Connected to Discord!');
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => setConnectionStatus(null), 3000);
+        } else {
+          setConnectionStatus(`Failed to connect: ${result.error || 'Unknown error'}`);
+          
+          // Clear error message after 5 seconds
+          setTimeout(() => setConnectionStatus(null), 5000);
         }
       } catch (error) {
         console.error('[Settings] Discord connect failed:', error);
-        alert('Failed to connect to Discord');
+        const errorMsg = error instanceof Error ? error.message : 'Failed to connect to Discord';
+        setConnectionStatus(errorMsg);
+        
+        // Clear error message after 5 seconds
+        setTimeout(() => setConnectionStatus(null), 5000);
       } finally {
         setIsConnecting(false);
       }
@@ -441,6 +449,23 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
                         Connect your Discord account to see real DM notifications
                       </div>
                     </div>
+                    {connectionStatus && (
+                      <div style={{ 
+                        marginBottom: '12px', 
+                        padding: '12px', 
+                        background: connectionStatus.includes('Failed') || connectionStatus.includes('error') 
+                          ? 'rgba(244, 67, 54, 0.1)' 
+                          : 'rgba(33, 150, 243, 0.1)', 
+                        borderRadius: '4px', 
+                        border: connectionStatus.includes('Failed') || connectionStatus.includes('error')
+                          ? '1px solid rgba(244, 67, 54, 0.3)'
+                          : '1px solid rgba(33, 150, 243, 0.3)'
+                      }}>
+                        <div style={{ fontSize: '13px', opacity: 0.9 }}>
+                          {connectionStatus}
+                        </div>
+                      </div>
+                    )}
                     <button 
                       type="button" 
                       className="panel__button panel__button--accent" 
@@ -448,7 +473,7 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
                       disabled={isConnecting}
                       style={{ width: '100%' }}
                     >
-                      {isConnecting ? 'Connecting...' : 'Connect Discord'}
+                      {isConnecting ? '⏳ Waiting for authorization...' : 'Connect Discord'}
                     </button>
                   </>
                 )}

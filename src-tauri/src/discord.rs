@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use std::sync::Arc;
+use sha2::{Sha256, Digest};
+use base64::Engine;
 
 // Discord API Constants
 const DISCORD_API_BASE: &str = "https://discord.com/api/v10";
 const DISCORD_OAUTH_AUTHORIZE: &str = "https://discord.com/oauth2/authorize";
 const DISCORD_OAUTH_TOKEN: &str = "https://discord.com/api/v10/oauth2/token";
-const DISCORD_REDIRECT_URI: &str = "http://localhost:8080/callback";
+const DISCORD_REDIRECT_URI: &str = "thirdscreen://discord-callback";
 const DISCORD_SCOPES: &str = "identify messages.read";
 
 // ✅ SECURE: Credentials now loaded from encrypted storage via secure_storage.rs
@@ -116,13 +118,14 @@ impl DiscordClient {
         true
     }
 
-    pub async fn exchange_code(&mut self, code: &str, client_id: &str, client_secret: &str) -> Result<(), String> {
+    pub async fn exchange_code(&mut self, code: &str, client_id: &str, client_secret: &str, code_verifier: &str) -> Result<(), String> {
         let params = [
             ("client_id", client_id),
             ("client_secret", client_secret),
             ("grant_type", "authorization_code"),
             ("code", code),
             ("redirect_uri", DISCORD_REDIRECT_URI),
+            ("code_verifier", code_verifier),
         ];
 
         let response = self
@@ -303,14 +306,36 @@ pub fn init_discord_client() -> DiscordClientState {
     Arc::new(Mutex::new(DiscordClient::new()))
 }
 
-// Helper function to generate OAuth URL
-pub fn generate_oauth_url(client_id: &str, state: &str) -> String {
+// Helper functions for OAuth with PKCE
+/// Generate PKCE code verifier (random string)
+pub fn generate_code_verifier() -> String {
+    use rand::Rng;
+    const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+    let mut rng = rand::thread_rng();
+    (0..128)
+        .map(|_| {
+            let idx = rng.gen_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
+}
+
+/// Generate PKCE code challenge from verifier
+pub fn generate_code_challenge(verifier: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(verifier.as_bytes());
+    let result = hasher.finalize();
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(result)
+}
+
+pub fn generate_oauth_url(client_id: &str, state: &str, code_challenge: &str) -> String {
     format!(
-        "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
+        "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}&code_challenge={}&code_challenge_method=S256",
         DISCORD_OAUTH_AUTHORIZE,
         client_id,
         urlencoding::encode(DISCORD_REDIRECT_URI),
         urlencoding::encode(DISCORD_SCOPES),
-        state
+        state,
+        code_challenge
     )
 }

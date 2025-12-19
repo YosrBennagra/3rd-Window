@@ -1,21 +1,59 @@
 use crate::discord::{
-    generate_oauth_url, DiscordAuthState, DiscordClientState, DiscordConnectionStatus,
+    generate_oauth_url, generate_code_verifier, generate_code_challenge,
+    DiscordAuthState, DiscordClientState, DiscordConnectionStatus,
     DiscordDMNotification,
 };
 use crate::secure_storage::{CredentialsStore, get_credentials};
 use tauri::{State, AppHandle};
+use tauri_plugin_opener::OpenerExt;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 // ✅ SECURE: Credentials loaded from encrypted storage
 // No hardcoded secrets in source code
 
+// Store for PKCE state (code_verifier needs to be saved for later exchange)
+#[derive(Clone)]
+pub struct PkceState {
+    pub code_verifier: Arc<Mutex<Option<String>>>,
+}
+
+impl PkceState {
+    pub fn new() -> Self {
+        Self {
+            code_verifier: Arc::new(Mutex::new(None)),
+        }
+    }
+}
+
 #[tauri::command]
-pub async fn discord_get_oauth_url(
+pub async fn discord_start_oauth(
     credentials_store: State<'_, CredentialsStore>,
+    pkce_state: State<'_, PkceState>,
     app: AppHandle,
 ) -> Result<String, String> {
     let creds = get_credentials(&credentials_store, &app).await?;
+    
+    // Generate PKCE parameters
+    let code_verifier = generate_code_verifier();
+    let code_challenge = generate_code_challenge(&code_verifier);
     let state = uuid::Uuid::new_v4().to_string();
-    Ok(generate_oauth_url(&creds.client_id, &state))
+    
+    // Store code_verifier for later use
+    {
+        let mut verifier = pkce_state.code_verifier.lock().await;
+        *verifier = Some(code_verifier);
+    }
+    
+    let oauth_url = generate_oauth_url(&creds.client_id, &state, &code_challenge);
+    
+    // Debug: Log the OAuth URL
+    log::info!("Generated OAuth URL: {}", oauth_url);
+    
+    // Open URL in default browser automatically
+    app.opener().open_url(&oauth_url, None::<&str>).map_err(|e| format!("Failed to open browser: {}", e))?;
+    
+    Ok("OAuth flow started - waiting for redirect...".to_string())
 }
 
 #[tauri::command]
@@ -23,14 +61,28 @@ pub async fn discord_connect(
     code: String,
     discord_client: State<'_, DiscordClientState>,
     credentials_store: State<'_, CredentialsStore>,
+    pkce_state: State<'_, PkceState>,
     app: AppHandle,
 ) -> Result<DiscordConnectionStatus, String> {
     let creds = get_credentials(&credentials_store, &app).await?;
+    
+    // Retrieve stored code_verifier
+    let code_verifier = {
+        let verifier = pkce_state.code_verifier.lock().await;
+        verifier.clone().ok_or("No OAuth flow in progress")?
+    };
+    
     let client_arc = discord_client.inner().clone();
     
     {
         let mut client = client_arc.lock().await;
-        client.exchange_code(&code, &creds.client_id, &creds.client_secret).await?;
+        client.exchange_code(&code, &creds.client_id, &creds.client_secret, &code_verifier).await?;
+    }
+    
+    // Clear the code_verifier after successful exchange
+    {
+        let mut verifier = pkce_state.code_verifier.lock().await;
+        *verifier = None;
     }
 
     let client = client_arc.lock().await;

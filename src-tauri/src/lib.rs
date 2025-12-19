@@ -2,7 +2,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 use sysinfo::System;
-use tauri::{Manager, Window};
+use tauri::{Manager, Window, Emitter, Listener};
 
 mod layout;
 use layout::{LayoutOperation, LayoutService, LayoutState};
@@ -13,6 +13,7 @@ use secure_storage::init_credentials_store;
 mod discord;
 mod discord_commands;
 use discord::init_discord_client;
+use discord_commands::PkceState;
 
 const GRID_COLUMNS: u8 = 24;
 const GRID_ROWS: u8 = 12;
@@ -735,10 +736,42 @@ async fn get_system_temps() -> Result<SystemTemps, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(LayoutService::new(GRID_COLUMNS, GRID_ROWS))
         .manage(init_discord_client())
         .manage(init_credentials_store())
+        .manage(PkceState::new())
         .setup(|app| {
+            // Register deep link handler for Discord OAuth callback
+            let app_handle = app.handle().clone();
+            
+            app.listen("deep-link://new-url", move |event| {
+                let url = event.payload();
+                // Handle Discord OAuth callback
+                if url.starts_with("thirdscreen://discord-callback") {
+                    // Parse the authorization code from the URL
+                    if let Some(query_start) = url.find('?') {
+                        let query = &url[query_start + 1..];
+                        let params: HashMap<&str, &str> = query
+                            .split('&')
+                            .filter_map(|param| {
+                                let mut parts = param.split('=');
+                                Some((parts.next()?, parts.next()?))
+                            })
+                            .collect();
+                        
+                        if let Some(code) = params.get("code") {
+                            let code = code.to_string();
+                            
+                            // Emit event to frontend with the authorization code
+                            app_handle.emit("discord-oauth-callback", code).ok();
+                        }
+                    }
+                }
+            });
+            
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -761,7 +794,7 @@ pub fn run() {
             get_system_temps,
             get_layout,
             apply_layout_operation,
-            discord_commands::discord_get_oauth_url,
+            discord_commands::discord_start_oauth,
             discord_commands::discord_connect,
             discord_commands::discord_disconnect,
             discord_commands::discord_get_auth_state,
