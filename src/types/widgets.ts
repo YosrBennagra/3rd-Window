@@ -183,3 +183,22 @@ export type DiscordTimeFormat = NotificationTimeFormat;
 export interface DiscordNotificationsSettings extends NotificationWidgetSettings {}
 export const DISCORD_NOTIFICATIONS_DEFAULT_SETTINGS = NOTIFICATION_WIDGET_DEFAULT_SETTINGS;
 export const ensureDiscordNotificationsSettings = ensureNotificationWidgetSettings;
+
+// Widget definition for the config-driven widget system
+export interface WidgetDefinition {
+  id: string;
+  title: string;
+  component: string;
+  defaultSize: { w: number; h: number };
+  description?: string;
+}
+
+// Re-export future types for backward compatibility
+export type {
+  AlertItem,
+  MetricSnapshot,
+  NotificationItem,
+  IntegrationStatus,
+  PipelineStatus,
+  ShortcutItem,
+} from './future';

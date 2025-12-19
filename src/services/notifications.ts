@@ -15,9 +15,12 @@ export async function getNotifications(): Promise<NotificationItem[]> {
   const now = Date.now();
   return Array.from({ length: 5 }).map((_, idx) => ({
     id: `n-${now}-${idx}`,
+    title: messages[idx % messages.length],
+    message: messages[idx % messages.length],
     source: sources[idx % sources.length],
+    timestamp: new Date(now - idx * 60 * 1000),
     summary: messages[idx % messages.length],
-    receivedAt: now - idx * 60 * 1000,
+    receivedAt: new Date(now - idx * 60 * 1000),
     priority: severities[idx % severities.length]
   }));
 }

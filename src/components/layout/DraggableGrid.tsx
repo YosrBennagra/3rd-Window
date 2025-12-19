@@ -17,7 +17,7 @@ import type { ClockWidgetSettings, NotificationWidgetSettings } from '../../type
 
 const GAP_SIZE = 12;
 
-const widgetComponents: Record<string, React.ComponentType> = {
+const widgetComponents: Record<string, React.ComponentType<{ widget: WidgetLayout }>> = {
   notifications: NotificationsWidget,
   clock: ClockWidget,
 };

@@ -1,66 +1,8 @@
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import type { WidgetLayout } from '../../types/layout';
 import { ensureNotificationWidgetSettings } from '../../types/widgets';
-
-interface DiscordNotification {
-  id: string;
-  server: string;
-  channel: string;
-  sender: string;
-  message: string;
-  timestamp: Date;
-  unread: boolean;
-  isMention: boolean;
-  isDM: boolean;
-}
-
-// Sample Discord notifications
-const sampleDiscordNotifications: DiscordNotification[] = [
-  {
-    id: '1',
-    server: 'Dev Team',
-    channel: 'general',
-    sender: 'AlexK',
-    message: '@everyone Deployment scheduled for 3pm',
-    timestamp: new Date(Date.now() - 2 * 60 * 1000),
-    unread: true,
-    isMention: true,
-    isDM: false,
-  },
-  {
-    id: '2',
-    server: 'Dev Team',
-    channel: 'frontend',
-    sender: 'Sarah',
-    message: 'Anyone tested the new grid layout?',
-    timestamp: new Date(Date.now() - 15 * 60 * 1000),
-    unread: true,
-    isMention: false,
-    isDM: false,
-  },
-  {
-    id: '3',
-    server: 'Direct Messages',
-    channel: 'DM',
-    sender: 'Jamie',
-    message: 'Quick sync at 2pm?',
-    timestamp: new Date(Date.now() - 45 * 60 * 1000),
-    unread: false,
-    isMention: false,
-    isDM: true,
-  },
-  {
-    id: '4',
-    server: 'Design System',
-    channel: 'announcements',
-    sender: 'DesignBot',
-    message: 'New color tokens available in Figma',
-    timestamp: new Date(Date.now() - 90 * 60 * 1000),
-    unread: false,
-    isMention: false,
-    isDM: false,
-  },
-];
+import { discordService } from '../../services/discord';
+import type { DiscordDMNotification, DiscordAuthState } from '../../types/discord';
 
 interface Props {
   widget: WidgetLayout;
@@ -94,82 +36,128 @@ export function NotificationsWidget({ widget }: Props) {
   const settings = ensureNotificationWidgetSettings(widget.settings);
   const sourceInfo = sourceLabels[settings.source] || sourceLabels.discord;
   
+  // Discord state
+  const [discordAuth, setDiscordAuth] = useState<DiscordAuthState | null>(null);
+  const [discordDMs, setDiscordDMs] = useState<DiscordDMNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
   // Determine if widget is compact based on size
   const isCompact = widget.width < 4 || widget.height < 3;
 
-  // Render Discord notifications
-  const renderDiscordNotifications = () => {
-    const filtered = useMemo(() => {
-      let result = sampleDiscordNotifications;
-      
-      if (settings.showMentionsOnly) {
-        result = result.filter(n => n.isMention);
-      }
-      
-      if (!settings.includeDMs) {
-        result = result.filter(n => !n.isDM);
-      }
-      
-      return result;
-    }, []);
+  // Load Discord auth state and DMs
+  useEffect(() => {
+    if (settings.source !== 'discord') return;
 
-    const handleNotificationClick = (notification: DiscordNotification) => {
-      if (!settings.openOnClick) return;
-      console.log('Open Discord:', notification);
+    const loadDiscord = async () => {
+      setIsLoading(true);
+      try {
+        const auth = await discordService.getAuthState();
+        setDiscordAuth(auth);
+        
+        if (auth.isConnected) {
+          const dms = await discordService.getDMs(10);
+          setDiscordDMs(dms);
+        }
+      } catch (error) {
+        console.error('[NotificationsWidget] Failed to load Discord:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    if (filtered.length === 0) {
+    loadDiscord();
+
+    // Refresh DMs periodically
+    const interval = setInterval(() => {
+      if (discordService.isConnected()) {
+        discordService.getDMs(10).then(setDiscordDMs).catch(console.error);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [settings.source]);
+
+  // Render Discord notifications
+  const renderDiscordNotifications = () => {
+    if (!discordAuth?.isConnected) {
       return (
         <div className="notifications-widget__empty">
-          No Discord notifications
+          <div className="notifications-widget__placeholder-icon">🔗</div>
+          <div className="notifications-widget__placeholder-text">
+            Discord not connected
+          </div>
+          <div className="notifications-widget__placeholder-hint">
+            Right-click → Settings to connect
+          </div>
         </div>
       );
     }
 
-    return filtered.map((notification) => (
-      <div
-        key={notification.id}
-        className={`notifications-widget__item discord-item ${notification.unread ? 'notifications-widget__item--unread' : ''} ${settings.openOnClick ? 'notifications-widget__item--clickable' : ''}`}
-        onClick={() => handleNotificationClick(notification)}
-      >
-        <div className="notifications-widget__header">
-          <div className="notifications-widget__context">
-            {!isCompact && (
-              <>
-                <span className="notifications-widget__server">
-                  {notification.server}
-                </span>
-                <span className="notifications-widget__separator">/</span>
-              </>
-            )}
-            <span className="notifications-widget__channel">
-              {notification.isDM ? notification.sender : `#${notification.channel}`}
+    if (isLoading) {
+      return (
+        <div className="notifications-widget__empty">
+          <div className="notifications-widget__placeholder-text">
+            Loading Discord DMs...
+          </div>
+        </div>
+      );
+    }
+
+    if (discordDMs.length === 0) {
+      return (
+        <div className="notifications-widget__empty">
+          No Discord DMs
+        </div>
+      );
+    }
+
+    const handleDMClick = (dm: DiscordDMNotification) => {
+      if (!settings.openOnClick) return;
+      discordService.openDM(dm.channelId).catch(console.error);
+    };
+
+    return discordDMs.map((dm) => {
+      const timestamp = new Date(dm.timestamp);
+      const displayName = dm.sender.globalName || dm.sender.username;
+      
+      return (
+        <div
+          key={dm.id}
+          className={`notifications-widget__item discord-item ${dm.isUnread ? 'notifications-widget__item--unread' : ''} ${settings.openOnClick ? 'notifications-widget__item--clickable' : ''}`}
+          onClick={() => handleDMClick(dm)}
+        >
+          <div className="notifications-widget__header">
+            <div className="notifications-widget__context">
+              <span className="discord-logo">💬</span>
+              <span className="notifications-widget__sender">
+                {displayName}
+              </span>
+            </div>
+            <span className="notifications-widget__time">
+              {settings.timeFormat === 'relative' 
+                ? formatRelativeTime(timestamp)
+                : formatAbsoluteTime(timestamp)
+              }
             </span>
           </div>
-          <span className="notifications-widget__time">
-            {settings.timeFormat === 'relative' 
-              ? formatRelativeTime(notification.timestamp)
-              : formatAbsoluteTime(notification.timestamp)
-            }
-          </span>
-        </div>
-        
-        <div className="notifications-widget__content">
-          {!notification.isDM && (
-            <span className="notifications-widget__sender">
-              {notification.sender}:
+          
+          <div className="notifications-widget__content">
+            <span className="notifications-widget__message">
+              {isCompact && dm.content.length > 50 
+                ? dm.content.substring(0, 50) + '...' 
+                : dm.content.length > 100
+                ? dm.content.substring(0, 100) + '...'
+                : dm.content
+              }
             </span>
-          )}
-          <span className={`notifications-widget__message ${notification.isMention ? 'notifications-widget__message--mention' : ''}`}>
-            {notification.message}
-          </span>
-        </div>
+          </div>
 
-        {notification.unread && (
-          <div className="notifications-widget__unread-indicator" />
-        )}
-      </div>
-    ));
+          {dm.isUnread && (
+            <div className="notifications-widget__unread-indicator" />
+          )}
+        </div>
+      );
+    });
   };
 
   // Render placeholder for inactive sources

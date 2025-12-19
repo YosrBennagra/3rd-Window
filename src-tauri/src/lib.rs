@@ -7,6 +7,13 @@ use tauri::{Manager, Window};
 mod layout;
 use layout::{LayoutOperation, LayoutService, LayoutState};
 
+mod secure_storage;
+use secure_storage::init_credentials_store;
+
+mod discord;
+mod discord_commands;
+use discord::init_discord_client;
+
 const GRID_COLUMNS: u8 = 24;
 const GRID_ROWS: u8 = 12;
 
@@ -727,7 +734,10 @@ async fn get_system_temps() -> Result<SystemTemps, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
         .manage(LayoutService::new(GRID_COLUMNS, GRID_ROWS))
+        .manage(init_discord_client())
+        .manage(init_credentials_store())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -750,7 +760,13 @@ pub fn run() {
             open_system_clock,
             get_system_temps,
             get_layout,
-            apply_layout_operation
+            apply_layout_operation,
+            discord_commands::discord_get_oauth_url,
+            discord_commands::discord_connect,
+            discord_commands::discord_disconnect,
+            discord_commands::discord_get_auth_state,
+            discord_commands::discord_get_dms,
+            discord_commands::discord_open_dm
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

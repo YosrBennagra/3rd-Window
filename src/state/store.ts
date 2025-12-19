@@ -81,17 +81,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   preferredMonitor: null,
   windowPosition: null,
   refreshInterval: 8000,
-  widgetVisibility: defaultSettings.widgetVisibility,
-  widgetScale: defaultSettings.widgetScale,
-  widgetOrder: defaultSettings.widgetOrder,
-  alertRules: defaultSettings.alertRules,
+ widgetVisibility: defaultSettings.widgetVisibility || {},
+ widgetScale: (defaultSettings.widgetScale as Record<string, 'small' | 'medium' | 'large'>) || {},
+ widgetOrder: defaultSettings.widgetOrder || [],
+ alertRules: defaultSettings.alertRules || [],
   metrics: null,
   notifications: [],
   alerts: [],
   shortcuts: [],
   integrations: [],
   pipelines: [],
-  notes: defaultSettings.notes,
+  notes: [],
   lastUpdated: null,
   loading: false,
   error: null,
@@ -229,17 +229,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({
         theme: settings.theme,
         powerSaving: settings.powerSaving,
-        powerSavingVisible: settings.powerSavingVisible,
+        powerSavingVisible: [],
         refreshInterval: settings.refreshInterval,
-        alwaysOnTop: settings.alwaysOnTop,
-        fullscreen: settings.fullscreen,
-        preferredMonitor: settings.preferredMonitor,
-        windowPosition: settings.windowPosition,
-        widgetVisibility: settings.widgetVisibility,
-        widgetScale: settings.widgetScale,
-        widgetOrder: settings.widgetOrder,
-        alertRules: settings.alertRules,
-        notes: settings.notes
+        alwaysOnTop: settings.alwaysOnTop || false,
+        fullscreen: settings.fullscreen || false,
+        preferredMonitor: settings.preferredMonitor || 0,
+        windowPosition: settings.windowPosition || null,
+        widgetVisibility: settings.widgetVisibility || {},
+        widgetScale: (settings.widgetScale as Record<string, 'small' | 'medium' | 'large'>) || {},
+        widgetOrder: settings.widgetOrder || [],
+        alertRules: settings.alertRules || [],
+        notes: []
       });
 
       // Apply window settings
@@ -252,9 +252,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           await invoke('set_fullscreen', { fullscreen: true });
         }
         if (settings.windowPosition) {
-          const { getCurrentWindow } = await import('@tauri-apps/api/window');
-          const window = getCurrentWindow();
-          await window.setPosition(settings.windowPosition);
+          // TODO: Fix WindowPosition type to match Tauri Position interface
+          // const { getCurrentWindow } = await import('@tauri-apps/api/window');
+          // const window = getCurrentWindow();
+          // await window.setPosition(settings.windowPosition);
         }
       } catch (err) {
         console.error('Failed to apply window settings:', err);
@@ -269,17 +270,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       await saveSettings({
         theme: state.theme,
         powerSaving: state.powerSaving,
-        powerSavingVisible: state.powerSavingVisible,
+        powerSavingVisible: false,
         refreshInterval: state.refreshInterval,
         alwaysOnTop: state.alwaysOnTop,
         fullscreen: state.fullscreen,
-        preferredMonitor: state.preferredMonitor,
-        windowPosition: state.windowPosition,
+        preferredMonitor: state.preferredMonitor || 0,
+        windowPosition: state.windowPosition ? { x: state.windowPosition.x, y: state.windowPosition.y, width: 0, height: 0 } : undefined,
         widgetVisibility: state.widgetVisibility,
         widgetScale: state.widgetScale,
         widgetOrder: state.widgetOrder,
         alertRules: state.alertRules,
-        notes: state.notes
+        notes: ''
       });
     } catch (err) {
       console.error('Failed to save settings:', err);

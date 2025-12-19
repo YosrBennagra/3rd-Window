@@ -322,6 +322,17 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
   const renderNotificationSettings = () => {
     const notifSettings = ensureNotificationWidgetSettings(previewSettings ?? widget.settings);
     const [notifDraft, setNotifDraft] = useState(notifSettings);
+    const [discordAuth, setDiscordAuth] = useState<any>(null);
+    const [isConnecting, setIsConnecting] = useState(false);
+
+    // Load Discord auth state
+    useEffect(() => {
+      if (notifDraft.source === 'discord') {
+        import('../../services/discord').then(({ discordService }) => {
+          discordService.getAuthState().then(setDiscordAuth).catch(console.error);
+        });
+      }
+    }, [notifDraft.source]);
 
     useEffect(() => {
       setNotifDraft(ensureNotificationWidgetSettings(previewSettings ?? widget.settings));
@@ -331,6 +342,44 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
       const next = ensureNotificationWidgetSettings({ ...notifDraft, ...partial });
       setNotifDraft(next);
       onPreviewChange(next);
+    };
+
+    const handleDiscordConnect = async () => {
+      setIsConnecting(true);
+      try {
+        const { discordService } = await import('../../services/discord');
+        await discordService.startOAuthFlow();
+        
+        // In a real app, we'd need a callback handler
+        // For now, show instructions
+        alert('Please complete the Discord authorization in your browser, then paste the authorization code here.');
+        const code = prompt('Enter authorization code:');
+        
+        if (code) {
+          const result = await discordService.connect(code);
+          if (result.connected) {
+            const auth = await discordService.getAuthState();
+            setDiscordAuth(auth);
+          } else {
+            alert('Failed to connect: ' + (result.error || 'Unknown error'));
+          }
+        }
+      } catch (error) {
+        console.error('[Settings] Discord connect failed:', error);
+        alert('Failed to connect to Discord');
+      } finally {
+        setIsConnecting(false);
+      }
+    };
+
+    const handleDiscordDisconnect = async () => {
+      try {
+        const { discordService } = await import('../../services/discord');
+        await discordService.disconnect();
+        setDiscordAuth(null);
+      } catch (error) {
+        console.error('[Settings] Discord disconnect failed:', error);
+      }
     };
 
     const sourceLabels = {
@@ -366,52 +415,53 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
         {notifDraft.source === 'discord' && (
           <>
             <section className="panel__section">
-              <h3 className="panel__section-title">Content Filtering</h3>
+              <h3 className="panel__section-title">Discord Connection</h3>
               <div className="panel__control-group">
-                <label className="panel__control-label">Show Notifications</label>
-                <div className="panel__options panel__options--column">
-                  <label className="panel__option">
-                    <input
-                      type="radio"
-                      name={`${widget.id}-filter`}
-                      checked={!notifDraft.showMentionsOnly}
-                      onChange={() => handleNotifUpdate({ showMentionsOnly: false })}
-                    />
-                    All notifications
-                  </label>
-                  <label className="panel__option">
-                    <input
-                      type="radio"
-                      name={`${widget.id}-filter`}
-                      checked={notifDraft.showMentionsOnly}
-                      onChange={() => handleNotifUpdate({ showMentionsOnly: true })}
-                    />
-                    Mentions only
-                  </label>
-                </div>
+                {discordAuth?.isConnected ? (
+                  <>
+                    <div style={{ marginBottom: '12px', padding: '12px', background: 'rgba(76, 175, 80, 0.1)', borderRadius: '4px', border: '1px solid rgba(76, 175, 80, 0.3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: '#4caf50', fontSize: '16px' }}>✓</span>
+                        <span style={{ fontWeight: 500 }}>Connected as {discordAuth.user?.username}</span>
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      className="panel__button panel__button--ghost" 
+                      onClick={handleDiscordDisconnect}
+                      style={{ width: '100%' }}
+                    >
+                      Disconnect Discord
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '12px', padding: '12px', background: 'rgba(255, 152, 0, 0.1)', borderRadius: '4px', border: '1px solid rgba(255, 152, 0, 0.3)' }}>
+                      <div style={{ fontSize: '13px', opacity: 0.9 }}>
+                        Connect your Discord account to see real DM notifications
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      className="panel__button panel__button--accent" 
+                      onClick={handleDiscordConnect}
+                      disabled={isConnecting}
+                      style={{ width: '100%' }}
+                    >
+                      {isConnecting ? 'Connecting...' : 'Connect Discord'}
+                    </button>
+                  </>
+                )}
               </div>
+            </section>
 
+            <section className="panel__section">
+              <h3 className="panel__section-title">Discord DM Settings</h3>
               <div className="panel__control-group">
-                <label className="panel__control-label">Direct Messages</label>
-                <div className="panel__options panel__options--column">
-                  <label className="panel__option">
-                    <input
-                      type="radio"
-                      name={`${widget.id}-dms`}
-                      checked={notifDraft.includeDMs}
-                      onChange={() => handleNotifUpdate({ includeDMs: true })}
-                    />
-                    Include DMs
-                  </label>
-                  <label className="panel__option">
-                    <input
-                      type="radio"
-                      name={`${widget.id}-dms`}
-                      checked={!notifDraft.includeDMs}
-                      onChange={() => handleNotifUpdate({ includeDMs: false })}
-                    />
-                    Hide DMs
-                  </label>
+                <div style={{ padding: '12px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '4px', border: '1px solid rgba(99, 102, 241, 0.2)', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '13px', opacity: 0.9 }}>
+                    <strong>DMs Only</strong> - This widget shows Discord Direct Messages only. Server messages and channels are not included.
+                  </div>
                 </div>
               </div>
             </section>

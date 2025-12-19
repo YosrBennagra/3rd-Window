@@ -7,7 +7,7 @@ type Props = {
   ghostStyle: React.CSSProperties | null;
   dragInfo: DragInfo | null;
   widgets: WidgetLayout[];
-  widgetComponents: Record<string, React.ComponentType>;
+  widgetComponents: Record<string, React.ComponentType<{ widget: WidgetLayout }>>;
 };
 
 export default function GridGhost({ ghostStyle, dragInfo, widgets, widgetComponents }: Props) {
