@@ -2,7 +2,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 use sysinfo::System;
-use tauri::{Manager, Window, Emitter, Listener};
+use tauri::{Manager, Window};
 
 mod layout;
 use layout::{LayoutOperation, LayoutService, LayoutState};
@@ -744,33 +744,9 @@ pub fn run() {
         .manage(init_credentials_store())
         .manage(PkceState::new())
         .setup(|app| {
-            // Register deep link handler for Discord OAuth callback
-            let app_handle = app.handle().clone();
-            
-            app.listen("deep-link://new-url", move |event| {
-                let url = event.payload();
-                // Handle Discord OAuth callback
-                if url.starts_with("thirdscreen://discord-callback") {
-                    // Parse the authorization code from the URL
-                    if let Some(query_start) = url.find('?') {
-                        let query = &url[query_start + 1..];
-                        let params: HashMap<&str, &str> = query
-                            .split('&')
-                            .filter_map(|param| {
-                                let mut parts = param.split('=');
-                                Some((parts.next()?, parts.next()?))
-                            })
-                            .collect();
-                        
-                        if let Some(code) = params.get("code") {
-                            let code = code.to_string();
-                            
-                            // Emit event to frontend with the authorization code
-                            app_handle.emit("discord-oauth-callback", code).ok();
-                        }
-                    }
-                }
-            });
+            // ✅ No deep link handler needed - using localhost HTTP callback server instead
+            // Discord OAuth redirects to http://127.0.0.1:53172/discord/callback
+            // The callback server in discord_commands.rs handles the token exchange
             
             if cfg!(debug_assertions) {
                 app.handle().plugin(

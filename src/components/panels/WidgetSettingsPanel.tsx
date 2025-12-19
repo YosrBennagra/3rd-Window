@@ -432,6 +432,9 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
                         <span style={{ color: '#4caf50', fontSize: '16px' }}>✓</span>
                         <span style={{ fontWeight: 500 }}>Connected as {discordAuth.user?.username}</span>
                       </div>
+                      <div style={{ fontSize: '12px', opacity: 0.7, paddingLeft: '24px', marginTop: '4px' }}>
+                        DM notifications enabled
+                      </div>
                     </div>
                     <button 
                       type="button" 
@@ -444,9 +447,14 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
                   </>
                 ) : (
                   <>
-                    <div style={{ marginBottom: '12px', padding: '12px', background: 'rgba(255, 152, 0, 0.1)', borderRadius: '4px', border: '1px solid rgba(255, 152, 0, 0.3)' }}>
-                      <div style={{ fontSize: '13px', opacity: 0.9 }}>
-                        Connect your Discord account to see real DM notifications
+                    <div style={{ marginBottom: '12px', padding: '12px', background: 'rgba(33, 150, 243, 0.1)', borderRadius: '4px', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+                      <div style={{ fontSize: '13px', opacity: 0.9, marginBottom: '8px' }}>
+                        <strong>Connect Discord for DM notifications</strong>
+                      </div>
+                      <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                        • Read-only access to your DMs<br/>
+                        • Secure OAuth with PKCE<br/>
+                        • No posting or modification
                       </div>
                     </div>
                     {connectionStatus && (

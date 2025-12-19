@@ -8,7 +8,11 @@ use base64::Engine;
 const DISCORD_API_BASE: &str = "https://discord.com/api/v10";
 const DISCORD_OAUTH_AUTHORIZE: &str = "https://discord.com/oauth2/authorize";
 const DISCORD_OAUTH_TOKEN: &str = "https://discord.com/api/v10/oauth2/token";
-const DISCORD_REDIRECT_URI: &str = "thirdscreen://discord-callback";
+// ✅ Using localhost HTTP redirect instead of custom URI scheme
+// Discord OAuth does NOT support custom protocols like thirdscreen://
+// Must use standard http://127.0.0.1 for desktop apps
+const DISCORD_REDIRECT_URI: &str = "http://127.0.0.1:53172/discord/callback";
+// OAuth with messages.read allows reading DM messages
 const DISCORD_SCOPES: &str = "identify messages.read";
 
 // ✅ SECURE: Credentials now loaded from encrypted storage via secure_storage.rs
@@ -118,10 +122,10 @@ impl DiscordClient {
         true
     }
 
-    pub async fn exchange_code(&mut self, code: &str, client_id: &str, client_secret: &str, code_verifier: &str) -> Result<(), String> {
+    pub async fn exchange_code(&mut self, code: &str, client_id: &str, code_verifier: &str) -> Result<(), String> {
+        // ✅ PKCE flow - no client_secret needed (public client)
         let params = [
             ("client_id", client_id),
-            ("client_secret", client_secret),
             ("grant_type", "authorization_code"),
             ("code", code),
             ("redirect_uri", DISCORD_REDIRECT_URI),
@@ -161,15 +165,15 @@ impl DiscordClient {
         Ok(())
     }
 
-    pub async fn refresh_access_token(&mut self, client_id: &str, client_secret: &str) -> Result<(), String> {
+    pub async fn refresh_access_token(&mut self, client_id: &str) -> Result<(), String> {
         let refresh_token = self
             .refresh_token
             .as_ref()
             .ok_or("No refresh token available")?;
 
+        // ✅ PKCE flow - no client_secret needed
         let params = [
             ("client_id", client_id),
-            ("client_secret", client_secret),
             ("grant_type", "refresh_token"),
             ("refresh_token", refresh_token),
         ];

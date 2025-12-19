@@ -4,54 +4,111 @@ import type {
   DiscordAuthState,
   DiscordConnectionStatus,
   DiscordDMNotification,
+  DiscordUser,
 } from '../types/discord';
 
 /**
- * Discord Service - Handles Discord OAuth2 and DM notifications
- * Read-only Discord DM integration following official OAuth2 flow
+ * Discord Service - Handles Discord OAuth2 authentication
+ * 
+ * IMPORTANT ARCHITECTURE NOTES:
+ * ============================
+ * 
+ * OAuth = Identity Only (User info)
+ * - This service handles OAuth2 authentication
+ * - OAuth tokens can ONLY access user profile data
+ * - OAuth CANNOT read messages or DMs (requires bot token)
+ * 
+ * Bot = Messages & Real-time Events
+ * - Reading DMs requires a Discord Bot with Gateway connection
+ * - Bot tokens use WebSocket (not REST) for real-time updates
+ * - Bot functionality is NOT YET IMPLEMENTED
+ * 
+ * Current Status:
+ * - ✅ OAuth authentication (identity only)
+ * - ❌ Bot connection (TODO: requires bot token + Gateway WebSocket)
+ * - ❌ DM notifications (TODO: requires bot MESSAGE_CREATE events)
  */
 
 class DiscordService {
   private authState: DiscordAuthState | null = null;
-  private refreshInterval: number | null = null;
-  private readonly REFRESH_INTERVAL_MS = 30000; // 30 seconds
+  private checkInterval: number | null = null;
 
   /**
-   * Start automatic OAuth flow - opens browser and waits for callback
+   * Start OAuth flow - opens browser and automatically completes when callback received
+   * The backend HTTP server (port 53172) handles the callback and token exchange
    */
   async startOAuthFlow(): Promise<DiscordConnectionStatus> {
     return new Promise(async (resolve, reject) => {
       try {
-        // Listen for OAuth callback event from deep-link
-        const unlisten = await listen<string>('discord-oauth-callback', async (event) => {
-          const code = event.payload;
+        // Listen for successful authentication from backend
+        const unlistenSuccess = await listen<DiscordUser>('discord-auth-success', async (event) => {
+          console.log('[Discord] ✅ Authentication successful:', event.payload.username);
           
-          // Complete the OAuth flow with the authorization code
-          try {
-            const status = await invoke<DiscordConnectionStatus>('discord_connect', { code });
-            
-            if (status.connected && status.user) {
-              this.authState = {
-                isConnected: true,
-                user: status.user,
-                expiresAt: null,
-              };
-              this.startAutoRefresh();
-            }
-            
-            unlisten();
-            resolve(status);
-          } catch (error) {
-            console.error('[Discord] Failed to exchange code:', error);
-            unlisten();
-            reject(new Error('Failed to complete Discord authentication'));
-          }
+          // Fetch full auth state from backend
+          const authState = await this.getAuthState();
+          this.authState = authState;
+          
+          unlistenSuccess();
+          if (unlistenError) unlistenError();
+          if (this.checkInterval) clearInterval(this.checkInterval);
+          
+          resolve({
+            connected: true,
+            user: event.payload,
+            error: null,
+          });
         });
         
-        // Start the OAuth flow (opens browser automatically)
+        // Listen for authentication errors from backend
+        const unlistenError = await listen<string>('discord-auth-error', (event) => {
+          console.error('[Discord] ❌ Authentication failed:', event.payload);
+          
+          unlistenSuccess();
+          if (unlistenError) unlistenError();
+          if (this.checkInterval) clearInterval(this.checkInterval);
+          
+          reject(new Error(`Discord authentication failed: ${event.payload}`));
+        });
+        
+        // Start the OAuth flow (opens browser, starts callback server)
+        console.log('[Discord] Starting OAuth flow...');
         await invoke<string>('discord_start_oauth');
+        console.log('[Discord] Browser opened - waiting for user authorization...');
+        
+        // Poll for connection status as backup (in case events don't fire)
+        this.checkInterval = window.setInterval(async () => {
+          try {
+            const state = await this.getAuthState();
+            if (state.isConnected && state.user) {
+              console.log('[Discord] ✅ Connected (detected via polling)');
+              this.authState = state;
+              
+              unlistenSuccess();
+              if (unlistenError) unlistenError();
+              if (this.checkInterval) clearInterval(this.checkInterval);
+              
+              resolve({
+                connected: true,
+                user: state.user,
+                error: null,
+              });
+            }
+          } catch (err) {
+            console.error('[Discord] Status check error:', err);
+          }
+        }, 1000); // Check every second
+        
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          unlistenSuccess();
+          if (unlistenError) unlistenError();
+          if (this.checkInterval) clearInterval(this.checkInterval);
+          reject(new Error('OAuth flow timed out after 5 minutes'));
+        }, 5 * 60 * 1000);
+        
       } catch (error) {
         console.error('[Discord] Failed to start OAuth flow:', error);
+        if (this.checkInterval) clearInterval(this.checkInterval);
         reject(new Error('Failed to initialize Discord authentication'));
       }
     });
@@ -64,7 +121,10 @@ class DiscordService {
     try {
       await invoke('discord_disconnect');
       this.authState = null;
-      this.stopAutoRefresh();
+      if (this.checkInterval) {
+        clearInterval(this.checkInterval);
+        this.checkInterval = null;
+      }
     } catch (error) {
       console.error('[Discord] Disconnect failed:', error);
       throw error;
@@ -91,11 +151,12 @@ class DiscordService {
 
   /**
    * Get Discord DM notifications
+   * Uses OAuth with messages.read scope to fetch DM messages
    */
   async getDMs(limitPerChannel: number = 5): Promise<DiscordDMNotification[]> {
     try {
-      const dms = await invoke<DiscordDMNotification[]>('discord_get_dms', {
-        limitPerChannel,
+      const dms = await invoke<DiscordDMNotification[]>('discord_get_dm_notifications', {
+        limit: limitPerChannel,
       });
       return dms;
     } catch (error) {
@@ -127,31 +188,6 @@ class DiscordService {
    */
   getCurrentUser() {
     return this.authState?.user ?? null;
-  }
-
-  /**
-   * Start auto-refresh of DMs
-   */
-  private startAutoRefresh() {
-    if (this.refreshInterval !== null) {
-      return;
-    }
-
-    this.refreshInterval = window.setInterval(() => {
-      // Refresh will be triggered by components calling getDMs()
-      // This just keeps the connection alive
-      this.getAuthState().catch(console.error);
-    }, this.REFRESH_INTERVAL_MS);
-  }
-
-  /**
-   * Stop auto-refresh
-   */
-  private stopAutoRefresh() {
-    if (this.refreshInterval !== null) {
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = null;
-    }
   }
 }
 
