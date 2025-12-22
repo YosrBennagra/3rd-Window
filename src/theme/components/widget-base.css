@@ -1,0 +1,56 @@
+/* Base Widget Styles */
+.widget {
+  background: var(--os-surface);
+  border: 1px solid var(--os-border);
+  border-radius: var(--radius);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  box-shadow: none;
+  transition: border-color var(--transition-base);
+  box-sizing: border-box;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  transform: translateZ(0);
+}
+
+.widget:hover {
+  border-color: var(--os-border);
+}
+
+.widget__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--os-border-subtle);
+  padding-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.widget__title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--os-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.widget__subtitle {
+  font-size: var(--font-sm);
+  color: var(--os-text-secondary);
+}
+
+.widget__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  color: var(--os-text-primary);
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+}

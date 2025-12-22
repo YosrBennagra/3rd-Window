@@ -1,0 +1,66 @@
+/* Button System */
+.btn {
+  border-radius: var(--radius);
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  color: var(--os-text-primary);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  cursor: pointer;
+  font-size: var(--font-sm);
+  font-weight: 500;
+  transition: background var(--transition-base), border-color var(--transition-base);
+  font-family: inherit;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--os-surface-raised);
+  border-color: var(--os-border);
+}
+
+.btn--active,
+.btn.primary {
+  background: var(--os-accent);
+  border-color: var(--os-accent);
+  color: white;
+}
+
+.btn--active:hover,
+.btn.primary:hover {
+  background: var(--os-accent-hover);
+  border-color: var(--os-accent-hover);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-group {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.btn-group .btn {
+  flex: 1;
+}
+
+.btn-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  background: transparent;
+  border: 1px solid var(--os-border);
+  color: var(--os-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background var(--transition-base), border-color var(--transition-base);
+}
+
+.btn-close:hover {
+  background: var(--os-danger);
+  border-color: var(--os-danger);
+  color: white;
+}
