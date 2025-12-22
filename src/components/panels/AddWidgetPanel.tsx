@@ -154,6 +154,160 @@ const getWidgetIcon = (widgetId: string) => {
         <path d="M24 6v14M18 12a12 12 0 1 0 12 0"/>
       </svg>
     ),
+    calendar: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="8" y="10" width="32" height="32" rx="2"/>
+        <path d="M8 18h32M16 6v8M32 6v8"/>
+        <circle cx="18" cy="26" r="1.5" fill="currentColor"/>
+        <circle cx="24" cy="26" r="1.5" fill="currentColor"/>
+        <circle cx="30" cy="26" r="1.5" fill="currentColor"/>
+        <circle cx="18" cy="32" r="1.5" fill="currentColor"/>
+        <circle cx="24" cy="32" r="1.5" fill="currentColor"/>
+      </svg>
+    ),
+    github: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M24 6c-9.94 0-18 8.06-18 18 0 7.95 5.15 14.69 12.3 17.06.9.17 1.23-.39 1.23-.87v-3.06c-5.01 1.09-6.06-2.41-6.06-2.41-.82-2.08-2-2.63-2-2.63-1.63-1.12.12-1.1.12-1.1 1.8.13 2.75 1.85 2.75 1.85 1.6 2.75 4.2 1.96 5.23 1.5.16-1.17.63-1.96 1.14-2.41-3.98-.45-8.17-1.99-8.17-8.86 0-1.96.7-3.56 1.85-4.81-.19-.45-.8-2.27.17-4.73 0 0 1.51-.48 4.95 1.84 1.44-.4 2.98-.6 4.51-.61 1.53.01 3.07.21 4.51.61 3.43-2.32 4.94-1.84 4.94-1.84.97 2.46.36 4.28.18 4.73 1.15 1.25 1.85 2.85 1.85 4.81 0 6.89-4.2 8.4-8.2 8.84.64.55 1.22 1.64 1.22 3.31v4.91c0 .48.32 1.04 1.23.87 7.16-2.37 12.31-9.11 12.31-17.06 0-9.94-8.06-18-18-18z"/>
+      </svg>
+    ),
+    'crypto-stock': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M8 32l8-8 6 6 10-12 8 4"/>
+        <circle cx="8" cy="32" r="2" fill="currentColor"/>
+        <circle cx="16" cy="24" r="2" fill="currentColor"/>
+        <circle cx="22" cy="30" r="2" fill="currentColor"/>
+        <circle cx="32" cy="18" r="2" fill="currentColor"/>
+        <circle cx="40" cy="22" r="2" fill="currentColor"/>
+      </svg>
+    ),
+    webcam: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="24" cy="20" r="14"/>
+        <circle cx="24" cy="20" r="8"/>
+        <path d="M24 34v6M18 40h12"/>
+      </svg>
+    ),
+    'process-monitor': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="6" y="6" width="36" height="36" rx="2"/>
+        <path d="M6 16h36M6 26h36M6 36h36"/>
+        <circle cx="12" cy="11" r="1.5" fill="currentColor"/>
+        <circle cx="12" cy="21" r="1.5" fill="currentColor"/>
+        <circle cx="12" cy="31" r="1.5" fill="currentColor"/>
+      </svg>
+    ),
+    'volume-master': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 18v12h8l10 8V10l-10 8z"/>
+        <path d="M34 16a8 8 0 0 1 0 16M38 12a12 12 0 0 1 0 24"/>
+      </svg>
+    ),
+    'music-player': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="16" cy="34" r="6"/>
+        <circle cx="38" cy="32" r="6"/>
+        <path d="M22 34V10l16-4v26"/>
+      </svg>
+    ),
+    'api-tester': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="8" y="8" width="32" height="32" rx="2"/>
+        <path d="M16 18l8 6-8 6M26 30h8"/>
+      </svg>
+    ),
+    'log-viewer': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="8" y="8" width="32" height="32" rx="2"/>
+        <path d="M14 16h20M14 24h20M14 32h12"/>
+      </svg>
+    ),
+    monitoring: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="6" y="10" width="36" height="28" rx="2"/>
+        <path d="M12 28l6-8 6 6 8-10 6 4"/>
+      </svg>
+    ),
+    'world-clocks': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="24" cy="24" r="18"/>
+        <path d="M24 8v16l8 8"/>
+        <path d="M6 24h4M38 24h4M24 6v4M24 38v4"/>
+      </svg>
+    ),
+    'ai-assistant': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="24" cy="20" r="14"/>
+        <path d="M16 32a8 8 0 0 1 16 0"/>
+        <circle cx="19" cy="18" r="2" fill="currentColor"/>
+        <circle cx="29" cy="18" r="2" fill="currentColor"/>
+        <path d="M19 25a6 6 0 0 0 10 0"/>
+      </svg>
+    ),
+    'password-vault': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="10" y="18" width="28" height="24" rx="2"/>
+        <path d="M16 18v-6a8 8 0 0 1 16 0v6"/>
+        <circle cx="24" cy="30" r="3"/>
+        <path d="M24 33v4"/>
+      </svg>
+    ),
+    'secure-notes': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M28 8H12a4 4 0 0 0-4 4v24a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4V20z"/>
+        <polyline points="28 8 28 20 40 20"/>
+        <circle cx="24" cy="28" r="6"/>
+        <path d="M24 25v3l2 2"/>
+      </svg>
+    ),
+    'clipboard-history': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="12" y="10" width="24" height="32" rx="2"/>
+        <path d="M18 6h12v8H18z"/>
+        <path d="M18 20h12M18 26h12M18 32h8"/>
+      </svg>
+    ),
+    'color-picker': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="24" cy="24" r="16"/>
+        <path d="M24 8v32M8 24h32M14.3 14.3l19.4 19.4M33.7 14.3L14.3 33.7"/>
+      </svg>
+    ),
+    'message-inbox': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="6" y="12" width="36" height="24" rx="2"/>
+        <path d="M6 12l18 12 18-12"/>
+      </svg>
+    ),
+    'file-preview': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M28 6H12a4 4 0 0 0-4 4v28a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4V18z"/>
+        <polyline points="28 6 28 18 40 18"/>
+        <circle cx="24" cy="28" r="6"/>
+        <path d="M24 25v3M24 34v1"/>
+      </svg>
+    ),
+    'pinned-folders': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M8 12h12l4 4h16v20H8z"/>
+        <path d="M20 22v-6l-4-4"/>
+      </svg>
+    ),
+    'game-vault': (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="6" y="16" width="36" height="20" rx="4"/>
+        <circle cx="16" cy="26" r="3"/>
+        <path d="M28 23h4M30 21v4"/>
+        <path d="M34 23l2 3M38 23l-2 3"/>
+      </svg>
+    ),
+    battery: (
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="8" y="16" width="30" height="16" rx="2"/>
+        <rect x="38" y="20" width="2" height="8" rx="1"/>
+        <rect x="12" y="20" width="8" height="8" fill="currentColor"/>
+        <rect x="21" y="20" width="8" height="8" fill="currentColor" opacity="0.5"/>
+      </svg>
+    ),
   };
 
   return icons[widgetId] || (
