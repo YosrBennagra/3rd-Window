@@ -8,6 +8,7 @@ export default function WidgetPickerWindow() {
   const widgets = [
     { id: 'clock', name: 'Clock', isActive: false },
     { id: 'timer', name: 'Timer', isActive: false },
+    { id: 'activity', name: 'Activity', isActive: false },
   ];
 
   const handleClose = () => {

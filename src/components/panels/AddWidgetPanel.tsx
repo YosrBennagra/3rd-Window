@@ -64,7 +64,15 @@ export default function AddWidgetPanel({ onClose, onAdd, widgets }: Props) {
                   <path d="M24 14v12l8 4"/>
                 </svg>
               )}
-              {widget.id !== 'clock' && widget.id !== 'timer' && (
+              {widget.id === 'activity' && (
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="6" y="8" width="36" height="26" rx="2"/>
+                  <path d="M16 42h16"/>
+                  <path d="M24 34v8"/>
+                  <path d="M12 18h24"/>
+                </svg>
+              )}
+              {widget.id !== 'clock' && widget.id !== 'timer' && widget.id !== 'activity' && (
                 <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="12" y="12" width="24" height="24" rx="4"/>
                 </svg>

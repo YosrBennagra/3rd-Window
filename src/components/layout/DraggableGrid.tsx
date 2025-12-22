@@ -14,7 +14,7 @@ import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/G
 import { WidgetSettingsPanel } from '../panels';
 import type { WidgetLayout } from '../../types/layout';
 import { clampToRange } from './gridMath';
-import { ClockWidget, TimerWidget } from '../widgets';
+import { ClockWidget, TimerWidget, ActivityWidget } from '../widgets';
 import type { ClockWidgetSettings, TimerWidgetSettings } from '../../types/widgets';
 
 const GAP_SIZE = 12;
@@ -22,6 +22,7 @@ const GAP_SIZE = 12;
 const widgetComponents: Record<string, React.ComponentType<{ widget: WidgetLayout }>> = {
   clock: ClockWidget,
   timer: TimerWidget,
+  activity: ActivityWidget,
 };
 
 type PanelType = 'widget-settings' | 'add-widget' | null;

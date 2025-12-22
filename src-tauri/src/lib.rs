@@ -1,6 +1,8 @@
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::PathBuf, process::Command};
+use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use sysinfo::System;
 use tauri::{Manager, Window};
 
@@ -685,6 +687,97 @@ async fn get_system_temps() -> Result<SystemTemps, String> {
     })
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveWindowInfo {
+    name: String,
+    duration: u64,
+}
+
+// Simple in-memory tracking of active window
+#[derive(Debug)]
+struct WindowTracker {
+    current_window: String,
+    start_time: u64,
+}
+
+lazy_static::lazy_static! {
+    static ref WINDOW_TRACKER: Mutex<WindowTracker> = Mutex::new(WindowTracker {
+        current_window: String::new(),
+        start_time: current_timestamp(),
+    });
+}
+
+fn current_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
+#[tauri::command]
+fn get_system_uptime() -> Result<u64, String> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    
+    Ok(System::uptime())
+}
+
+#[cfg(windows)]
+#[tauri::command]
+fn get_active_window_info() -> Result<ActiveWindowInfo, String> {
+    use windows::Win32::Foundation::{HWND, MAX_PATH};
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW};
+    
+    unsafe {
+        let hwnd: HWND = GetForegroundWindow();
+        if hwnd.0.is_null() {
+            return Ok(ActiveWindowInfo {
+                name: "No active window".to_string(),
+                duration: 0,
+            });
+        }
+        
+        let mut buffer = [0u16; MAX_PATH as usize];
+        let len = GetWindowTextW(hwnd, &mut buffer);
+        
+        let window_title = if len > 0 {
+            String::from_utf16_lossy(&buffer[..len as usize])
+        } else {
+            "Unknown".to_string()
+        };
+        
+        // Track window focus duration
+        let mut tracker = WINDOW_TRACKER.lock().unwrap();
+        let current_time = current_timestamp();
+        
+        let duration = if tracker.current_window == window_title {
+            // Same window, calculate elapsed time
+            current_time.saturating_sub(tracker.start_time)
+        } else {
+            // Different window, reset tracking
+            tracker.current_window = window_title.clone();
+            tracker.start_time = current_time;
+            0
+        };
+        
+        Ok(ActiveWindowInfo {
+            name: window_title,
+            duration,
+        })
+    }
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+fn get_active_window_info() -> Result<ActiveWindowInfo, String> {
+    // Placeholder for non-Windows platforms
+    Ok(ActiveWindowInfo {
+        name: "Not supported on this platform".to_string(),
+        duration: 0,
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -710,7 +803,9 @@ pub fn run() {
             get_monitors,
             move_to_monitor,
             open_system_clock,
-            get_system_temps
+            get_system_temps,
+            get_system_uptime,
+            get_active_window_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

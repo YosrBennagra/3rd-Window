@@ -24,9 +24,14 @@ const TIMER_MIN_WIDTH = 3;
 const TIMER_MIN_HEIGHT = 2;
 const TIMER_MAX_WIDTH = 3;
 const TIMER_MAX_HEIGHT = 2;
+const ACTIVITY_MIN_WIDTH = 6;
+const ACTIVITY_MIN_HEIGHT = 4;
+const ACTIVITY_MAX_WIDTH = 6;
+const ACTIVITY_MAX_HEIGHT = 4;
 const WIDGET_CONSTRAINTS: Record<string, WidgetConstraints> = {
   clock: { minWidth: CLOCK_MIN_WIDTH, minHeight: CLOCK_MIN_HEIGHT, maxWidth: CLOCK_MAX_WIDTH, maxHeight: CLOCK_MAX_HEIGHT },
   timer: { minWidth: TIMER_MIN_WIDTH, minHeight: TIMER_MIN_HEIGHT, maxWidth: TIMER_MAX_WIDTH, maxHeight: TIMER_MAX_HEIGHT },
+  activity: { minWidth: ACTIVITY_MIN_WIDTH, minHeight: ACTIVITY_MIN_HEIGHT, maxWidth: ACTIVITY_MAX_WIDTH, maxHeight: ACTIVITY_MAX_HEIGHT },
 };
 
 const getDefaultWidgetSettings = (widgetType: string): Record<string, unknown> | undefined => {
