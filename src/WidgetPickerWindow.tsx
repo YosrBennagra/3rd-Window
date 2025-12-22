@@ -1,15 +1,25 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { emit } from '@tauri-apps/api/event';
 import AddWidgetPanel from './components/panels/AddWidgetPanel';
+import { widgetDefinitions } from './config/widgets';
 import './App.css';
 
 export default function WidgetPickerWindow() {
-  const widgets = [
-    { id: 'clock', name: 'Clock', isActive: false },
-    { id: 'timer', name: 'Timer', isActive: false },
-    { id: 'activity', name: 'Activity', isActive: false },
-  ];
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const widgets = widgetDefinitions.map(def => ({
+    id: def.id,
+    name: def.title,
+    description: def.description,
+    isActive: false,
+    disabled: def.disabled || false,
+  }));
+
+  const filteredWidgets = widgets.filter(w => 
+    w.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (w.description && w.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   const handleClose = () => {
     getCurrentWindow().close();
@@ -28,5 +38,15 @@ export default function WidgetPickerWindow() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  return <AddWidgetPanel onClose={handleClose} onAdd={handleAdd} widgets={widgets} />;
+  return (
+    <div className="explorer-window">
+      <AddWidgetPanel 
+        onClose={handleClose} 
+        onAdd={handleAdd} 
+        widgets={filteredWidgets}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
+    </div>
+  );
 }

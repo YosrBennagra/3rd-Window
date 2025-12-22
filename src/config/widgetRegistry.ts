@@ -1,5 +1,5 @@
 ﻿import type { WidgetConfig } from '../types/widget';
-import { ClockWidget } from '../components/widgets';
+import { ClockWidget, ImageWidget } from '../components/widgets';
 
 export const widgetRegistry: WidgetConfig[] = [
   {
@@ -8,6 +8,14 @@ export const widgetRegistry: WidgetConfig[] = [
     description: 'Displays current time and date',
     icon: 'clock',
     component: ClockWidget,
+    defaultSize: 'medium',
+  },
+  {
+    id: 'image',
+    name: 'Image',
+    description: 'Display a custom image or photo',
+    icon: '🖼️',
+    component: ImageWidget,
     defaultSize: 'medium',
   },
 ];

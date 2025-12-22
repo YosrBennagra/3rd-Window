@@ -1,0 +1,46 @@
+/* Form Controls */
+.select-input,
+.input-field {
+  appearance: none;
+  border-radius: var(--radius);
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  color: var(--os-text-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-sm);
+  font-family: inherit;
+  transition: border-color var(--transition-base), background var(--transition-fast);
+}
+
+.select-input:hover,
+.input-field:hover {
+  border-color: var(--os-text-secondary);
+}
+
+.select-input:focus,
+.input-field:focus {
+  outline: 2px solid var(--os-accent);
+  outline-offset: 1px;
+  border-color: var(--os-accent);
+}
+
+.select-input:disabled,
+.input-field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Settings Groups */
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.setting-label {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--os-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}

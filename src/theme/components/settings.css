@@ -1,0 +1,62 @@
+/* Settings System */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  z-index: 50;
+}
+
+.settings-panel {
+  width: min(560px, 90vw);
+  max-height: 85vh;
+  background: var(--os-bg-secondary);
+  border: 1px solid var(--os-border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+}
+
+.settings__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--os-border);
+  background: var(--os-bg-tertiary);
+}
+
+.settings__header h2 {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  margin: 0;
+  color: var(--os-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.settings__content {
+  padding: var(--spacing-xl);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  scrollbar-width: thin;
+  scrollbar-color: var(--os-border) transparent;
+}
+
+.settings__content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings__content::-webkit-scrollbar-thumb {
+  background: var(--os-border);
+  border-radius: var(--radius);
+}

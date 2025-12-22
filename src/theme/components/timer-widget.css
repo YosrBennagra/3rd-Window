@@ -1,0 +1,121 @@
+/* Timer Widget */
+.timer-widget {
+  --timer-accent: rgba(248, 250, 252, 0.92);
+}
+
+.timer-widget.widget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--os-border);
+  border-radius: var(--radius);
+  background: var(--os-surface);
+}
+
+.timer-widget--active {
+  --timer-accent: var(--os-accent, #3d7bda);
+}
+
+.timer-widget--glass {
+  position: relative;
+}
+
+.timer-widget__inner {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.45rem, 1.1vw, 1rem);
+  padding: clamp(0.3rem, 0.8vw, 0.6rem);
+}
+
+.timer-widget__stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: clamp(0.05rem, 0.3vw, 0.25rem);
+}
+
+.timer-widget__time {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  font-size: clamp(1.15rem, 2.8vw, 1.8rem);
+  letter-spacing: 0.015em;
+  font-weight: 300;
+  line-height: 1.05;
+  color: var(--timer-accent);
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.timer-widget__time--pulse {
+  animation: timerPulse 2s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% {
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.18);
+  }
+  50% {
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.36);
+  }
+}
+
+.timer-widget__controls {
+  display: flex;
+  gap: clamp(0.2rem, 0.6vw, 0.45rem);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  pointer-events: auto;
+  margin-top: clamp(0.25rem, 0.7vw, 0.5rem);
+}
+
+.timer-widget__control {
+  width: clamp(18px, 3.4vw, 24px);
+  height: clamp(18px, 3.4vw, 24px);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(16, 21, 32, 0.45);
+  color: rgba(248, 250, 252, 0.78);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+  padding: 0;
+}
+
+.timer-widget__control svg {
+  width: 62%;
+  height: 62%;
+}
+
+.timer-widget__control:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.timer-widget__control:active {
+  transform: scale(0.96);
+}
+
+.timer-widget__control--primary {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.timer-widget__control--secondary {
+  opacity: 0.5;
+}
+
+.timer-widget--active .timer-widget__control--primary {
+  background: rgba(61, 123, 218, 0.2);
+  border-color: rgba(61, 123, 218, 0.35);
+  color: #d5e4ff;
+}

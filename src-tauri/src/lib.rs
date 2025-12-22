@@ -1,24 +1,4 @@
-use log::info;
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, path::PathBuf, process::Command};
-use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
-use sysinfo::System;
-use tauri::{Manager, Window};
-
-#[cfg(windows)]
-use windows::core::PCWSTR;
-#[cfg(windows)]
-use windows::Win32::Graphics::Gdi::{
-    EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE, DISPLAY_DEVICE_MIRRORING_DRIVER,
-};
-#[cfg(windows)]
-use winreg::{
-    enums::{HKEY_LOCAL_MACHINE, KEY_READ},
-    RegKey,
-};
-#[cfg(windows)]
-use wmi::{COMLibrary, Variant, WMIConnection};
+use tauri::Manager;
 
 mod settings;
 mod monitors;
@@ -26,6 +6,8 @@ mod window_controls;
 mod sensors;
 mod window_tracker;
 mod system;
+mod network;
+mod metrics;
 
 pub use settings::{load_settings, save_settings, AppSettings};
 pub use monitors::{get_monitors, Monitor, MonitorPosition, MonitorSize};
@@ -33,6 +15,8 @@ pub use sensors::get_system_temps;
 pub use system::get_system_uptime;
 pub use window_controls::{apply_fullscreen, move_to_monitor, open_system_clock, toggle_fullscreen};
 pub use window_tracker::{get_active_window_info, ActiveWindowInfo};
+pub use network::get_network_stats;
+pub use metrics::get_system_metrics;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -61,7 +45,9 @@ pub fn run() {
             open_system_clock,
             get_system_temps,
             get_system_uptime,
-            get_active_window_info
+            get_active_window_info,
+            get_network_stats,
+            get_system_metrics
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

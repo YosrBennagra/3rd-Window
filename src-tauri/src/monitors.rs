@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Monitor {
