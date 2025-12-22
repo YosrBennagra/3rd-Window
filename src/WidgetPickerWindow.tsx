@@ -27,7 +27,5 @@ export default function WidgetPickerWindow() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  return (
-      <AddWidgetPanel onClose={handleClose} onAdd={handleAdd} widgets={widgets} />
-  );
+  return <AddWidgetPanel onClose={handleClose} onAdd={handleAdd} widgets={widgets} />;
 }

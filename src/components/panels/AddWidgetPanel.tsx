@@ -28,8 +28,14 @@ export default function AddWidgetPanel({ onClose, onAdd, widgets }: Props) {
           <span>Add Widget</span>
         </div>
         <button 
+          type="button"
           className="explorer-header__close" 
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onClose();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
           data-tauri-drag-region="false"
         >
           ✕

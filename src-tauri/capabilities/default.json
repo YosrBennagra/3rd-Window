@@ -11,6 +11,7 @@
     "core:window:allow-create",
     "core:webview:allow-create-webview-window",
     "core:window:allow-show",
-    "core:window:allow-set-focus"
+    "core:window:allow-set-focus",
+    "core:window:allow-close"
   ]
 }
