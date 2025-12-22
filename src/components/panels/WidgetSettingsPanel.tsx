@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { WidgetLayout } from '../../types/layout';
-import type { ClockWidgetSettings, NotificationWidgetSettings } from '../../types/widgets';
-import { ensureClockWidgetSettings, ensureNotificationWidgetSettings } from '../../types/widgets';
+import type { ClockWidgetSettings, TimerWidgetSettings } from '../../types/widgets';
+import { ensureClockWidgetSettings, ensureTimerWidgetSettings } from '../../types/widgets';
 import './Panel.css';
 
 const widgetNames: Record<string, string> = {
   clock: 'Clock',
-  'cpu-temp': 'CPU Temperature',
-  'gpu-temp': 'GPU Temperature',
-  notifications: 'Notifications',
+  timer: 'Timer',
 };
 
 interface Props {
   widget: WidgetLayout;
-  previewSettings?: ClockWidgetSettings | NotificationWidgetSettings;
-  onPreviewChange: (settings: ClockWidgetSettings | NotificationWidgetSettings) => void;
-  onApply: (settings: ClockWidgetSettings | NotificationWidgetSettings) => Promise<void> | void;
+  previewSettings?: ClockWidgetSettings | TimerWidgetSettings;
+  onPreviewChange: (settings: ClockWidgetSettings | TimerWidgetSettings) => void;
+  onApply: (settings: ClockWidgetSettings | TimerWidgetSettings) => Promise<void> | void;
   onCancel: () => void;
 }
 
@@ -38,66 +36,61 @@ const alignmentLabels: Record<ClockWidgetSettings['alignment'], string> = {
   right: 'Right',
 };
 
-const fontSizeLabels: Record<ClockWidgetSettings['fontSizeMode'], string> = {
-  auto: 'Auto (resize with widget)',
-  small: 'Small',
-  medium: 'Medium',
-  large: 'Large',
-};
-
 export default function WidgetSettingsPanel({ widget, previewSettings, onPreviewChange, onApply, onCancel }: Props) {
   const widgetName = widgetNames[widget.widgetType] || widget.widgetType;
-  const baseSettings = useMemo(
-    () => ensureClockWidgetSettings(previewSettings ?? widget.settings),
-    [previewSettings, widget],
-  );
-  const [draft, setDraft] = useState<ClockWidgetSettings>(baseSettings);
-  const [timezoneInput, setTimezoneInput] = useState(
-    baseSettings.timezone === 'system' ? '' : baseSettings.timezone,
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Clock State
+  const clockBaseSettings = useMemo(
+    () => (widget.widgetType === 'clock' ? ensureClockWidgetSettings(previewSettings ?? widget.settings) : null),
+    [previewSettings, widget],
+  );
+  const [clockDraft, setClockDraft] = useState<ClockWidgetSettings | null>(clockBaseSettings);
+  const [timezoneInput, setTimezoneInput] = useState('');
+
+  // Timer State
+  const timerBaseSettings = useMemo(
+    () => (widget.widgetType === 'timer' ? ensureTimerWidgetSettings(previewSettings ?? widget.settings) : null),
+    [previewSettings, widget],
+  );
+  const [timerDraft, setTimerDraft] = useState<TimerWidgetSettings | null>(timerBaseSettings);
+
   useEffect(() => {
-    setDraft(baseSettings);
-    setTimezoneInput(baseSettings.timezone === 'system' ? '' : baseSettings.timezone);
-  }, [baseSettings]);
-
-  const timezoneOptions = useMemo(() => {
-    if (typeof Intl !== 'undefined' && typeof (Intl as typeof Intl & { supportedValuesOf?: (value: string) => string[] }).supportedValuesOf === 'function') {
-      try {
-        return (Intl as any).supportedValuesOf('timeZone');
-      } catch {
-        // fall back to defaults
-      }
+    if (widget.widgetType === 'clock' && clockBaseSettings) {
+      setClockDraft(clockBaseSettings);
+      setTimezoneInput(clockBaseSettings.timezone === 'system' ? '' : clockBaseSettings.timezone);
+    } else if (widget.widgetType === 'timer' && timerBaseSettings) {
+      setTimerDraft(timerBaseSettings);
     }
-    return ['UTC', 'Europe/Paris', 'America/New_York', 'Asia/Tokyo', 'Australia/Sydney'];
-  }, []);
+  }, [widget.widgetType, clockBaseSettings, timerBaseSettings]);
 
-  const handleUpdate = (partial: Partial<ClockWidgetSettings>) => {
-    const next = ensureClockWidgetSettings({ ...draft, ...partial });
-    setDraft(next);
+  const handleClockUpdate = (partial: Partial<ClockWidgetSettings>) => {
+    if (!clockDraft) return;
+    const next = ensureClockWidgetSettings({ ...clockDraft, ...partial });
+    setClockDraft(next);
     onPreviewChange(next);
   };
 
-  const handleTimezoneSelect = (value: string) => {
-    if (value === 'system') {
-      handleUpdate({ timezone: 'system' });
-      setTimezoneInput('');
-    } else {
-      handleUpdate({ timezone: value });
-      setTimezoneInput(value);
-    }
+  const handleTimerUpdate = (partial: Partial<TimerWidgetSettings>) => {
+    if (!timerDraft) return;
+    const next = ensureTimerWidgetSettings({ ...timerDraft, ...partial });
+    setTimerDraft(next);
+    onPreviewChange(next);
   };
 
   const handleTimezoneInput = (value: string) => {
     setTimezoneInput(value);
-    handleUpdate({ timezone: value.trim() === '' ? 'system' : value.trim() });
+    handleClockUpdate({ timezone: value.trim() === '' ? 'system' : value.trim() });
   };
 
   const handleApply = async () => {
     setIsSubmitting(true);
     try {
-      await onApply(draft);
+      if (widget.widgetType === 'clock' && clockDraft) {
+        await onApply(clockDraft);
+      } else if (widget.widgetType === 'timer' && timerDraft) {
+        await onApply(timerDraft);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -107,453 +100,168 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
     onCancel();
   };
 
-  const renderClockSettings = () => (
-    <>
-      <section className="panel__section">
-        <h3 className="panel__section-title">Time & Date</h3>
-        <div className="panel__control-group">
-          <label className="panel__control-label">Time Format</label>
-          <div className="panel__options">
-            <label className="panel__option">
-              <input
-                type="radio"
-                name={`${widget.id}-time-format`}
-                checked={draft.timeFormat === '12h'}
-                onChange={() => handleUpdate({ timeFormat: '12h' })}
-              />
-              12-hour (AM / PM)
-            </label>
-            <label className="panel__option">
-              <input
-                type="radio"
-                name={`${widget.id}-time-format`}
-                checked={draft.timeFormat === '24h'}
-                onChange={() => handleUpdate({ timeFormat: '24h' })}
-              />
-              24-hour
-            </label>
-          </div>
-        </div>
-
-        <div className="panel__control-group">
-          <label className="panel__control-label">Seconds Display</label>
-          <div className="panel__options">
-            <label className="panel__option">
-              <input
-                type="radio"
-                name={`${widget.id}-seconds`}
-                checked={draft.showSeconds}
-                onChange={() => handleUpdate({ showSeconds: true })}
-              />
-              Show seconds
-            </label>
-            <label className="panel__option">
-              <input
-                type="radio"
-                name={`${widget.id}-seconds`}
-                checked={!draft.showSeconds}
-                onChange={() => handleUpdate({ showSeconds: false })}
-              />
-              Hide seconds
-            </label>
-          </div>
-        </div>
-
-        <div className="panel__control-group">
-          <label className="panel__control-label">Update Frequency</label>
-          <div className="panel__options">
-            <label className="panel__option">
-              <input
-                type="radio"
-                name={`${widget.id}-frequency`}
-                checked={draft.updateFrequency === 'second'}
-                onChange={() => handleUpdate({ updateFrequency: 'second' })}
-              />
-              Every second
-            </label>
-            <label className="panel__option">
-              <input
-                type="radio"
-                name={`${widget.id}-frequency`}
-                checked={draft.updateFrequency === 'minute'}
-                onChange={() => handleUpdate({ updateFrequency: 'minute' })}
-              />
-              Every minute
-            </label>
-          </div>
-        </div>
-
-        <div className="panel__control-group">
-          <label className="panel__control-label">Date Display</label>
-          <div className="panel__options panel__options--column">
-            {(Object.keys(dateFormatLabels) as Array<ClockWidgetSettings['dateFormat']>).map((format) => (
-              <label key={format} className="panel__option">
-                <input
-                  type="radio"
-                  name={`${widget.id}-date-format`}
-                  checked={draft.dateFormat === format}
-                  onChange={() => handleUpdate({ dateFormat: format })}
-                />
-                {dateFormatLabels[format]}
-              </label>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="panel__section">
-        <h3 className="panel__section-title">Appearance</h3>
-        <div className="panel__control-group">
-          <label className="panel__control-label">Layout Style</label>
-          <div className="panel__options panel__options--column">
-            {(Object.keys(layoutStyleLabels) as Array<ClockWidgetSettings['layoutStyle']>).map((value) => (
-              <label key={value} className="panel__option">
-                <input
-                  type="radio"
-                  name={`${widget.id}-layout-style`}
-                  checked={draft.layoutStyle === value}
-                  onChange={() => handleUpdate({ layoutStyle: value })}
-                />
-                {layoutStyleLabels[value]}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel__control-group">
-          <label className="panel__control-label">Alignment</label>
-          <div className="panel__options">
-            {(Object.keys(alignmentLabels) as Array<ClockWidgetSettings['alignment']>).map((value) => (
-              <label key={value} className="panel__option">
-                <input
-                  type="radio"
-                  name={`${widget.id}-alignment`}
-                  checked={draft.alignment === value}
-                  onChange={() => handleUpdate({ alignment: value })}
-                />
-                {alignmentLabels[value]}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel__control-group">
-          <label className="panel__control-label">Font Size</label>
-          <div className="panel__options panel__options--column">
-            {(Object.keys(fontSizeLabels) as Array<ClockWidgetSettings['fontSizeMode']>).map((value) => (
-              <label key={value} className="panel__option">
-                <input
-                  type="radio"
-                  name={`${widget.id}-font-size`}
-                  checked={draft.fontSizeMode === value}
-                  onChange={() => handleUpdate({ fontSizeMode: value })}
-                />
-                {fontSizeLabels[value]}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel__control-group">
-          <label className="panel__control-label">Click Behavior</label>
-          <div className="panel__options panel__options--column">
-            <label className="panel__option">
-              <input
-                type="radio"
-                name={`${widget.id}-click-behavior`}
-                checked={draft.clickBehavior === 'open-system-clock'}
-                onChange={() => handleUpdate({ clickBehavior: 'open-system-clock' })}
-              />
-              Open system clock
-            </label>
-            <label className="panel__option">
-              <input
-                type="radio"
-                name={`${widget.id}-click-behavior`}
-                checked={draft.clickBehavior === 'none'}
-                onChange={() => handleUpdate({ clickBehavior: 'none' })}
-              />
-              Do nothing
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel__section">
-        <h3 className="panel__section-title">Timezone</h3>
-        <div className="panel__control-group">
-          <label className="panel__control-label">Timezone</label>
-          <div className="panel__stack">
-            <select
-              className="panel__select"
-              value={draft.timezone === 'system' ? 'system' : draft.timezone}
-              onChange={(e) => handleTimezoneSelect(e.target.value)}
-            >
-              <option value="system">System timezone</option>
-              {timezoneOptions.map((tz: string) => (
-                <option key={tz} value={tz}>
-                  {tz}
-                </option>
-              ))}
-              {draft.timezone !== 'system' && !timezoneOptions.includes(draft.timezone) && (
-                <option value={draft.timezone}>{draft.timezone}</option>
-              )}
-            </select>
-            <input
-              className="panel__text-input"
-              type="text"
-              list="clock-timezone-options"
-              placeholder="e.g. Europe/Paris"
-              value={timezoneInput}
-              onChange={(e) => handleTimezoneInput(e.target.value)}
-            />
-            <datalist id="clock-timezone-options">
-              {timezoneOptions.map((tz: string) => (
-                <option key={tz} value={tz} />
-              ))}
-            </datalist>
-          </div>
-          <p className="panel__hint">Custom timezone is shown under the clock whenever the date is visible.</p>
-        </div>
-      </section>
-    </>
-  );
-
-  const renderNotificationSettings = () => {
-    const notifSettings = ensureNotificationWidgetSettings(previewSettings ?? widget.settings);
-    const [notifDraft, setNotifDraft] = useState(notifSettings);
-    const [discordAuth, setDiscordAuth] = useState<any>(null);
-    const [isConnecting, setIsConnecting] = useState(false);
-    const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
-
-    // Load Discord auth state
-    useEffect(() => {
-      if (notifDraft.source === 'discord') {
-        import('../../services/discord').then(({ discordService }) => {
-          discordService.getAuthState().then(setDiscordAuth).catch(console.error);
-        });
-      }
-    }, [notifDraft.source]);
-
-    useEffect(() => {
-      setNotifDraft(ensureNotificationWidgetSettings(previewSettings ?? widget.settings));
-    }, [previewSettings, widget]);
-
-    const handleNotifUpdate = (partial: Partial<NotificationWidgetSettings>) => {
-      const next = ensureNotificationWidgetSettings({ ...notifDraft, ...partial });
-      setNotifDraft(next);
-      onPreviewChange(next);
-    };
-
-    const handleDiscordConnect = async () => {
-      setIsConnecting(true);
-      setConnectionStatus('Opening browser for Discord authorization...');
-      
-      try {
-        const { discordService } = await import('../../services/discord');
-        
-        // Start automatic OAuth flow (opens browser and waits for callback)
-        const result = await discordService.startOAuthFlow();
-        
-        if (result.connected) {
-          const auth = await discordService.getAuthState();
-          setDiscordAuth(auth);
-          setConnectionStatus('Connected to Discord!');
-          
-          // Clear success message after 3 seconds
-          setTimeout(() => setConnectionStatus(null), 3000);
-        } else {
-          setConnectionStatus(`Failed to connect: ${result.error || 'Unknown error'}`);
-          
-          // Clear error message after 5 seconds
-          setTimeout(() => setConnectionStatus(null), 5000);
-        }
-      } catch (error) {
-        console.error('[Settings] Discord connect failed:', error);
-        const errorMsg = error instanceof Error ? error.message : 'Failed to connect to Discord';
-        setConnectionStatus(errorMsg);
-        
-        // Clear error message after 5 seconds
-        setTimeout(() => setConnectionStatus(null), 5000);
-      } finally {
-        setIsConnecting(false);
-      }
-    };
-
-    const handleDiscordDisconnect = async () => {
-      try {
-        const { discordService } = await import('../../services/discord');
-        await discordService.disconnect();
-        setDiscordAuth(null);
-      } catch (error) {
-        console.error('[Settings] Discord disconnect failed:', error);
-      }
-    };
-
-    const sourceLabels = {
-      discord: 'Discord',
-      mail: 'Mail',
-      system: 'System',
-      custom: 'Custom',
-    };
-
+  const renderClockSettings = () => {
+    if (!clockDraft) return null;
     return (
       <>
         <section className="panel__section">
-          <h3 className="panel__section-title">Notification Source</h3>
+          <h3 className="panel__section-title">Appearance</h3>
           <div className="panel__control-group">
-            <label className="panel__control-label">Select Source</label>
-            <div className="panel__options panel__options--column">
-              {(Object.keys(sourceLabels) as Array<keyof typeof sourceLabels>).map((source) => (
-                <label key={source} className="panel__option">
+            <label className="panel__control-label">Layout Style</label>
+            <div className="panel__options">
+              {(Object.keys(layoutStyleLabels) as ClockWidgetSettings['layoutStyle'][]).map((style) => (
+                <label key={style} className="panel__option">
                   <input
                     type="radio"
-                    name={`${widget.id}-source`}
-                    checked={notifDraft.source === source}
-                    onChange={() => handleNotifUpdate({ source })}
+                    name={`${widget.id}-layout`}
+                    checked={clockDraft.layoutStyle === style}
+                    onChange={() => handleClockUpdate({ layoutStyle: style })}
                   />
-                  {sourceLabels[source]}
-                  {source !== 'discord' && <span style={{ marginLeft: '8px', opacity: 0.5 }}>(Coming soon)</span>}
+                  {layoutStyleLabels[style]}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel__control-group">
+            <label className="panel__control-label">Alignment</label>
+            <div className="panel__options">
+              {(Object.keys(alignmentLabels) as ClockWidgetSettings['alignment'][]).map((align) => (
+                <label key={align} className="panel__option">
+                  <input
+                    type="radio"
+                    name={`${widget.id}-align`}
+                    checked={clockDraft.alignment === align}
+                    onChange={() => handleClockUpdate({ alignment: align })}
+                  />
+                  {alignmentLabels[align]}
                 </label>
               ))}
             </div>
           </div>
         </section>
 
-        {notifDraft.source === 'discord' && (
-          <>
-            <section className="panel__section">
-              <h3 className="panel__section-title">Discord Connection</h3>
-              <div className="panel__control-group">
-                {discordAuth?.isConnected ? (
-                  <>
-                    <div style={{ marginBottom: '12px', padding: '12px', background: 'rgba(76, 175, 80, 0.1)', borderRadius: '4px', border: '1px solid rgba(76, 175, 80, 0.3)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color: '#4caf50', fontSize: '16px' }}>✓</span>
-                        <span style={{ fontWeight: 500 }}>Connected as {discordAuth.user?.username}</span>
-                      </div>
-                      <div style={{ fontSize: '12px', opacity: 0.7, paddingLeft: '24px', marginTop: '4px' }}>
-                        DM notifications enabled
-                      </div>
-                    </div>
-                    <button 
-                      type="button" 
-                      className="panel__button panel__button--ghost" 
-                      onClick={handleDiscordDisconnect}
-                      style={{ width: '100%' }}
-                    >
-                      Disconnect Discord
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ marginBottom: '12px', padding: '12px', background: 'rgba(33, 150, 243, 0.1)', borderRadius: '4px', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
-                      <div style={{ fontSize: '13px', opacity: 0.9, marginBottom: '8px' }}>
-                        <strong>Connect Discord for DM notifications</strong>
-                      </div>
-                      <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                        • Read-only access to your DMs<br/>
-                        • Secure OAuth with PKCE<br/>
-                        • No posting or modification
-                      </div>
-                    </div>
-                    {connectionStatus && (
-                      <div style={{ 
-                        marginBottom: '12px', 
-                        padding: '12px', 
-                        background: connectionStatus.includes('Failed') || connectionStatus.includes('error') 
-                          ? 'rgba(244, 67, 54, 0.1)' 
-                          : 'rgba(33, 150, 243, 0.1)', 
-                        borderRadius: '4px', 
-                        border: connectionStatus.includes('Failed') || connectionStatus.includes('error')
-                          ? '1px solid rgba(244, 67, 54, 0.3)'
-                          : '1px solid rgba(33, 150, 243, 0.3)'
-                      }}>
-                        <div style={{ fontSize: '13px', opacity: 0.9 }}>
-                          {connectionStatus}
-                        </div>
-                      </div>
-                    )}
-                    <button 
-                      type="button" 
-                      className="panel__button panel__button--accent" 
-                      onClick={handleDiscordConnect}
-                      disabled={isConnecting}
-                      style={{ width: '100%' }}
-                    >
-                      {isConnecting ? '⏳ Waiting for authorization...' : 'Connect Discord'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </section>
+        <section className="panel__section">
+          <h3 className="panel__section-title">Date & Time</h3>
+          <div className="panel__control-group">
+            <label className="panel__control-label">Date Format</label>
+            <select
+              className="panel__select"
+              value={clockDraft.dateFormat}
+              onChange={(e) => handleClockUpdate({ dateFormat: e.target.value as ClockWidgetSettings['dateFormat'] })}
+            >
+              {(Object.keys(dateFormatLabels) as ClockWidgetSettings['dateFormat'][]).map((format) => (
+                <option key={format} value={format}>
+                  {dateFormatLabels[format]}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <section className="panel__section">
-              <h3 className="panel__section-title">Discord DM Settings</h3>
-              <div className="panel__control-group">
-                <div style={{ padding: '12px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '4px', border: '1px solid rgba(99, 102, 241, 0.2)', marginBottom: '12px' }}>
-                  <div style={{ fontSize: '13px', opacity: 0.9 }}>
-                    <strong>DMs Only</strong> - This widget shows Discord Direct Messages only. Server messages and channels are not included.
-                  </div>
-                </div>
-              </div>
-            </section>
+          <div className="panel__control-group">
+            <label className="panel__control-label">Time Format</label>
+            <div className="panel__options">
+              <label className="panel__option">
+                <input
+                  type="radio"
+                  name={`${widget.id}-format`}
+                  checked={clockDraft.timeFormat === '12h'}
+                  onChange={() => handleClockUpdate({ timeFormat: '12h' })}
+                />
+                12-hour
+              </label>
+              <label className="panel__option">
+                <input
+                  type="radio"
+                  name={`${widget.id}-format`}
+                  checked={clockDraft.timeFormat === '24h'}
+                  onChange={() => handleClockUpdate({ timeFormat: '24h' })}
+                />
+                24-hour
+              </label>
+            </div>
+          </div>
 
-            <section className="panel__section">
-              <h3 className="panel__section-title">Display</h3>
-              <div className="panel__control-group">
-                <label className="panel__control-label">Time Format</label>
-                <div className="panel__options panel__options--column">
-                  <label className="panel__option">
-                    <input
-                      type="radio"
-                      name={`${widget.id}-time-format`}
-                      checked={notifDraft.timeFormat === 'relative'}
-                      onChange={() => handleNotifUpdate({ timeFormat: 'relative' })}
-                    />
-                    Relative (2m ago, 1h ago)
-                  </label>
-                  <label className="panel__option">
-                    <input
-                      type="radio"
-                      name={`${widget.id}-time-format`}
-                      checked={notifDraft.timeFormat === 'absolute'}
-                      onChange={() => handleNotifUpdate({ timeFormat: 'absolute' })}
-                    />
-                    Absolute (3:45 PM)
-                  </label>
-                </div>
-              </div>
-            </section>
+          <div className="panel__control-group">
+            <label className="panel__control-label">Seconds</label>
+            <label className="panel__toggle">
+              <input
+                type="checkbox"
+                checked={clockDraft.showSeconds}
+                onChange={(e) => handleClockUpdate({ showSeconds: e.target.checked })}
+              />
+              Show seconds
+            </label>
+          </div>
 
-            <section className="panel__section">
-              <h3 className="panel__section-title">Interaction</h3>
-              <div className="panel__control-group">
-                <label className="panel__control-label">On Click</label>
-                <div className="panel__options panel__options--column">
-                  <label className="panel__option">
-                    <input
-                      type="radio"
-                      name={`${widget.id}-click`}
-                      checked={notifDraft.openOnClick}
-                      onChange={() => handleNotifUpdate({ openOnClick: true })}
-                    />
-                    Open Discord
-                  </label>
-                  <label className="panel__option">
-                    <input
-                      type="radio"
-                      name={`${widget.id}-click`}
-                      checked={!notifDraft.openOnClick}
-                      onChange={() => handleNotifUpdate({ openOnClick: false })}
-                    />
-                    Do nothing
-                  </label>
-                </div>
-              </div>
-            </section>
-          </>
-        )}
+          <div className="panel__control-group">
+            <label className="panel__control-label">Timezone</label>
+            <input
+              type="text"
+              className="panel__input"
+              placeholder="System Default (leave empty)"
+              value={timezoneInput}
+              onChange={(e) => handleTimezoneInput(e.target.value)}
+            />
+            <p className="panel__help-text">e.g., "America/New_York", "UTC", "Asia/Tokyo"</p>
+          </div>
+        </section>
+      </>
+    );
+  };
+
+  const renderTimerSettings = () => {
+    if (!timerDraft) return null;
+    return (
+      <>
+        <section className="panel__section">
+          <h3 className="panel__section-title">Duration</h3>
+          <div className="panel__control-group">
+            <label className="panel__control-label">Minutes</label>
+            <input
+              type="number"
+              className="panel__input"
+              min="0"
+              max="180"
+              value={timerDraft.durationMinutes}
+              onChange={(e) => handleTimerUpdate({ durationMinutes: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+          <div className="panel__control-group">
+            <label className="panel__control-label">Seconds</label>
+            <input
+              type="number"
+              className="panel__input"
+              min="0"
+              max="59"
+              value={timerDraft.durationSeconds}
+              onChange={(e) => handleTimerUpdate({ durationSeconds: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+        </section>
+
+        <section className="panel__section">
+          <h3 className="panel__section-title">Label</h3>
+          <div className="panel__control-group">
+            <label className="panel__control-label">Text</label>
+            <input
+              type="text"
+              className="panel__input"
+              value={timerDraft.label}
+              onChange={(e) => handleTimerUpdate({ label: e.target.value })}
+            />
+          </div>
+          <div className="panel__control-group">
+            <label className="panel__toggle">
+              <input
+                type="checkbox"
+                checked={timerDraft.showLabel}
+                onChange={(e) => handleTimerUpdate({ showLabel: e.target.checked })}
+              />
+              Show Label
+            </label>
+          </div>
+        </section>
       </>
     );
   };
@@ -562,13 +270,13 @@ export default function WidgetSettingsPanel({ widget, previewSettings, onPreview
     if (widget.widgetType === 'clock') {
       return renderClockSettings();
     }
-    if (widget.widgetType === 'notifications') {
-      return renderNotificationSettings();
+    if (widget.widgetType === 'timer') {
+      return renderTimerSettings();
     }
     return <p className="panel__placeholder">Widget settings for "{widgetName}" coming soon...</p>;
   };
 
-  const showActions = widget.widgetType === 'clock' || widget.widgetType === 'notifications';
+  const showActions = widget.widgetType === 'clock' || widget.widgetType === 'timer';
 
   return (
     <div className="panel-overlay" onClick={handleCancel}>

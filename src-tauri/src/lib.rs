@@ -4,20 +4,6 @@ use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 use sysinfo::System;
 use tauri::{Manager, Window};
 
-mod layout;
-use layout::{LayoutOperation, LayoutService, LayoutState};
-
-mod secure_storage;
-use secure_storage::init_credentials_store;
-
-mod discord;
-mod discord_commands;
-use discord::init_discord_client;
-use discord_commands::PkceState;
-
-const GRID_COLUMNS: u8 = 24;
-const GRID_ROWS: u8 = 12;
-
 #[cfg(windows)]
 use windows::core::PCWSTR;
 #[cfg(windows)]
@@ -400,39 +386,6 @@ async fn load_settings(app: tauri::AppHandle) -> Result<AppSettings, String> {
 }
 
 #[tauri::command]
-async fn save_dashboard(
-    app: tauri::AppHandle,
-    layout_service: tauri::State<'_, LayoutService>,
-    dashboard: LayoutState,
-) -> Result<LayoutState, String> {
-    layout_service.import(&app, dashboard)
-}
-
-#[tauri::command]
-async fn load_dashboard(
-    app: tauri::AppHandle,
-    layout_service: tauri::State<'_, LayoutService>,
-) -> Result<LayoutState, String> {
-    layout_service.load(&app)
-}
-
-#[tauri::command]
-async fn apply_layout_operation(
-    app: tauri::AppHandle,
-    layout_service: tauri::State<'_, LayoutService>,
-    operation: LayoutOperation,
-) -> Result<LayoutState, String> {
-    layout_service.apply_operation(&app, operation)
-}
-
-#[tauri::command]
-async fn get_layout(
-    layout_service: tauri::State<'_, LayoutService>,
-) -> Result<LayoutState, String> {
-    Ok(layout_service.snapshot())
-}
-
-#[tauri::command]
 async fn toggle_fullscreen(window: Window) -> Result<bool, String> {
     let current = window
         .is_fullscreen()
@@ -739,15 +692,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(LayoutService::new(GRID_COLUMNS, GRID_ROWS))
-        .manage(init_discord_client())
-        .manage(init_credentials_store())
-        .manage(PkceState::new())
         .setup(|app| {
-            // ✅ No deep link handler needed - using localhost HTTP callback server instead
-            // Discord OAuth redirects to http://127.0.0.1:53172/discord/callback
-            // The callback server in discord_commands.rs handles the token exchange
-            
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -760,22 +705,12 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_settings,
             load_settings,
-            load_dashboard,
-            save_dashboard,
             toggle_fullscreen,
             apply_fullscreen,
             get_monitors,
             move_to_monitor,
             open_system_clock,
-            get_system_temps,
-            get_layout,
-            apply_layout_operation,
-            discord_commands::discord_start_oauth,
-            discord_commands::discord_connect,
-            discord_commands::discord_disconnect,
-            discord_commands::discord_get_auth_state,
-            discord_commands::discord_get_dms,
-            discord_commands::discord_open_dm
+            get_system_temps
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

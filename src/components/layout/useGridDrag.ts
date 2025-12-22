@@ -67,6 +67,7 @@ export default function useGridDrag({ widgets, moveWidget, getCellFromPointer }:
     (e: React.PointerEvent, widget: WidgetLayout) => {
       if (e.button !== 0) return;
       e.preventDefault();
+      e.stopPropagation();
 
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       dragOffsetRef.current = {
