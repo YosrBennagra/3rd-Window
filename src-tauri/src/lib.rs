@@ -1,22 +1,10 @@
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::PathBuf, process::Command};
+use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use sysinfo::System;
-use tauri::{Manager, Window, Emitter, Listener};
-
-mod layout;
-use layout::{LayoutOperation, LayoutService, LayoutState};
-
-mod secure_storage;
-use secure_storage::init_credentials_store;
-
-mod discord;
-mod discord_commands;
-use discord::init_discord_client;
-use discord_commands::PkceState;
-
-const GRID_COLUMNS: u8 = 24;
-const GRID_ROWS: u8 = 12;
+use tauri::{Manager, Window};
 
 #[cfg(windows)]
 use windows::core::PCWSTR;
@@ -400,39 +388,6 @@ async fn load_settings(app: tauri::AppHandle) -> Result<AppSettings, String> {
 }
 
 #[tauri::command]
-async fn save_dashboard(
-    app: tauri::AppHandle,
-    layout_service: tauri::State<'_, LayoutService>,
-    dashboard: LayoutState,
-) -> Result<LayoutState, String> {
-    layout_service.import(&app, dashboard)
-}
-
-#[tauri::command]
-async fn load_dashboard(
-    app: tauri::AppHandle,
-    layout_service: tauri::State<'_, LayoutService>,
-) -> Result<LayoutState, String> {
-    layout_service.load(&app)
-}
-
-#[tauri::command]
-async fn apply_layout_operation(
-    app: tauri::AppHandle,
-    layout_service: tauri::State<'_, LayoutService>,
-    operation: LayoutOperation,
-) -> Result<LayoutState, String> {
-    layout_service.apply_operation(&app, operation)
-}
-
-#[tauri::command]
-async fn get_layout(
-    layout_service: tauri::State<'_, LayoutService>,
-) -> Result<LayoutState, String> {
-    Ok(layout_service.snapshot())
-}
-
-#[tauri::command]
 async fn toggle_fullscreen(window: Window) -> Result<bool, String> {
     let current = window
         .is_fullscreen()
@@ -732,6 +687,97 @@ async fn get_system_temps() -> Result<SystemTemps, String> {
     })
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveWindowInfo {
+    name: String,
+    duration: u64,
+}
+
+// Simple in-memory tracking of active window
+#[derive(Debug)]
+struct WindowTracker {
+    current_window: String,
+    start_time: u64,
+}
+
+lazy_static::lazy_static! {
+    static ref WINDOW_TRACKER: Mutex<WindowTracker> = Mutex::new(WindowTracker {
+        current_window: String::new(),
+        start_time: current_timestamp(),
+    });
+}
+
+fn current_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
+#[tauri::command]
+fn get_system_uptime() -> Result<u64, String> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    
+    Ok(System::uptime())
+}
+
+#[cfg(windows)]
+#[tauri::command]
+fn get_active_window_info() -> Result<ActiveWindowInfo, String> {
+    use windows::Win32::Foundation::{HWND, MAX_PATH};
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW};
+    
+    unsafe {
+        let hwnd: HWND = GetForegroundWindow();
+        if hwnd.0.is_null() {
+            return Ok(ActiveWindowInfo {
+                name: "No active window".to_string(),
+                duration: 0,
+            });
+        }
+        
+        let mut buffer = [0u16; MAX_PATH as usize];
+        let len = GetWindowTextW(hwnd, &mut buffer);
+        
+        let window_title = if len > 0 {
+            String::from_utf16_lossy(&buffer[..len as usize])
+        } else {
+            "Unknown".to_string()
+        };
+        
+        // Track window focus duration
+        let mut tracker = WINDOW_TRACKER.lock().unwrap();
+        let current_time = current_timestamp();
+        
+        let duration = if tracker.current_window == window_title {
+            // Same window, calculate elapsed time
+            current_time.saturating_sub(tracker.start_time)
+        } else {
+            // Different window, reset tracking
+            tracker.current_window = window_title.clone();
+            tracker.start_time = current_time;
+            0
+        };
+        
+        Ok(ActiveWindowInfo {
+            name: window_title,
+            duration,
+        })
+    }
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+fn get_active_window_info() -> Result<ActiveWindowInfo, String> {
+    // Placeholder for non-Windows platforms
+    Ok(ActiveWindowInfo {
+        name: "Not supported on this platform".to_string(),
+        duration: 0,
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -739,39 +785,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(LayoutService::new(GRID_COLUMNS, GRID_ROWS))
-        .manage(init_discord_client())
-        .manage(init_credentials_store())
-        .manage(PkceState::new())
         .setup(|app| {
-            // Register deep link handler for Discord OAuth callback
-            let app_handle = app.handle().clone();
-            
-            app.listen("deep-link://new-url", move |event| {
-                let url = event.payload();
-                // Handle Discord OAuth callback
-                if url.starts_with("thirdscreen://discord-callback") {
-                    // Parse the authorization code from the URL
-                    if let Some(query_start) = url.find('?') {
-                        let query = &url[query_start + 1..];
-                        let params: HashMap<&str, &str> = query
-                            .split('&')
-                            .filter_map(|param| {
-                                let mut parts = param.split('=');
-                                Some((parts.next()?, parts.next()?))
-                            })
-                            .collect();
-                        
-                        if let Some(code) = params.get("code") {
-                            let code = code.to_string();
-                            
-                            // Emit event to frontend with the authorization code
-                            app_handle.emit("discord-oauth-callback", code).ok();
-                        }
-                    }
-                }
-            });
-            
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -784,22 +798,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_settings,
             load_settings,
-            load_dashboard,
-            save_dashboard,
             toggle_fullscreen,
             apply_fullscreen,
             get_monitors,
             move_to_monitor,
             open_system_clock,
             get_system_temps,
-            get_layout,
-            apply_layout_operation,
-            discord_commands::discord_start_oauth,
-            discord_commands::discord_connect,
-            discord_commands::discord_disconnect,
-            discord_commands::discord_get_auth_state,
-            discord_commands::discord_get_dms,
-            discord_commands::discord_open_dm
+            get_system_uptime,
+            get_active_window_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

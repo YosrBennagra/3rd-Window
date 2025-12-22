@@ -3,7 +3,6 @@ import './Panel.css';
 interface WidgetOption {
   id: string;
   name: string;
-  description?: string;
   isActive: boolean;
 }
 
@@ -20,38 +19,69 @@ export default function AddWidgetPanel({ onClose, onAdd, widgets }: Props) {
   };
 
   return (
-    <div className="panel-overlay" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel__header">
-          <h2 className="panel__title">Add Widget</h2>
-          <button className="panel__close" onClick={onClose}>✕</button>
+    <>
+      <div className="explorer-header" data-tauri-drag-region>
+        <div className="explorer-header__left">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"/>
+          </svg>
+          <span>Add Widget</span>
         </div>
-        <div className="panel__content">
-          {widgets.length === 0 ? (
-            <p className="panel__placeholder">No widgets available</p>
-          ) : (
-            <ul className="panel__list">
-              {widgets.map((widget) => (
-                <li key={widget.id} className="panel__list-item">
-                  <div className="panel__list-text">
-                    <div className="panel__list-title">{widget.name}</div>
-                    {widget.description && (
-                      <div className="panel__list-description">{widget.description}</div>
-                    )}
-                  </div>
-                  <button
-                    className="panel__button"
-                    disabled={widget.isActive}
-                    onClick={() => handleAdd(widget.id)}
-                  >
-                    {widget.isActive ? 'Already Added' : 'Add'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <button 
+          type="button"
+          className="explorer-header__close" 
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onClose();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          data-tauri-drag-region="false"
+        >
+          ✕
+        </button>
       </div>
-    </div>
+
+      <div className="explorer-content">
+        {widgets.map((widget) => (
+          <button
+            key={widget.id}
+            className="explorer-item"
+            disabled={widget.isActive}
+            onClick={() => handleAdd(widget.id)}
+          >
+            <div className="explorer-item__icon">
+              {widget.id === 'clock' && (
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="24" cy="24" r="20"/>
+                  <path d="M24 8v16l10 6"/>
+                </svg>
+              )}
+              {widget.id === 'timer' && (
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 4h12"/>
+                  <circle cx="24" cy="26" r="18"/>
+                  <path d="M24 14v12l8 4"/>
+                </svg>
+              )}
+              {widget.id === 'activity' && (
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="6" y="8" width="36" height="26" rx="2"/>
+                  <path d="M16 42h16"/>
+                  <path d="M24 34v8"/>
+                  <path d="M12 18h24"/>
+                </svg>
+              )}
+              {widget.id !== 'clock' && widget.id !== 'timer' && widget.id !== 'activity' && (
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="12" y="12" width="24" height="24" rx="4"/>
+                </svg>
+              )}
+            </div>
+            <span className="explorer-item__name">{widget.name}</span>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }

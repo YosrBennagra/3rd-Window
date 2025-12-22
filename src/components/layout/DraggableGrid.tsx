@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { listen } from '@tauri-apps/api/event';
 import { useGridStore } from '../../store/gridStore';
 import { useStore } from '../../store';
 import GridGhost from './GridGhost';
@@ -9,17 +11,18 @@ import type { ResizeHandle } from './useWidgetResize';
 import './DraggableGrid.css';
 import GridWidgetItem from './GridWidgetItem';
 import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/GridContextMenu';
-import { WidgetSettingsPanel, AddWidgetPanel } from '../panels';
+import { WidgetSettingsPanel } from '../panels';
 import type { WidgetLayout } from '../../types/layout';
 import { clampToRange } from './gridMath';
-import { ClockWidget, NotificationsWidget } from '../widgets';
-import type { ClockWidgetSettings, NotificationWidgetSettings } from '../../types/widgets';
+import { ClockWidget, TimerWidget, ActivityWidget } from '../widgets';
+import type { ClockWidgetSettings, TimerWidgetSettings } from '../../types/widgets';
 
 const GAP_SIZE = 12;
 
 const widgetComponents: Record<string, React.ComponentType<{ widget: WidgetLayout }>> = {
-  notifications: NotificationsWidget,
   clock: ClockWidget,
+  timer: TimerWidget,
+  activity: ActivityWidget,
 };
 
 type PanelType = 'widget-settings' | 'add-widget' | null;
@@ -48,13 +51,13 @@ export function DraggableGrid() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
-  const [widgetPreviewSettings, setWidgetPreviewSettings] = useState<Record<string, ClockWidgetSettings | NotificationWidgetSettings>>({});
+  const [widgetPreviewSettings, setWidgetPreviewSettings] = useState<Record<string, ClockWidgetSettings | TimerWidgetSettings>>({});
   const selectedWidget = useMemo(
     () => (selectedWidgetId ? widgets.find((widget) => widget.id === selectedWidgetId) ?? null : null),
     [selectedWidgetId, widgets],
   );
 
-  const handlePreviewSettingsChange = useCallback((widgetId: string, settings: ClockWidgetSettings | NotificationWidgetSettings) => {
+  const handlePreviewSettingsChange = useCallback((widgetId: string, settings: ClockWidgetSettings | TimerWidgetSettings) => {
     setWidgetPreviewSettings((prev) => ({
       ...prev,
       [widgetId]: settings,
@@ -166,7 +169,7 @@ export function DraggableGrid() {
   }, [clearPreviewSettings, closeSettingsPanel, selectedWidgetId]);
 
   const handlePanelApply = useCallback(
-    async (settings: ClockWidgetSettings | NotificationWidgetSettings) => {
+    async (settings: ClockWidgetSettings | TimerWidgetSettings) => {
       if (!selectedWidgetId) return;
       const success = await updateWidgetSettings(selectedWidgetId, settings as unknown as Record<string, unknown>);
       if (success) {
@@ -196,11 +199,11 @@ export function DraggableGrid() {
     },
     [handleResizePointerDown],
   );
-  const handleContextMenu = (e: React.MouseEvent, widget: WidgetLayout | null) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, widget: WidgetLayout | null) => {
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, widget });
-  };
+  }, []);
 
   const handleGridContextMenu = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.grid-widget')) return;
@@ -246,7 +249,7 @@ export function DraggableGrid() {
         }
         break;
       case 'add-widget':
-        setActivePanel('add-widget');
+        void openWidgetPicker();
         break;
       case 'toggle-lock':
         if (widget) {
@@ -259,31 +262,50 @@ export function DraggableGrid() {
     }
   };
 
-  const handleAddWidget = (widgetType: string) => {
+  const handleAddWidget = useCallback((widgetType: string) => {
     void addWidget(widgetType);
-  };
+  }, [addWidget]);
 
-  const handleClosePanel = () => {
-    closeSettingsPanel();
-  };
+  // Listen for add-widget events from the picker window
+  useEffect(() => {
+    const unlisten = listen<{ type: string }>('add-widget', (event) => {
+      handleAddWidget(event.payload.type);
+    });
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, [handleAddWidget]);
 
-  const availableWidgets = useMemo(
-    () => [
-      {
-        id: 'notifications',
-        name: 'Notifications',
-        description: 'Configurable notification feed',
-        isActive: false,
-      },
-      {
-        id: 'clock',
-        name: 'Clock',
-        description: 'Analog + digital clock',
-        isActive: false,
-      },
-    ],
-    [widgets],
-  );
+  const openWidgetPicker = async () => {
+    const label = 'widget-picker';
+    const existing = await WebviewWindow.getByLabel(label);
+    if (existing) {
+      await existing.setFocus();
+      return;
+    }
+
+    const webview = new WebviewWindow(label, {
+      url: '/#/widget-picker',
+      title: 'Add Widget',
+      width: 520,
+      height: 400,
+      decorations: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      center: true,
+      resizable: false
+    });
+
+    webview.once('tauri://created', function () {
+      // webview window successfully created
+    });
+    
+    webview.once('tauri://error', function (e) {
+      // an error happened creating the webview window
+      console.error(e);
+    });
+  };
 
   const gridStyle = useMemo(
     () => ({
@@ -330,8 +352,12 @@ export function DraggableGrid() {
         className={`draggable-grid ${debugGrid ? 'draggable-grid--debug' : ''} ${isBlocked ? 'is-move-blocked' : ''}`}
         ref={gridRef}
         style={gridStyle}
+        data-tauri-drag-region="false"
         onContextMenu={handleGridContextMenu}
         onPointerDown={(e) => {
+          // Block window drag from grid background
+          e.stopPropagation();
+          
           if (!e.defaultPrevented) {
             cancelDrag();
             const clickedWidget = (e.target as HTMLElement).closest('.grid-widget');
@@ -385,13 +411,6 @@ export function DraggableGrid() {
           onPreviewChange={(settings) => handlePreviewSettingsChange(selectedWidget.id, settings)}
           onApply={handlePanelApply}
           onCancel={handlePanelCancel}
-        />
-      )}
-      {activePanel === 'add-widget' && (
-        <AddWidgetPanel
-          onClose={handleClosePanel}
-          onAdd={handleAddWidget}
-          widgets={availableWidgets}
         />
       )}
     </>

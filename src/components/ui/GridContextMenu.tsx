@@ -31,7 +31,7 @@ const defaultWidgetNames: Record<string, string> = {
   'clock': 'Clock',
   'cpu-temp': 'CPU Temperature',
   'gpu-temp': 'GPU Temperature',
-  'notifications': 'Notifications',
+  'timer': 'Timer',
 };
 
 export default function GridContextMenu({ menu, onClose, onAction, widgetDisplayName, isAdjustGridMode, isFullscreen = false }: Props) {

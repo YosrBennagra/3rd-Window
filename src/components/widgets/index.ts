@@ -1,2 +1,3 @@
 export { ClockWidget } from './ClockWidget';
-export { NotificationsWidget } from './NotificationsWidget';
+export { TimerWidget } from './TimerWidget';
+export { default as ActivityWidget } from './ActivityWidget';

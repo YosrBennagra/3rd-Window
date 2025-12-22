@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { WidgetLayout } from '../../types/layout';
 import type { ResizeHandle } from './useWidgetResize';
 
@@ -11,7 +12,7 @@ interface Props {
   isResizing?: boolean;
 }
 
-export default function GridWidgetItem({
+function GridWidgetItem({
   widget,
   WidgetComponent,
   handleWidgetPointerDown,
@@ -24,8 +25,15 @@ export default function GridWidgetItem({
     <div
       key={widget.id}
       className={`grid-widget ${dragInfo?.id === widget.id ? 'grid-widget--dragging' : ''} ${isResizing ? 'grid-widget--resizing' : ''}`}
-      onPointerDown={(e) => handleWidgetPointerDown(e, widget)}
-      onContextMenu={(e) => handleContextMenu(e, widget)}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        handleWidgetPointerDown(e, widget);
+      }}
+      onContextMenu={(e) => {
+        e.stopPropagation();
+        handleContextMenu(e, widget);
+      }}
+      data-tauri-drag-region="false"
       style={{
         gridColumn: `${widget.x + 1} / span ${widget.width}`,
         gridRow: `${widget.y + 1} / span ${widget.height}`,
@@ -45,7 +53,10 @@ export default function GridWidgetItem({
             <div
               key={handle}
               className={className}
-              onPointerDown={(e) => handleResizePointerDown(e, widget, handle as ResizeHandle)}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                handleResizePointerDown(e, widget, handle as ResizeHandle);
+              }}
               title="Resize"
             />
           ))}
@@ -53,7 +64,10 @@ export default function GridWidgetItem({
             <div
               key={handle}
               className={`grid-widget__resize-edge grid-widget__resize-edge--${handle}`}
-              onPointerDown={(e) => handleResizePointerDown(e, widget, handle)}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                handleResizePointerDown(e, widget, handle);
+              }}
               title="Resize"
             />
           ))}
@@ -62,3 +76,5 @@ export default function GridWidgetItem({
     </div>
   );
 }
+
+export default memo(GridWidgetItem);
