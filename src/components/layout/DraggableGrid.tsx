@@ -3,6 +3,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { listen } from '@tauri-apps/api/event';
 import { useGridStore } from '../../store/gridStore';
 import { useStore } from '../../store';
+import { spawnDesktopWidget } from '../../services/desktop-widgets';
 import GridGhost from './GridGhost';
 import GridCells from './GridCells';
 import useGridDrag from './useGridDrag';
@@ -268,6 +269,42 @@ export function DraggableGrid() {
           void setWidgetLock(widget.id, !(widget.locked ?? false));
         }
         break;
+      case 'pop-out-widget':
+        if (widget) {
+          void handlePopOutWidget(widget);
+        }
+        break;
+    }
+  };
+
+  const handlePopOutWidget = async (widget: WidgetLayout) => {
+    try {
+      const metrics = getGridMetrics();
+      if (!metrics) return;
+
+      // Calculate pixel position and size from grid coordinates
+      const { cellWidth, cellHeight, columnGap, rowGap } = metrics;
+      const pixelWidth = Math.round(widget.width * cellWidth + (widget.width - 1) * columnGap);
+      const pixelHeight = Math.round(widget.height * cellHeight + (widget.height - 1) * rowGap);
+
+      // Default desktop position (center of screen, or where the widget currently is)
+      const screenX = Math.round(window.screenX + 100);
+      const screenY = Math.round(window.screenY + 100);
+
+      await spawnDesktopWidget({
+        widgetId: widget.id,
+        widgetType: widget.widgetType,
+        x: screenX,
+        y: screenY,
+        width: Math.max(pixelWidth, 200), // Minimum 200px width
+        height: Math.max(pixelHeight, 150), // Minimum 150px height
+      });
+
+      // Remove widget from grid after successful pop-out
+      await removeWidget(widget.id);
+    } catch (error) {
+      console.error('Failed to pop out widget:', error);
+      // Could show a toast notification here
     }
   };
 

@@ -10,7 +10,8 @@ export type MenuAction =
   | 'add-widget'
   | 'resize'
   | 'toggle-adjust-grid'
-  | 'toggle-lock';
+  | 'toggle-lock'
+  | 'pop-out-widget';
 
 export interface ContextMenuState {
   x: number;
@@ -174,6 +175,16 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
           >
             <span className="grid-context-menu__icon">{isWidgetLocked ? '🔓' : '🔒'}</span>
             {isWidgetLocked ? 'Unlock Widget' : 'Lock Widget'}
+          </button>
+
+          <div className="grid-context-menu__divider" />
+
+          <button
+            className="grid-context-menu__item grid-context-menu__item--highlight"
+            onClick={() => handleItemClick('pop-out-widget')}
+          >
+            <span className="grid-context-menu__icon">⇱</span>
+            Pop Out to Desktop
           </button>
 
           <button

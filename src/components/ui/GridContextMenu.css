@@ -51,6 +51,15 @@
   background: var(--os-surface);
 }
 
+.grid-context-menu__item--highlight {
+  color: var(--color-accent, #6366f1);
+  font-weight: 500;
+}
+
+.grid-context-menu__item--highlight:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.15);
+}
+
 .grid-context-menu__item--danger:hover:not(:disabled) {
   background: var(--os-danger);
   color: white;

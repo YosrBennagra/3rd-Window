@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../../store';
 import type { Monitor } from '../../types/system';
+import AdvancedSettings from '../AdvancedSettings';
 
 const RAW_MONITOR_ID_PATTERN = /^\\\\\.\\DISPLAY\\d+$/i;
 
@@ -18,6 +19,7 @@ const formatMonitorLabel = (monitor: Monitor, index: number) => {
 };
 
 export function SettingsPanel() {
+  const [activeTab, setActiveTab] = useState<'general' | 'advanced'>('general');
   const { 
     settingsOpen, 
     toggleSettings, 
@@ -67,7 +69,50 @@ export function SettingsPanel() {
           <button className="btn-close" onClick={toggleSettings}>✕</button>
         </div>
         
+        <div className="settings__tabs" style={{ 
+          display: 'flex', 
+          borderBottom: '1px solid rgba(255,255,255,0.1)', 
+          marginBottom: '16px' 
+        }}>
+          <button
+            onClick={() => setActiveTab('general')}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'general' ? '2px solid #6366f1' : '2px solid transparent',
+              color: activeTab === 'general' ? '#fff' : 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'all 200ms',
+            }}
+          >
+            General
+          </button>
+          <button
+            onClick={() => setActiveTab('advanced')}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'advanced' ? '2px solid #6366f1' : '2px solid transparent',
+              color: activeTab === 'advanced' ? '#fff' : 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'all 200ms',
+            }}
+          >
+            Advanced
+          </button>
+        </div>
+        
         <div className="settings__content">
+          {activeTab === 'general' && (
+            <>
           <div className="setting-group">
             <label className="setting-label">Monitor</label>
             <select 
@@ -118,6 +163,12 @@ export function SettingsPanel() {
               </button>
             </div>
           </div>
+            </>
+          )}
+          
+          {activeTab === 'advanced' && (
+            <AdvancedSettings />
+          )}
         </div>
       </div>
     </div>
