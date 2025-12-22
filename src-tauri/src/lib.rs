@@ -20,7 +20,6 @@ use winreg::{
 #[cfg(windows)]
 use wmi::{COMLibrary, Variant, WMIConnection};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
 mod settings;
 mod monitors;
 mod window_controls;
@@ -67,4 +66,4 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-        let end = start + 18;
+
