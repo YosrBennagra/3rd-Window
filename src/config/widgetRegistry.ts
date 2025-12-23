@@ -1,5 +1,5 @@
-﻿import type { WidgetConfig } from '../types/widget';
-import { ClockWidget, ImageWidget } from '../components/widgets';
+import type { WidgetConfig } from '../domain/models/widget';
+import { ClockWidget, ImageWidget } from '../ui/components/widgets';
 
 export const widgetRegistry: WidgetConfig[] = [
   {
@@ -14,7 +14,7 @@ export const widgetRegistry: WidgetConfig[] = [
     id: 'image',
     name: 'Image',
     description: 'Display a custom image or photo',
-    icon: '🖼️',
+    icon: '???',
     component: ImageWidget,
     defaultSize: 'medium',
   },

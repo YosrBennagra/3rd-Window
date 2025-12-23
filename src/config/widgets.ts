@@ -1,4 +1,4 @@
-import { WidgetDefinition } from '../types/widgets';
+import { WidgetDefinition } from '../domain/models/widgets';
 
 export const widgetDefinitions: WidgetDefinition[] = [
   // Working Widgets
