@@ -18,6 +18,7 @@ import {
   PDF_WIDGET_DEFAULT_SETTINGS,
   ensurePDFWidgetSettings
 } from '../../domain/models/widgets';
+import { WIDGET_CONSTRAINTS, getWidgetConstraints } from '../../domain/config/widgetConstraints';
 
 export const DEFAULT_GRID: GridConfig = { columns: 24, rows: 12 };
 export const GRID_COLS = DEFAULT_GRID.columns;
@@ -27,69 +28,6 @@ type GridBox = { x: number; y: number; width: number; height: number };
 
 const clampValue = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const generateWidgetId = (widgetType: string) => `${widgetType}-${Math.random().toString(36).slice(2, 10)}`;
-
-const CLOCK_MIN_WIDTH = 3;
-const CLOCK_MIN_HEIGHT = 2;
-const CLOCK_MAX_WIDTH = 3;
-const CLOCK_MAX_HEIGHT = 2;
-const TIMER_MIN_WIDTH = 3;
-const TIMER_MIN_HEIGHT = 2;
-const TIMER_MAX_WIDTH = 3;
-const TIMER_MAX_HEIGHT = 2;
-const ACTIVITY_MIN_WIDTH = 6;
-const ACTIVITY_MIN_HEIGHT = 4;
-const ACTIVITY_MAX_WIDTH = 6;
-const ACTIVITY_MAX_HEIGHT = 4;
-const IMAGE_MIN_WIDTH = 3;
-const IMAGE_MIN_HEIGHT = 3;
-const IMAGE_MAX_WIDTH = 12;
-const IMAGE_MAX_HEIGHT = 12;
-const VIDEO_MIN_WIDTH = 3;
-const VIDEO_MIN_HEIGHT = 3;
-const VIDEO_MAX_WIDTH = 12;
-const VIDEO_MAX_HEIGHT = 12;
-const NOTES_MIN_WIDTH = 3;
-const NOTES_MIN_HEIGHT = 3;
-const NOTES_MAX_WIDTH = 8;
-const NOTES_MAX_HEIGHT = 10;
-const QUICKLINKS_MIN_WIDTH = 3;
-const QUICKLINKS_MIN_HEIGHT = 3;
-const QUICKLINKS_MAX_WIDTH = 6;
-const QUICKLINKS_MAX_HEIGHT = 8;
-const NETWORK_MONITOR_MIN_WIDTH = 3;
-const NETWORK_MONITOR_MIN_HEIGHT = 4;
-const NETWORK_MONITOR_MAX_WIDTH = 6;
-const NETWORK_MONITOR_MAX_HEIGHT = 8;
-const TEMPERATURE_MIN_WIDTH = 3;
-const TEMPERATURE_MIN_HEIGHT = 3;
-const TEMPERATURE_MAX_WIDTH = 4;
-const TEMPERATURE_MAX_HEIGHT = 6;
-const RAM_MIN_WIDTH = 3;
-const RAM_MIN_HEIGHT = 3;
-const RAM_MAX_WIDTH = 4;
-const RAM_MAX_HEIGHT = 6;
-const DISK_MIN_WIDTH = 3;
-const DISK_MIN_HEIGHT = 3;
-const DISK_MAX_WIDTH = 4;
-const DISK_MAX_HEIGHT = 6;
-const PDF_MIN_WIDTH = 4;
-const PDF_MIN_HEIGHT = 4;
-const PDF_MAX_WIDTH = 12;
-const PDF_MAX_HEIGHT = 12;
-const WIDGET_CONSTRAINTS: Record<string, WidgetConstraints> = {
-  clock: { minWidth: CLOCK_MIN_WIDTH, minHeight: CLOCK_MIN_HEIGHT, maxWidth: CLOCK_MAX_WIDTH, maxHeight: CLOCK_MAX_HEIGHT },
-  timer: { minWidth: TIMER_MIN_WIDTH, minHeight: TIMER_MIN_HEIGHT, maxWidth: TIMER_MAX_WIDTH, maxHeight: TIMER_MAX_HEIGHT },
-  activity: { minWidth: ACTIVITY_MIN_WIDTH, minHeight: ACTIVITY_MIN_HEIGHT, maxWidth: ACTIVITY_MAX_WIDTH, maxHeight: ACTIVITY_MAX_HEIGHT },
-  image: { minWidth: IMAGE_MIN_WIDTH, minHeight: IMAGE_MIN_HEIGHT, maxWidth: IMAGE_MAX_WIDTH, maxHeight: IMAGE_MAX_HEIGHT },
-  video: { minWidth: VIDEO_MIN_WIDTH, minHeight: VIDEO_MIN_HEIGHT, maxWidth: VIDEO_MAX_WIDTH, maxHeight: VIDEO_MAX_HEIGHT },
-  notes: { minWidth: NOTES_MIN_WIDTH, minHeight: NOTES_MIN_HEIGHT, maxWidth: NOTES_MAX_WIDTH, maxHeight: NOTES_MAX_HEIGHT },
-  quicklinks: { minWidth: QUICKLINKS_MIN_WIDTH, minHeight: QUICKLINKS_MIN_HEIGHT, maxWidth: QUICKLINKS_MAX_WIDTH, maxHeight: QUICKLINKS_MAX_HEIGHT },
-  'network-monitor': { minWidth: NETWORK_MONITOR_MIN_WIDTH, minHeight: NETWORK_MONITOR_MIN_HEIGHT, maxWidth: NETWORK_MONITOR_MAX_WIDTH, maxHeight: NETWORK_MONITOR_MAX_HEIGHT },
-  temperature: { minWidth: TEMPERATURE_MIN_WIDTH, minHeight: TEMPERATURE_MIN_HEIGHT, maxWidth: TEMPERATURE_MAX_WIDTH, maxHeight: TEMPERATURE_MAX_HEIGHT },
-  ram: { minWidth: RAM_MIN_WIDTH, minHeight: RAM_MIN_HEIGHT, maxWidth: RAM_MAX_WIDTH, maxHeight: RAM_MAX_HEIGHT },
-  disk: { minWidth: DISK_MIN_WIDTH, minHeight: DISK_MIN_HEIGHT, maxWidth: DISK_MAX_WIDTH, maxHeight: DISK_MAX_HEIGHT },
-  pdf: { minWidth: PDF_MIN_WIDTH, minHeight: PDF_MIN_HEIGHT, maxWidth: PDF_MAX_WIDTH, maxHeight: PDF_MAX_HEIGHT },
-};
 
 const getDefaultWidgetSettings = (widgetType: string): Record<string, unknown> | undefined => {
   if (widgetType === 'clock') {
@@ -343,7 +281,7 @@ interface GridState {
   setWidgetLock: (id: string, locked: boolean) => Promise<boolean>;
   updateWidgetSettings: (id: string, settings: Record<string, unknown>) => Promise<boolean>;
   isPositionOccupied: (pos: { x: number; y: number; width: number; height: number }, excludeId?: string) => boolean;
-  getConstraints: (widgetType: string) => WidgetConstraints | undefined;
+  getConstraints: (widgetType: string) => WidgetConstraints;
   toggleDebugGrid: () => void;
 }
 
@@ -443,7 +381,7 @@ export const useGridStore = create<GridState>((set, get) => ({
   },
 
   getConstraints(widgetType) {
-    return WIDGET_CONSTRAINTS[widgetType];
+    return getWidgetConstraints(widgetType);
   },
 
   toggleDebugGrid() {

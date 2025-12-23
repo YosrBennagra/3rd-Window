@@ -15,25 +15,11 @@ import GridContextMenu, { type ContextMenuState, type MenuAction } from '../ui/G
 import { WidgetSettingsPanel } from '../panels';
 import type { WidgetLayout } from '../../../domain/models/layout';
 import { clampToRange } from './gridMath';
-import { ClockWidget, TimerWidget, ActivityWidget, ImageWidget, VideoWidget, NotesWidget, QuickLinksWidget, NetworkMonitorWidget, TemperatureWidget, RamUsageWidget, DiskUsageWidget, PDFWidget } from '../widgets';
 import type { ClockWidgetSettings, TimerWidgetSettings } from '../../../domain/models/widgets';
+import { widgetRegistry } from '../../../config/widgetRegistry';
+import { executeMenuAction, type MenuActionContext } from '../../../application/services/menuActions';
 
 const GAP_SIZE = 12;
-
-const widgetComponents: Record<string, React.ComponentType<{ widget: WidgetLayout }>> = {
-  clock: ClockWidget,
-  timer: TimerWidget,
-  activity: ActivityWidget,
-  image: ImageWidget,
-  video: VideoWidget,
-  notes: NotesWidget,
-  quicklinks: QuickLinksWidget,
-  'network-monitor': NetworkMonitorWidget,
-  temperature: TemperatureWidget,
-  ram: RamUsageWidget,
-  disk: DiskUsageWidget,
-  pdf: PDFWidget,
-};
 
 type PanelType = 'widget-settings' | 'add-widget' | null;
 
@@ -228,53 +214,25 @@ export function DraggableGrid() {
   };
 
   const handleMenuAction = (action: MenuAction, widget?: WidgetLayout | null) => {
-    switch (action) {
-      case 'exit-fullscreen':
-        void setFullscreen(settingsState?.isFullscreen ? false : true);
-        break;
-      case 'settings':
-        toggleSettings();
-        break;
-      case 'widget-settings':
-        if (widget) {
-          setSelectedWidgetId(widget.id);
-          setActivePanel('widget-settings');
-        }
-        break;
-      case 'resize':
-        if (widget && !widget.locked) {
-          beginResize(widget);
-        }
-        break;
-      case 'toggle-adjust-grid':
-        toggleDebugGrid();
-        break;
-      case 'remove-widget':
-        if (widget) {
-          if (widget.id === selectedWidgetId) {
-            setSelectedWidgetId(null);
-            setActivePanel(null);
-          }
-          void removeWidget(widget.id);
-        }
-        break;
-      case 'add-widget':
-        void openWidgetPicker();
-        break;
-      case 'toggle-lock':
-        if (widget) {
-          if (resizingWidgetId === widget.id) {
-            cancelResizeMode();
-          }
-          void setWidgetLock(widget.id, !(widget.locked ?? false));
-        }
-        break;
-      case 'pop-out-widget':
-        if (widget) {
-          void handlePopOutWidget(widget);
-        }
-        break;
-    }
+    const context: MenuActionContext = {
+      widget,
+      selectedWidgetId,
+      settingsState,
+      resizingWidgetId,
+      setFullscreen,
+      toggleSettings,
+      setSelectedWidgetId,
+      setActivePanel,
+      beginResize,
+      toggleDebugGrid,
+      removeWidget,
+      setWidgetLock,
+      cancelResizeMode,
+      openWidgetPicker,
+      handlePopOutWidget,
+    };
+    
+    void executeMenuAction(action, context);
   };
 
   const handlePopOutWidget = async (widget: WidgetLayout) => {
@@ -416,7 +374,7 @@ export function DraggableGrid() {
         <GridCells grid={grid} highlight={previewArea} debugGrid={debugGrid} isBlocked={isBlocked} isDragging={!!dragInfo} isResizing={!!resizingWidgetId} />
 
         {widgets.map((widget) => {
-          const WidgetComponent = widgetComponents[widget.widgetType];
+          const WidgetComponent = widgetRegistry.get(widget.widgetType);
           if (!WidgetComponent) return null;
           const previewSettings = widgetPreviewSettings[widget.id];
           let widgetToRender: WidgetLayout = previewSettings
@@ -439,7 +397,7 @@ export function DraggableGrid() {
           );
         })}
 
-        <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} widgets={widgets} widgetComponents={widgetComponents} />
+        <GridGhost ghostStyle={ghostStyle} dragInfo={dragInfo} widgets={widgets} widgetComponents={widgetRegistry.getComponents()} />
       </div>
 
       <GridContextMenu

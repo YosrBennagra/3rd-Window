@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DesktopWidget } from './components/DesktopWidget';
-import { ClockWidget, TemperatureWidget, RamUsageWidget, DiskUsageWidget, NetworkMonitorWidget } from './components/widgets';
+import { widgetRegistry } from '../config/widgetRegistry';
 import type { WidgetLayout } from '../domain/models/layout';
 import './App.css';
 
@@ -22,31 +22,34 @@ export function DesktopWidgetView({ widgetId, widgetType }: DesktopWidgetViewPro
   };
 
   const renderWidget = () => {
-    switch (widgetType.toLowerCase()) {
-      case 'clock':
-        return <ClockWidget />;
-      case 'temperature':
-      case 'cpu-temp':
-      case 'gpu-temp':
-        return <TemperatureWidget widget={mockWidget} />;
-      case 'ram':
-      case 'ram-usage':
-        return <RamUsageWidget widget={mockWidget} />;
-      case 'disk':
-      case 'disk-usage':
-        return <DiskUsageWidget widget={mockWidget} />;
-      case 'network-monitor':
-      case 'network':
-        return <NetworkMonitorWidget widget={mockWidget} />;
-      default:
-        return (
-          <div style={{ padding: '20px', color: 'white' }}>
-            <h3>Unknown Widget Type</h3>
-            <p>Type: {widgetType}</p>
-            <p>ID: {widgetId}</p>
-          </div>
-        );
+    // Normalize widget type (handle aliases)
+    const normalizedType = widgetType.toLowerCase();
+    let lookupType = normalizedType;
+    
+    // Map aliases to canonical names
+    if (normalizedType === 'cpu-temp' || normalizedType === 'gpu-temp') {
+      lookupType = 'temperature';
+    } else if (normalizedType === 'ram-usage') {
+      lookupType = 'ram';
+    } else if (normalizedType === 'disk-usage') {
+      lookupType = 'disk';
+    } else if (normalizedType === 'network') {
+      lookupType = 'network-monitor';
     }
+    
+    const WidgetComponent = widgetRegistry.get(lookupType);
+    
+    if (WidgetComponent) {
+      return <WidgetComponent widget={mockWidget} />;
+    }
+    
+    return (
+      <div style={{ padding: '20px', color: 'white' }}>
+        <h3>Unknown Widget Type</h3>
+        <p>Type: {widgetType}</p>
+        <p>ID: {widgetId}</p>
+      </div>
+    );
   };
 
   return (

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { WidgetLayout } from '../../../domain/models/layout';
+import type { WidgetComponent } from '../../../config/widgetRegistry';
 
 type DragInfo = { id: string; width: number; height: number; widgetType: string };
 
@@ -7,7 +8,7 @@ type Props = {
   ghostStyle: React.CSSProperties | null;
   dragInfo: DragInfo | null;
   widgets: WidgetLayout[];
-  widgetComponents: Record<string, React.ComponentType<{ widget: WidgetLayout }>>;
+  widgetComponents: Record<string, WidgetComponent>;
 };
 
 export default function GridGhost({ ghostStyle, dragInfo, widgets, widgetComponents }: Props) {

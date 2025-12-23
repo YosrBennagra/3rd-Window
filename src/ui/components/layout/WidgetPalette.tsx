@@ -1,5 +1,5 @@
 import { useGridStore } from '../../../application/stores/gridStore';
-import { widgetRegistry } from '../../../config/widgetRegistry';
+import { widgetDefinitions } from '../../../config/widgets';
 import './WidgetPalette.css';
 
 export function WidgetPalette() {
@@ -27,15 +27,14 @@ export function WidgetPalette() {
       <div className="widget-palette__section">
         <h4>Add Widget</h4>
         <div className="widget-palette__grid">
-          {widgetRegistry.map((widget) => (
+          {widgetDefinitions.filter((widget) => !widget.disabled).map((widget) => (
             <button
               key={widget.id}
               className="widget-palette__item"
               onClick={() => handleAddWidget(widget.id)}
               title={widget.description}
             >
-              <span className="widget-palette__icon">{widget.icon}</span>
-              <span className="widget-palette__name">{widget.name}</span>
+              <span className="widget-palette__name">{widget.title}</span>
             </button>
           ))}
         </div>
