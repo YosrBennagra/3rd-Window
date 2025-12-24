@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "ThirdScreen",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "com.thirdscreen.app",
   "build": {
     "frontendDist": "../dist",
@@ -35,9 +35,22 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "ThirdScreen",
+    "copyright": "Copyright © 2025 ThirdScreen. All rights reserved.",
+    "category": "Utility",
+    "shortDescription": "Desktop widget dashboard for system monitoring and productivity",
+    "longDescription": "ThirdScreen transforms your desktop with customizable widgets for system monitoring, notes, quick links, and more. Professional-grade desktop integration with focus management, multi-monitor support, and clean uninstallation."
   },
   "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/YosrBennagra/3rd-Window/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "PLACEHOLDER_UPDATE_PUBKEY_REPLACE_BEFORE_PRODUCTION"
+    },
     "deep-link": {
       "schemes": ["thirdscreen"]
     }

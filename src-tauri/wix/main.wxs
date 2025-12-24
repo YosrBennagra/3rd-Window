@@ -1,0 +1,104 @@
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product 
+        Id="*"
+        Name="ThirdScreen"
+        Language="1033"
+        Version="$(var.Version)"
+        Manufacturer="ThirdScreen"
+        UpgradeCode="E8F7A5D2-9B3C-4E1F-8A6D-7C9E4F2B1A3D">
+        
+        <Package 
+            InstallerVersion="450" 
+            Compressed="yes" 
+            InstallScope="perUser"
+            Description="ThirdScreen - Desktop Widget Dashboard"
+            Comments="Professional desktop widget system for Windows" />
+
+        <MajorUpgrade 
+            DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+            AllowSameVersionUpgrades="yes" />
+        
+        <MediaTemplate EmbedCab="yes" />
+
+        <!-- Feature: Main Application -->
+        <Feature 
+            Id="ProductFeature" 
+            Title="ThirdScreen" 
+            Level="1"
+            Description="Core application and system integrations">
+            <ComponentGroupRef Id="ApplicationFiles" />
+            <ComponentRef Id="RegistryCleanup" />
+        </Feature>
+
+        <!-- Registry Cleanup Component -->
+        <DirectoryRef Id="TARGETDIR">
+            <Component Id="RegistryCleanup" Guid="A1B2C3D4-E5F6-7890-ABCD-EF1234567890">
+                <!-- This component ensures registry cleanup on uninstall -->
+                <!-- Actual cleanup is handled by the Rust uninstaller module -->
+                
+                <!-- Mark as "per-user" installation (HKCU only, no admin required) -->
+                <RegistryValue 
+                    Root="HKCU" 
+                    Key="Software\ThirdScreen" 
+                    Name="InstallPath" 
+                    Type="string" 
+                    Value="[INSTALLFOLDER]" 
+                    KeyPath="yes" />
+                
+                <!-- Custom action to run uninstall cleanup -->
+                <CustomAction 
+                    Id="UninstallCleanup"
+                    BinaryKey="WixCA"
+                    DllEntry="WixQuietExec"
+                    Execute="deferred"
+                    Return="ignore"
+                    Impersonate="yes" />
+                
+                <!-- Schedule cleanup during uninstall -->
+                <InstallExecuteSequence>
+                    <Custom Action="UninstallCleanup" Before="RemoveFiles">
+                        REMOVE="ALL"
+                    </Custom>
+                </InstallExecuteSequence>
+            </Component>
+        </DirectoryRef>
+
+        <!-- UI Configuration -->
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+        <UIRef Id="WixUI_InstallDir" />
+        
+        <!-- License -->
+        <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+        
+        <!-- Branding -->
+        <WixVariable Id="WixUIBannerBmp" Value="installer-banner.bmp" />
+        <WixVariable Id="WixUIDialogBmp" Value="installer-dialog.bmp" />
+
+        <!-- Installation Directory -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="LocalAppDataFolder">
+                <Directory Id="INSTALLFOLDER" Name="ThirdScreen" />
+            </Directory>
+        </Directory>
+
+        <!-- Launch Application After Install -->
+        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" 
+                  Value="Launch ThirdScreen" />
+        <Property Id="WixShellExecTarget" Value="[#ThirdScreen.exe]" />
+        
+        <CustomAction 
+            Id="LaunchApplication"
+            BinaryKey="WixCA"
+            DllEntry="WixShellExec"
+            Impersonate="yes" />
+        
+        <UI>
+            <Publish Dialog="ExitDialog"
+                    Control="Finish"
+                    Event="DoAction"
+                    Value="LaunchApplication">
+                WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed
+            </Publish>
+        </UI>
+    </Product>
+</Wix>
