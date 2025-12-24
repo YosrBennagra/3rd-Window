@@ -54,6 +54,11 @@ pub use commands::{
     spawn_desktop_widget,
     update_widget_position,
     update_widget_size,
+    // Widget action commands
+    minimize_desktop_widget,
+    restore_desktop_widget,
+    toggle_widget_always_on_top,
+    set_widget_opacity,
     // Persistence commands
     load_persisted_state,
     save_persisted_state,
@@ -264,6 +269,11 @@ pub fn run() {
             update_widget_position,
             update_widget_size,
             get_desktop_widgets,
+            // Widget action commands
+            minimize_desktop_widget,
+            restore_desktop_widget,
+            toggle_widget_always_on_top,
+            set_widget_opacity,
             // Windows-specific commands
             #[cfg(target_os = "windows")]
             enable_context_menu,

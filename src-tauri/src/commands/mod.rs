@@ -11,6 +11,7 @@ pub mod sensors;
 pub mod network;
 pub mod metrics;
 pub mod desktop_widgets;
+pub mod widget_actions;
 pub mod persistence;
 
 // Re-export all command functions for easy registration
@@ -23,6 +24,11 @@ pub use metrics::get_system_metrics;
 pub use desktop_widgets::{
     close_desktop_widget, get_desktop_widgets, spawn_desktop_widget, update_widget_position,
     update_widget_size,
+};
+
+pub use widget_actions::{
+    minimize_desktop_widget, restore_desktop_widget, toggle_widget_always_on_top,
+    set_widget_opacity,
 };
 pub use persistence::{
     load_persisted_state, save_persisted_state, reset_persisted_state, get_schema_version,
