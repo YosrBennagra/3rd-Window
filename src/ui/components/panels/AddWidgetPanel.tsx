@@ -10,10 +10,12 @@ interface WidgetOption {
 
 interface Props {
   onClose: () => void;
-  onAdd: (widgetType: string) => void;
+  onAddToGrid: (widgetType: string) => void;
+  onAddToDesktop: (widgetType: string) => void;
   widgets: WidgetOption[];
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
+  isSpawning?: boolean;
 }
 
 const getWidgetIcon = (widgetId: string) => {
@@ -317,12 +319,7 @@ const getWidgetIcon = (widgetId: string) => {
   );
 };
 
-export default function AddWidgetPanel({ onClose, onAdd, widgets, searchTerm = '', onSearchChange }: Props) {
-  const handleAdd = (widgetType: string) => {
-    onAdd(widgetType);
-    onClose();
-  };
-
+export default function AddWidgetPanel({ onClose, onAddToGrid, onAddToDesktop, widgets, searchTerm = '', onSearchChange, isSpawning }: Props) {
   return (
     <>
       <div className="explorer-header" data-tauri-drag-region>
@@ -388,45 +385,50 @@ export default function AddWidgetPanel({ onClose, onAdd, widgets, searchTerm = '
           </div>
         ) : (
           widgets.map((widget) => (
-            <button
+            <div
               key={widget.id}
-              className="explorer-item"
-              disabled={widget.isActive || widget.disabled}
-              onClick={() => !widget.disabled && handleAdd(widget.id)}
-              style={{
-                opacity: widget.disabled ? 0.5 : 1,
-                cursor: widget.disabled ? 'not-allowed' : 'pointer',
-                position: 'relative',
-              }}
+              className={`explorer-item ${widget.disabled ? 'disabled' : ''}`}
+              role="article"
+              aria-label={`${widget.name} widget`}
             >
               <div className="explorer-item__icon">
                 {getWidgetIcon(widget.id)}
               </div>
+              
               <div className="explorer-item__content">
                 <span className="explorer-item__name">{widget.name}</span>
                 {widget.description && (
                   <span className="explorer-item__description">{widget.description}</span>
                 )}
               </div>
-              {widget.disabled && (
-                <div style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  background: 'rgba(255, 193, 7, 0.2)',
-                  border: '1px solid rgba(255, 193, 7, 0.4)',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  fontSize: '9px',
-                  fontWeight: '600',
-                  color: 'rgba(255, 193, 7, 1)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}>
+
+              {widget.disabled ? (
+                <div className="explorer-item__badge">
                   Soon
                 </div>
+              ) : (
+                <div className="explorer-item__actions">
+                  <button
+                    className="explorer-item__action-btn explorer-item__action-btn--grid"
+                    onClick={() => onAddToGrid(widget.id)}
+                    disabled={isSpawning}
+                    title="Add to Dashboard"
+                    aria-label={`Add ${widget.name} to Dashboard`}
+                  >
+                    <span>📊</span>
+                  </button>
+                  <button
+                    className="explorer-item__action-btn explorer-item__action-btn--desktop"
+                    onClick={() => onAddToDesktop(widget.id)}
+                    disabled={isSpawning}
+                    title="Add to Desktop"
+                    aria-label={`Add ${widget.name} to Desktop`}
+                  >
+                    <span>🖥️</span>
+                  </button>
+                </div>
               )}
-            </button>
+            </div>
           ))
         )}
       </div>

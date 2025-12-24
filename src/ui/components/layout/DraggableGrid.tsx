@@ -309,14 +309,14 @@ export function DraggableGrid() {
       url: '/#/widget-picker',
       title: 'Add Widget',
       width: 520,
-      height: 400,
+      height: 480,
       decorations: false,
       transparent: true,
-      alwaysOnTop: false,  // Don't force always-on-top for modals
+      alwaysOnTop: true,
       skipTaskbar: true,
       center: true,
-      resizable: false,
-      focus: true,  // Only take focus on initial creation
+      resizable: true,
+      focus: true,
     });
 
     webview.once('tauri://created', function () {

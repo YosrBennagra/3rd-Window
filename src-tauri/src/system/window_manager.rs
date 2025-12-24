@@ -112,10 +112,10 @@ impl WindowConfig {
             height: 480,
             x: None,
             y: None,
-            resizable: false,
+            resizable: true,
             decorations: true,
             transparent: false,
-            always_on_top: false,  // Don't force always-on-top for pickers
+            always_on_top: true,
             skip_taskbar: false,
             center: true,
             visible: true,
