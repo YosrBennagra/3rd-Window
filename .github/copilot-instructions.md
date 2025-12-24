@@ -1,30 +1,58 @@
-# Copilot Instructions
 
-## Architecture Snapshot
-- ThirdScreen is a React 18 + Zustand UI in [src/](src) packaged as a Tauri v2 desktop shell defined in [src-tauri/src/lib.rs](src-tauri/src/lib.rs); keep UI logic in TypeScript and OS integrations in Rust commands.
-- App boot ([src/App.tsx](src/App.tsx)) loads saved window prefs via `useStore.loadSettings()` and enumerates monitors via `loadMonitors()` before rendering [src/components/layout/DraggableGrid.tsx](src/components/layout/DraggableGrid.tsx) and the overlay settings panel.
-- Commands must be registered in `tauri::Builder::invoke_handler` inside [src-tauri/src/lib.rs](src-tauri/src/lib.rs); existing handlers: `save_settings`, `load_settings`, `toggle_fullscreen`, `apply_fullscreen`, `get_monitors`, `move_to_monitor`, `get_system_temps`.
+# Copilot Instructions (ThirdScreen)
 
-## State & Settings
-- There are three Zustand stores: `useStore` in [src/store.ts](src/store.ts) for window/monitor preferences, `useGridStore` in [src/store/gridStore.ts](src/store/gridStore.ts) for the draggable grid, and `useAppStore` in [src/state/store.ts](src/state/store.ts) for the future widget/alert system. Pick the right store before mutating state.
-- `useStore` methods wrap Tauri commands via `@tauri-apps/api/core/invoke`; update state optimistically, call the command, persist via `save_settings`, and revert on failure (see `setFullscreen` and `setSelectedMonitor`).
-- Monitor changes exit fullscreen, call `move_to_monitor`, wait for window settling, then re-enter fullscreen; reuse that sequence to prevent the “stuck fullscreen” bug.
+You are working in the ThirdScreen repo.
 
-## Widgets & Layout
-- The shipping UI uses [src/components/layout/DraggableGrid.tsx](src/components/layout/DraggableGrid.tsx) backed by [src/store/gridStore.ts](src/store/gridStore.ts) (`GRID_COLS`/`GRID_ROWS` = 6). Dragging/resizing rely on pointer events, `gridRef`, and `updateWidgetPositionWithPush`; extend these helpers rather than reimplementing collision checks.
-- Widget React components live in [src/components/widgets/](src/components/widgets) and are mapped via the `widgetComponents` record inside `DraggableGrid`. Add new widgets there plus defaults through `useGridStore.addWidget`.
-- `WidgetHost` in [src/components/WidgetHost.tsx](src/components/WidgetHost.tsx) and `widgetDefinitions` in [src/config/widgets.ts](src/config/widgets.ts) form a planned config-driven system; they remain unused because their persistence pipeline in [src/state/store.ts](src/state/store.ts) depends on a not-yet-built storage service. Treat them as experimental scaffolding.
+## Skill-aware workflow (required)
 
-## Services & Metrics
-- Frontend services live in [src/services/](src/services). `system-metrics.ts` expects a `get_system_metrics` Tauri command and falls back to zeros when unavailable; align with the Rust side (only `get_system_temps` exists today) before consuming new fields.
-- Alerts, notifications, shortcuts, integrations, and pipelines are currently stub fetchers used by `useAppStore.refreshAll()`; confirm their data contracts before surfacing values in UI.
+This repo contains “skills” that define quality standards and implementation checklists:
 
-## Developer Workflow
-- Primary commands: `npm install`, `npm run tauri:dev` for the desktop dev loop, `npm run tauri:build` for installers, and `npm run dev:ui` / `npm run build:ui` for browser-only work (see [docs/dev/running.md](docs/dev/running.md)).
-- Node 20+, Rust toolchain, and Tauri prerequisites are required (see [docs/dev/setup.md](docs/dev/setup.md)). If the window is blank, restart `npm run tauri:dev` to rebind port 5173 per [docs/dev/troubleshooting.md](docs/dev/troubleshooting.md).
+- Skills live under `.github/copilot/skills/<skill-name>/skill.md`.
 
-## Guardrails & References
-- Follow the 120-step roadmap in [TODO.md](TODO.md) and log wins in [PROGRESS.md](PROGRESS.md) before expanding scope.
-- Styling lives in [src/App.css](src/App.css) and [src/components/layout/DraggableGrid.css](src/components/layout/DraggableGrid.css); preserve the glassmorphism theme (blurred translucent panels, smooth 200–300ms transitions).
-- When modifying Tauri, keep logic in Rust modules and expose typed structs (e.g., `AppSettings`, `Monitor`) with `#[serde(rename_all = "camelCase")]` to stay aligned with the TypeScript mirrors under [src/types/system.ts](src/types/system.ts).
-- Security/performance: never expose new Tauri commands without validation, avoid tight polling (default refresh is 8s in `useAppStore.refreshInterval`), and batch hardware queries where possible.
+Whenever the user prompt implies applying one or more skills (explicitly or implicitly), you MUST:
+
+1. Identify the most relevant skill(s) based on the user request.
+2. Open and follow the corresponding `skill.md` as the source-of-truth checklist.
+3. Apply the skill guidance to the codebase changes you make (not just advice).
+
+### How to choose skills
+
+- If the user explicitly names a skill (e.g., “apply accessibility best practices”), load that exact skill.
+- If the user does not name a skill, infer likely skills from the prompt.
+- If multiple skills could plausibly apply, pick the smallest set that directly affects the request.
+- If the skill choice is ambiguous, ask up to 2 clarifying questions before making large changes.
+
+### Skill selection heuristics (use as hints)
+
+- Accessibility/UI semantics/ARIA/keyboard → `accessibility-best-practices`
+- Install/update/uninstall/versioning/release channels → `app-distribution-awareness`
+- Build pipelines/GitHub Actions/release automation → `ci-cd-awareness`
+- Boundaries/layers/ports-adapters → `clean-architecture`
+- Focus/keyboard/window behavior → `desktop-ux-principles`
+- Frontend↔Tauri command contracts → `ipc-contracts`
+- Multi-display behavior → `multi-monitor-ux`
+- Window creation/lifecycle/state → `multi-window-management`
+- Windows registry/startup/context menu/protocols → `os-integration-windows`
+- Performance profiling/budgets/render costs → `performance-optimization`
+- Extensibility/registries/plugin boundaries → `plugin-ready-design`
+- React idioms/hooks/effects/18 patterns → `react-18-best-practices`
+- Rust correctness/error handling/safety → `rust-safety-principles`
+- Split responsibilities/modules → `separation-of-concerns`
+- SOLID refactors/APIs → `solid-principles`
+- Persisted state/migrations/compat → `state-persistence`
+- Tauri v2 config/plugins/security → `tauri-v2-architecture`
+- Testing strategy/mocks/fixtures → `testability-design`
+- TS strictness/types/tsconfig → `typescript-strict-mode`
+- Widget APIs/contracts/metadata → `widget-contract-design`
+- Zustand store structure/selectors → `zustand-state-architecture`
+
+### When no skill applies
+
+If the request is purely informational or a tiny change, proceed normally.
+
+## Guardrails
+
+- Prefer minimal, surgical changes.
+- Don’t invent new UX beyond what’s requested.
+- Validate with the closest build/test command when feasible.
+
