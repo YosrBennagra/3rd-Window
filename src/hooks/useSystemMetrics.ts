@@ -115,6 +115,7 @@ export function useNetworkStats(options: UseSystemMetricsOptions = {}) {
   const [error, setError] = useState<Error | null>(null);
   const intervalRef = useRef<number | null>(null);
   const isVisibleRef = useRef(true);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -126,6 +127,7 @@ export function useNetworkStats(options: UseSystemMetricsOptions = {}) {
         const data = await invoke<NetworkStats>('get_network_stats');
         setStats(data);
         setError(null);
+        hasFetchedRef.current = true;
       } catch (err) {
         console.error('[useNetworkStats] Failed to fetch:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -140,7 +142,10 @@ export function useNetworkStats(options: UseSystemMetricsOptions = {}) {
       }
     };
 
-    void fetchStats();
+    // Only fetch initially if we don't have data yet
+    if (!hasFetchedRef.current) {
+      void fetchStats();
+    }
     intervalRef.current = window.setInterval(fetchStats, refreshInterval);
 
     if (pauseWhenHidden) {

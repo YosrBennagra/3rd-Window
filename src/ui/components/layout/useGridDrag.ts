@@ -12,6 +12,7 @@ interface DragParams {
 export interface GridDragState {
   dragInfo: DragInfo | null;
   ghostStyle: React.CSSProperties | null;
+  dragStyle: React.CSSProperties | null;
   hoverCell: { x: number; y: number } | null;
   preview: { x: number; y: number; width: number; height: number } | null;
   isDragBlocked: boolean;
@@ -22,6 +23,7 @@ export interface GridDragState {
 export default function useGridDrag({ widgets, moveWidget, getCellFromPointer }: DragParams): GridDragState {
   const [dragInfo, setDragInfo] = useState<DragInfo | null>(null);
   const [ghostStyle, setGhostStyle] = useState<React.CSSProperties | null>(null);
+  const [dragStyle, setDragStyle] = useState<React.CSSProperties | null>(null);
   const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
   const [isDragBlocked, setIsDragBlocked] = useState(false);
   const [preview, setPreview] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -55,6 +57,7 @@ export default function useGridDrag({ widgets, moveWidget, getCellFromPointer }:
   const cancelDrag = useCallback(() => {
     setDragInfo(null);
     setGhostStyle(null);
+    setDragStyle(null);
     setHoverCell(null);
     setPreview(null);
     setIsDragBlocked(false);
@@ -69,28 +72,30 @@ export default function useGridDrag({ widgets, moveWidget, getCellFromPointer }:
       e.preventDefault();
       e.stopPropagation();
 
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const widgetElement = e.currentTarget as HTMLElement;
+      const rect = widgetElement.getBoundingClientRect();
+      
       dragOffsetRef.current = {
         x: e.clientX - rect.left,
         y: e.clientY - rect.top,
       };
 
       setDragInfo({ id: widget.id, widgetType: widget.widgetType, width: widget.width, height: widget.height });
-      setGhostStyle({
-        position: 'fixed',
-        left: `${rect.left}px`,
-        top: `${rect.top}px`,
-        width: `${rect.width}px`,
-        height: `${rect.height}px`,
-        zIndex: 30,
-        pointerEvents: 'none',
+      
+      // Set style for fixed positioning
+      setDragStyle({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
       });
+      
       setHoverCell({ x: widget.x, y: widget.y });
       setPreview({ x: widget.x, y: widget.y, width: widget.width, height: widget.height });
 
       dragPointerId.current = e.pointerId;
       try {
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        widgetElement.setPointerCapture(e.pointerId);
       } catch {
         // ignore
       }
@@ -107,11 +112,9 @@ export default function useGridDrag({ widgets, moveWidget, getCellFromPointer }:
 
       const x = ev.clientX - dragOffsetRef.current.x;
       const y = ev.clientY - dragOffsetRef.current.y;
-      setGhostStyle((prev) => ({
-        ...prev,
-        left: `${x}px`,
-        top: `${y}px`,
-      }));
+      
+      // Update position for fixed element
+      setDragStyle((prev) => prev ? { ...prev, left: x, top: y } : null);
 
       const widgetLeft = ev.clientX - dragOffsetRef.current.x;
       const widgetTop = ev.clientY - dragOffsetRef.current.y;
@@ -170,6 +173,7 @@ export default function useGridDrag({ widgets, moveWidget, getCellFromPointer }:
   return {
     dragInfo,
     ghostStyle,
+    dragStyle,
     hoverCell,
     preview,
     isDragBlocked,

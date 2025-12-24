@@ -133,6 +133,7 @@ export function DraggableGrid() {
   const {
     dragInfo,
     ghostStyle,
+    dragStyle,
     preview: dragPreview,
     isDragBlocked,
     handleWidgetPointerDown,
@@ -410,6 +411,7 @@ export function DraggableGrid() {
               handleContextMenu={handleContextMenu}
               onRemoveWidget={removeWidget}
               dragInfo={dragInfo}
+              dragStyle={dragStyle}
               isResizing={resizingWidgetId === widget.id}
             />
           );
