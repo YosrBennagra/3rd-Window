@@ -11,6 +11,7 @@ interface Props {
   handleContextMenu: (e: React.MouseEvent, widget: WidgetLayout) => void;
   onRemoveWidget?: (widgetId: string) => void;
   dragInfo?: { id: string } | null;
+  dragStyle?: React.CSSProperties | null;
   isResizing?: boolean;
 }
 
@@ -22,12 +23,31 @@ function GridWidgetItem({
   handleContextMenu,
   onRemoveWidget,
   dragInfo,
+  dragStyle,
   isResizing,
 }: Props) {
+  const isBeingDragged = dragInfo?.id === widget.id;
+  
+  // When dragging, use fixed position style; otherwise use grid position
+  const style: React.CSSProperties = isBeingDragged && dragStyle
+    ? {
+        position: 'fixed',
+        left: dragStyle.left,
+        top: dragStyle.top,
+        width: dragStyle.width,
+        height: dragStyle.height,
+        zIndex: 1000,
+        pointerEvents: 'none',
+      }
+    : {
+        gridColumn: `${widget.x + 1} / span ${widget.width}`,
+        gridRow: `${widget.y + 1} / span ${widget.height}`,
+      };
+  
   return (
     <div
       key={widget.id}
-      className={`grid-widget ${dragInfo?.id === widget.id ? 'grid-widget--dragging' : ''} ${isResizing ? 'grid-widget--resizing' : ''}`}
+      className={`grid-widget ${isBeingDragged ? 'grid-widget--dragging' : ''} ${isResizing ? 'grid-widget--resizing' : ''}`}
       onPointerDown={(e) => {
         e.stopPropagation();
         handleWidgetPointerDown(e, widget);
@@ -37,10 +57,7 @@ function GridWidgetItem({
         handleContextMenu(e, widget);
       }}
       data-tauri-drag-region="false"
-      style={{
-        gridColumn: `${widget.x + 1} / span ${widget.width}`,
-        gridRow: `${widget.y + 1} / span ${widget.height}`,
-      }}
+      style={style}
     >
       <div className="grid-widget__content">
         <WidgetErrorBoundary
