@@ -14,8 +14,8 @@
 .panel-floating-window {
   position: fixed;
   z-index: 9999;
-  width: 520px;
-  height: 400px;
+  width: 1270px;
+  height: 650px;
   filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.5));
 }
 

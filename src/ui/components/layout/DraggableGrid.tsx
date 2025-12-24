@@ -308,8 +308,8 @@ export function DraggableGrid() {
     const webview = new WebviewWindow(label, {
       url: '/#/widget-picker',
       title: 'Add Widget',
-      width: 520,
-      height: 480,
+      width: 1270,
+      height: 650,
       decorations: false,
       transparent: true,
       alwaysOnTop: true,
