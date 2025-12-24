@@ -1,41 +1,16 @@
-import { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { useSystemMetrics } from '../../../hooks/useSystemMetrics';
 import type { WidgetLayout } from '../../../domain/models/layout';
-
-interface SystemMetrics {
-  cpuUsage: number;
-  cpuTemp: number;
-  gpuTemp: number;
-  ramUsedBytes: number;
-  ramTotalBytes: number;
-  diskUsedBytes: number;
-  diskTotalBytes: number;
-  netUpMbps: number;
-  netDownMbps: number;
-}
 
 interface Props {
   widget: WidgetLayout;
 }
 
 export default function RamUsageWidget({ widget: _widget }: Props) {
-  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
-
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const data = await invoke<SystemMetrics>('get_system_metrics');
-        setMetrics(data);
-      } catch (error) {
-        console.error('Failed to fetch system metrics:', error);
-      }
-    };
-
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // Use optimized hook with 3s refresh (RAM changes slowly)
+  const { metrics } = useSystemMetrics({
+    refreshInterval: 3000,
+    pauseWhenHidden: true,
+  });
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -45,8 +20,8 @@ export default function RamUsageWidget({ widget: _widget }: Props) {
     return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
   };
 
-  const usedBytes = metrics?.ramUsedBytes ?? 0;
-  const totalBytes = metrics?.ramTotalBytes ?? 1;
+  const usedBytes = metrics?.memoryUsed ?? 0;
+  const totalBytes = metrics?.memoryTotal ?? 1;
   const usedPct = (usedBytes / totalBytes) * 100;
   const freeBytes = totalBytes - usedBytes;
 

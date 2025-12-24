@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { enableContextMenu, disableContextMenu, isContextMenuInstalled } from '../../infrastructure/ipc/context-menu';
+import { enableContextMenu, disableContextMenu, checkContextMenuInstalled } from '../../infrastructure/ipc/context-menu';
 
 export default function AdvancedSettings() {
   const [contextMenuEnabled, setContextMenuEnabled] = useState(false);
@@ -15,7 +15,7 @@ export default function AdvancedSettings() {
       }
 
       try {
-        const installed = await isContextMenuInstalled();
+        const installed = await checkContextMenuInstalled();
         setContextMenuEnabled(installed);
       } catch (err) {
         console.error('Failed to check context menu status:', err);
@@ -48,18 +48,40 @@ export default function AdvancedSettings() {
   };
 
   return (
-    <div className="advanced-settings" style={{ padding: '20px' }}>
-      <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: 600 }}>Advanced Settings</h3>
+    <section className="advanced-settings" style={{ padding: '20px' }} aria-labelledby="advanced-settings-title">
+      <h3 id="advanced-settings-title" style={{ marginBottom: '20px', fontSize: '18px', fontWeight: 600 }}>Advanced Settings</h3>
+      
+      {/* Live region for error announcements */}
+      {error && (
+        <div 
+          role="alert" 
+          aria-live="assertive"
+          style={{ 
+            marginBottom: '16px', 
+            padding: '12px', 
+            borderRadius: '6px',
+            background: '#ef44441a',
+            color: '#ef4444',
+            fontSize: '13px'
+          }}
+        >
+          {error}
+        </div>
+      )}
       
       {isWindows && (
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 500 }}>
+            <label id="context-menu-label" style={{ fontSize: '14px', fontWeight: 500 }}>
               Windows Context Menu Integration
             </label>
             <button
               onClick={handleToggleContextMenu}
               disabled={loading}
+              aria-label={contextMenuEnabled ? 'Disable context menu integration' : 'Enable context menu integration'}
+              aria-labelledby="context-menu-label"
+              aria-pressed={contextMenuEnabled}
+              aria-busy={loading}
               style={{
                 padding: '6px 16px',
                 borderRadius: '6px',
@@ -75,7 +97,7 @@ export default function AdvancedSettings() {
               {loading ? 'Loading...' : contextMenuEnabled ? 'Disable' : 'Enable'}
             </button>
           </div>
-          <p style={{ fontSize: '13px', opacity: 0.7, margin: 0 }}>
+          <p id="context-menu-description" style={{ fontSize: '13px', opacity: 0.7, margin: 0 }}>
             Add "ThirdScreen - Add Widget" to Windows desktop right-click menu
           </p>
           {error && (
@@ -98,7 +120,7 @@ export default function AdvancedSettings() {
           Context menu integration is only available on Windows.
         </p>
       )}
-    </div>
+    </section>
   );
 }
 

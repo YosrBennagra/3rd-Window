@@ -2,6 +2,21 @@ import { create } from 'zustand';
 import { DesktopWidgetConfig } from '../../domain/models/desktop-widget';
 import { spawnDesktopWidget, closeDesktopWidget, getDesktopWidgets } from '../../infrastructure/ipc/desktop-widgets';
 
+/**
+ * Desktop Widget Store (Zustand Architecture Best Practice)
+ * 
+ * This store manages desktop widget state ONLY.
+ * Follows Zustand principles:
+ * - One store per concern (desktop widgets)
+ * - Delegates side effects to IPC abstraction layer
+ * - Explicit state ownership
+ * - Actions named by intent
+ * - State is minimal and intentional
+ * 
+ * Note: This store delegates to IPC abstractions (infrastructure layer),
+ * which is acceptable as it's not calling Tauri directly.
+ */
+
 interface DesktopWidgetState {
   desktopWidgets: DesktopWidgetConfig[];
   isLoaded: boolean;

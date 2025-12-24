@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { WidgetLayout } from '../domain/models/layout';
+import type { WidgetComponentProps } from '../domain/contracts/WidgetContract';
 import { 
   ClockWidget, 
   TimerWidget, 
@@ -23,9 +24,13 @@ import {
  * 1. Import the widget component
  * 2. Register it here
  * 3. Add constraints to domain/config/widgetConstraints.ts
+ * 
+ * NOTE: The WidgetComponent type is a union to support both legacy widgets
+ * (using { widget: WidgetLayout }) and new contract-compliant widgets
+ * (using WidgetComponentProps). Gradually migrate widgets to the new API.
  */
 
-type WidgetComponent = ComponentType<{ widget?: WidgetLayout }> | ComponentType<{ widget: WidgetLayout }>;
+type WidgetComponent = ComponentType<WidgetComponentProps> | ComponentType<{ widget: WidgetLayout }>;
 
 class WidgetRegistry {
   private components = new Map<string, WidgetComponent>();

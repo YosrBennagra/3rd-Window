@@ -20,6 +20,21 @@ import {
 } from '../../domain/models/widgets';
 import { WIDGET_CONSTRAINTS, getWidgetConstraints } from '../../domain/config/widgetConstraints';
 
+/**
+ * Grid Layout Store (Zustand Architecture Best Practice)
+ * 
+ * This store manages grid and widget layout state ONLY.
+ * Follows Zustand principles:
+ * - One store per concern (grid layout and widgets)
+ * - State is minimal and intentional
+ * - Actions are named by intent (addWidget, moveWidget, resizeWidget)
+ * - No side effects (no IPC, no persistence)
+ * - Uses domain logic for calculations (layout algorithms)
+ * 
+ * Note: Layout algorithms are in this file but could be extracted to
+ * domain layer if they become complex. They are deterministic pure functions.
+ */
+
 export const DEFAULT_GRID: GridConfig = { columns: 24, rows: 12 };
 export const GRID_COLS = DEFAULT_GRID.columns;
 export const GRID_ROWS = DEFAULT_GRID.rows;
@@ -292,7 +307,23 @@ export const useGridStore = create<GridState>((set, get) => ({
   isLoaded: false,
 
   async loadDashboard() {
+    // Legacy load - replaced by loadPersisted
     set({ grid: DEFAULT_GRID, widgets: DEFAULT_WIDGETS, isLoaded: true });
+  },
+  
+  // Persistence methods (new versioned persistence)
+  async savePersisted() {
+    const { grid, widgets } = get();
+    return { grid, widgets };
+  },
+  
+  async loadPersisted(layout: { grid: { columns: number; rows: number }; widgets: WidgetLayout[] }) {
+    const normalizedWidgets = normalizeWidgets(layout.widgets, layout.grid);
+    set({ 
+      grid: layout.grid,
+      widgets: normalizedWidgets,
+      isLoaded: true 
+    });
   },
 
   async applyOperation(operation) {

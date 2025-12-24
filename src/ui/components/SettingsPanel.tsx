@@ -17,57 +17,84 @@ export default function SettingsPanel() {
   return (
     <div className="settings-panel">
       {/* Sidebar Navigation */}
-      <nav className="settings-sidebar">
+      <nav className="settings-sidebar" aria-label="Settings navigation">
         <div className="settings-sidebar-header">
           <h2>Settings</h2>
         </div>
-        <div className="settings-nav">
+        <div className="settings-nav" role="tablist" aria-label="Settings sections">
           <button 
             className={`settings-nav-item ${activeSection === 'general' ? 'active' : ''}`}
             onClick={() => setActiveSection('general')}
+            role="tab"
+            aria-selected={activeSection === 'general'}
+            aria-controls="settings-section-content"
+            id="tab-general"
           >
-            <span className="settings-nav-icon">⚙️</span>
+            <span className="settings-nav-icon" aria-hidden="true">⚙️</span>
             General
           </button>
           <button 
             className={`settings-nav-item ${activeSection === 'widgets' ? 'active' : ''}`}
             onClick={() => setActiveSection('widgets')}
+            role="tab"
+            aria-selected={activeSection === 'widgets'}
+            aria-controls="settings-section-content"
+            id="tab-widgets"
           >
-            <span className="settings-nav-icon">🎨</span>
+            <span className="settings-nav-icon" aria-hidden="true">🎨</span>
             Widgets
           </button>
           <button 
             className={`settings-nav-item ${activeSection === 'alerts' ? 'active' : ''}`}
             onClick={() => setActiveSection('alerts')}
+            role="tab"
+            aria-selected={activeSection === 'alerts'}
+            aria-controls="settings-section-content"
+            id="tab-alerts"
           >
-            <span className="settings-nav-icon">🔔</span>
+            <span className="settings-nav-icon" aria-hidden="true">🔔</span>
             Alert Rules
           </button>
           <button 
             className={`settings-nav-item ${activeSection === 'advanced' ? 'active' : ''}`}
             onClick={() => setActiveSection('advanced')}
+            role="tab"
+            aria-selected={activeSection === 'advanced'}
+            aria-controls="settings-section-content"
+            id="tab-advanced"
           >
-            <span className="settings-nav-icon">🔧</span>
+            <span className="settings-nav-icon" aria-hidden="true">🔧</span>
             Advanced
           </button>
         </div>
       </nav>
 
       {/* Main Content */}
-      <div className="settings-content">
+      <div 
+        className="settings-content" 
+        id="settings-section-content"
+        role="tabpanel"
+        aria-labelledby={`tab-${activeSection}`}
+      >
         {activeSection === 'general' && (
-          <div className="settings-section">
+          <section className="settings-section" aria-labelledby="general-settings-title">
             <div className="settings-section-header">
-              <h2>General Settings</h2>
+              <h2 id="general-settings-title">General Settings</h2>
               <p className="muted">Configure general application behavior</p>
             </div>
 
             <div className="settings-group">
               <div>
-                <p className="list-title">Power Saving Mode</p>
+                <p className="list-title" id="power-saving-label">Power Saving Mode</p>
                 <p className="muted tiny">Black background, keep key widgets lit</p>
               </div>
-              <button className="btn ghost" onClick={toggle}>
+              <button 
+                className="btn ghost" 
+                onClick={toggle}
+                aria-label="Toggle power saving mode"
+                aria-labelledby="power-saving-label"
+                aria-pressed={enabled}
+              >
                 {enabled ? 'Enabled' : 'Disabled'}
               </button>
             </div>
@@ -92,14 +119,19 @@ export default function SettingsPanel() {
 
             <div className="settings-group">
               <div>
-                <p className="list-title">Refresh Data</p>
+                <p className="list-title" id="refresh-label">Refresh Data</p>
                 <p className="muted tiny">Pull latest metrics and notifications</p>
               </div>
-              <button className="btn primary" onClick={refresh}>
+              <button 
+                className="btn primary" 
+                onClick={refresh}
+                aria-label="Refresh data now"
+                aria-labelledby="refresh-label"
+              >
                 Refresh Now
               </button>
             </div>
-          </div>
+          </section>
         )}
 
         {activeSection === 'widgets' && (

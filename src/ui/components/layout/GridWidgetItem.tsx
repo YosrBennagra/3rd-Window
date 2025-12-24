@@ -1,13 +1,15 @@
 import { memo } from 'react';
 import type { WidgetLayout } from '../../../domain/models/layout';
 import type { ResizeHandle } from './useWidgetResize';
+import { WidgetErrorBoundary } from '../widgets/WidgetErrorBoundary';
 
 interface Props {
   widget: WidgetLayout;
-  WidgetComponent: React.ComponentType<any>;
+  WidgetComponent: React.ComponentType<any>; // Union type makes this complex, keep as any for now
   handleWidgetPointerDown: (e: React.PointerEvent, widget: WidgetLayout) => void;
   handleResizePointerDown: (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => void;
   handleContextMenu: (e: React.MouseEvent, widget: WidgetLayout) => void;
+  onRemoveWidget?: (widgetId: string) => void;
   dragInfo?: { id: string } | null;
   isResizing?: boolean;
 }
@@ -18,6 +20,7 @@ function GridWidgetItem({
   handleWidgetPointerDown,
   handleResizePointerDown,
   handleContextMenu,
+  onRemoveWidget,
   dragInfo,
   isResizing,
 }: Props) {
@@ -40,7 +43,12 @@ function GridWidgetItem({
       }}
     >
       <div className="grid-widget__content">
-        <WidgetComponent widget={widget} />
+        <WidgetErrorBoundary
+          widget={widget}
+          onRemove={() => onRemoveWidget?.(widget.id)}
+        >
+          <WidgetComponent widget={widget} />
+        </WidgetErrorBoundary>
       </div>
       {isResizing && (
         <>

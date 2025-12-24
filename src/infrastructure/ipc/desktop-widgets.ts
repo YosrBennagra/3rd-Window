@@ -1,22 +1,22 @@
-import { invoke } from '@tauri-apps/api/core';
-import { DesktopWidgetConfig } from '../../domain/models/desktop-widget';
+import IpcService from '../../services/ipc';
+import type { WidgetWindowConfig } from '../../types/ipc';
 
-export async function spawnDesktopWidget(config: DesktopWidgetConfig): Promise<string> {
-  return await invoke<string>('spawn_desktop_widget', { config });
+export async function spawnDesktopWidget(config: WidgetWindowConfig): Promise<string> {
+  return await IpcService.widget.spawn(config);
 }
 
 export async function closeDesktopWidget(widgetId: string): Promise<void> {
-  await invoke('close_desktop_widget', { widgetId });
+  await IpcService.widget.close({ widgetId });
 }
 
 export async function updateWidgetPosition(widgetId: string, x: number, y: number): Promise<void> {
-  await invoke('update_widget_position', { widgetId, x, y });
+  await IpcService.widget.updatePosition({ widgetId, x, y });
 }
 
 export async function updateWidgetSize(widgetId: string, width: number, height: number): Promise<void> {
-  await invoke('update_widget_size', { widgetId, width, height });
+  await IpcService.widget.updateSize({ widgetId, width, height });
 }
 
-export async function getDesktopWidgets(): Promise<DesktopWidgetConfig[]> {
-  return await invoke<DesktopWidgetConfig[]>('get_desktop_widgets');
+export async function getDesktopWidgets(): Promise<WidgetWindowConfig[]> {
+  return await IpcService.widget.list();
 }

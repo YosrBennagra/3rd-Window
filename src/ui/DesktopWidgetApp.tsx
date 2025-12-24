@@ -40,6 +40,7 @@ export function DesktopWidgetView({ widgetId, widgetType }: DesktopWidgetViewPro
     const WidgetComponent = widgetRegistry.get(lookupType);
     
     if (WidgetComponent) {
+      // @ts-expect-error: Union type compatibility - widget components use legacy API
       return <WidgetComponent widget={mockWidget} />;
     }
     

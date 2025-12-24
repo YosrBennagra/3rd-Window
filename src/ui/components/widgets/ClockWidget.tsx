@@ -1,55 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback } from 'react';
 import type { MouseEvent } from 'react';
 import type { WidgetLayout } from '../../../domain/models/layout';
 import { ensureClockWidgetSettings } from '../../../domain/models/widgets';
 import { invoke } from '@tauri-apps/api/core';
+import { useClock } from '../../../application/hooks/useClock';
+import { useFormattedTime } from '../../../application/hooks/useFormattedTime';
+
+/**
+ * ClockWidget Component (React 18 Best Practice)
+ * 
+ * Follows React principles:
+ * - Function component only
+ * - Minimal local state (none - delegated to custom hooks)
+ * - Custom hooks for behavior extraction
+ * - No business logic in JSX
+ * - Stable event handlers via useCallback
+ */
 
 interface Props {
   widget?: WidgetLayout;
 }
 
 export function ClockWidget({ widget }: Props) {
-  const [time, setTime] = useState(() => new Date());
   const settings = ensureClockWidgetSettings(widget?.settings);
-  const locale = useMemo(
-    () => (typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US'),
-    [],
-  );
-
-  const intervalMs = 60000;
-  const effectiveTimezone = settings.timezone === 'system' ? undefined : settings.timezone;
-
-  useEffect(() => {
-    setTime(new Date());
-    const interval = window.setInterval(() => setTime(new Date()), intervalMs);
-    return () => window.clearInterval(interval);
-  }, [intervalMs]);
-
-  const dateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(locale, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        timeZone: effectiveTimezone,
-      }),
-    [effectiveTimezone, locale],
-  );
-
-  const zonedTime = useMemo(
-    () => (effectiveTimezone ? new Date(time.toLocaleString('en-US', { timeZone: effectiveTimezone })) : time),
-    [effectiveTimezone, time],
-  );
-
-  const hours24 = zonedTime.getHours();
-  const minutes = zonedTime.getMinutes();
-  const hours12 = hours24 % 12 || 12;
-  const is24h = settings.timeFormat === '24h';
-  const hourText = is24h ? String(hours24).padStart(2, '0') : String(hours12);
-  const minuteText = String(minutes).padStart(2, '0');
-  const periodText = !is24h ? (hours24 >= 12 ? 'PM' : 'AM') : '';
-  const timeText = is24h ? `${hourText}:${minuteText}` : `${hourText}:${minuteText} ${periodText}`;
-  const dateText = dateFormatter.format(zonedTime);
+  const time = useClock({ interval: 60000 });
+  const { timeText, dateText } = useFormattedTime(time, settings);
 
   const handleClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {

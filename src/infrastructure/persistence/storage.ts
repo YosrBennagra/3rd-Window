@@ -1,5 +1,7 @@
 // Placeholder storage service - to be implemented
 
+import type { AlertRule } from '../../domain/services/alerts';
+
 interface WindowPosition {
   x: number;
   y: number;
@@ -19,7 +21,7 @@ interface Settings {
   widgetVisibility?: Record<string, boolean>;
   widgetScale?: Record<string, string>;
   widgetOrder?: string[];
-  alertRules?: any[];
+  alertRules?: AlertRule[];
   notes?: string;
 }
 

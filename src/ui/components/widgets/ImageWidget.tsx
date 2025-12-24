@@ -92,6 +92,7 @@ export function ImageWidget({ widget }: Props) {
               onClick={handleRemoveImage}
               onPointerDown={(e) => e.stopPropagation()}
               title="Remove image"
+              aria-label="Remove image"
             >
               ×
             </button>

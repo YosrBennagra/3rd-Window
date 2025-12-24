@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { useNetworkStats } from '../../../hooks/useSystemMetrics';
 import type { WidgetLayout } from '../../../domain/models/layout';
 import { ensureNetworkMonitorWidgetSettings } from '../../../domain/models/widgets';
 
@@ -18,31 +17,21 @@ interface Props {
 
 export default function NetworkMonitorWidget({ widget }: Props) {
   const settings = ensureNetworkMonitorWidgetSettings(widget.settings);
-  const [stats, setStats] = useState<NetworkStats>({
+
+  // Use optimized hook with visibility detection
+  const { stats: fetchedStats } = useNetworkStats({
+    refreshInterval: settings.refreshInterval,
+    pauseWhenHidden: true,
+  });
+
+  const stats: NetworkStats = fetchedStats ?? {
     interfaceName: 'Detecting...',
     downloadSpeed: 0,
     uploadSpeed: 0,
     totalDownloaded: 0,
     totalUploaded: 0,
     isConnected: false,
-  });
-
-  useEffect(() => {
-    const fetchNetworkStats = async () => {
-      try {
-        const data = await invoke<NetworkStats>('get_network_stats');
-        setStats(data);
-      } catch (error) {
-        console.error('Failed to fetch network stats:', error);
-        // Keep showing last known stats on error
-      }
-    };
-
-    fetchNetworkStats();
-    const interval = setInterval(fetchNetworkStats, settings.refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [settings.refreshInterval]);
+  };
 
   const formatBytes = (bytes: number, decimals = 2): string => {
     if (bytes === 0) return '0 B';

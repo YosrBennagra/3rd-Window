@@ -1,13 +1,13 @@
-import { invoke } from '@tauri-apps/api/core';
+import IpcService from '../../services/ipc';
 
 export async function enableContextMenu(): Promise<void> {
-  await invoke('enable_context_menu');
+  await IpcService.contextMenu.enable();
 }
 
 export async function disableContextMenu(): Promise<void> {
-  await invoke('disable_context_menu');
+  await IpcService.contextMenu.disable();
 }
 
-export async function isContextMenuInstalled(): Promise<boolean> {
-  return await invoke<boolean>('check_context_menu_installed');
+export async function checkContextMenuInstalled(): Promise<boolean> {
+  return await IpcService.contextMenu.checkInstalled();
 }

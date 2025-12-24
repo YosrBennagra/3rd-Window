@@ -13,6 +13,8 @@
   --accent-hover: #4d8af0;
   --accent-muted: rgba(61, 123, 218, 0.16);
   --focus-ring: rgba(77, 138, 240, 0.45);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
   --danger: #f05d63;
   --success: #58c39b;
   --radius-sm: 6px;
@@ -21,16 +23,80 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
+  
+  /* Animation durations - respects prefers-reduced-motion */
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
+  
   font-family: 'Segoe UI', 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   font-feature-settings: 'liga' 1, 'calt' 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Respect user's reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-normal: 0ms;
+    --transition-slow: 0ms;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* ============================================================================
+   FOCUS STYLES - Desktop UX Principle: Visible keyboard navigation
+   ============================================================================ */
+
+/* Remove default focus outline (we'll add our own) */
+*:focus {
+  outline: none;
+}
+
+/* Visible focus ring for keyboard navigation */
+*:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* Button focus styles */
+button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 4px rgba(77, 138, 240, 0.15);
+}
+
+/* Input focus styles */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 0px;
+  border-color: var(--accent);
+}
+
+/* Interactive div focus (for custom controls) */
+div[role="button"]:focus-visible,
+div[role="tab"]:focus-visible,
+div[tabindex]:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 html,

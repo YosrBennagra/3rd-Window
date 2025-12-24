@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event';
 import { useGridStore } from '../../../application/stores/gridStore';
 import { useStore } from '../../../application/stores/store';
 import { spawnDesktopWidget } from '../../../infrastructure/ipc/desktop-widgets';
+import { useRenderTracking } from '../../../utils/performanceMonitoring';
 import GridGhost from './GridGhost';
 import GridCells from './GridCells';
 import useGridDrag from './useGridDrag';
@@ -18,12 +19,16 @@ import { clampToRange } from './gridMath';
 import type { ClockWidgetSettings, TimerWidgetSettings } from '../../../domain/models/widgets';
 import { widgetRegistry } from '../../../config/widgetRegistry';
 import { executeMenuAction, type MenuActionContext } from '../../../application/services/menuActions';
+import { registerCoreWidgets } from '../../../config/widgetPluginBootstrap';
 
 const GAP_SIZE = 12;
 
 type PanelType = 'widget-settings' | 'add-widget' | null;
 
 export function DraggableGrid() {
+  // Performance tracking
+  useRenderTracking('DraggableGrid');
+
   const {
     widgets,
     grid,
@@ -270,6 +275,15 @@ export function DraggableGrid() {
     void addWidget(widgetType);
   }, [addWidget]);
 
+  // Register core widgets on mount (plugin system initialization)
+  useEffect(() => {
+    try {
+      registerCoreWidgets();
+    } catch (error) {
+      console.error('[DraggableGrid] Failed to register core widgets:', error);
+    }
+  }, []);
+
   // Listen for add-widget events from the picker window
   useEffect(() => {
     const unlisten = listen<{ type: string }>('add-widget', (event) => {
@@ -284,7 +298,9 @@ export function DraggableGrid() {
     const label = 'widget-picker';
     const existing = await WebviewWindow.getByLabel(label);
     if (existing) {
-      await existing.setFocus();
+      // Don't steal focus - just show the window
+      // User can click it if they want to interact
+      await existing.show();
       return;
     }
 
@@ -295,10 +311,11 @@ export function DraggableGrid() {
       height: 400,
       decorations: false,
       transparent: true,
-      alwaysOnTop: true,
+      alwaysOnTop: false,  // Don't force always-on-top for modals
       skipTaskbar: true,
       center: true,
-      resizable: false
+      resizable: false,
+      focus: true,  // Only take focus on initial creation
     });
 
     webview.once('tauri://created', function () {
@@ -391,6 +408,7 @@ export function DraggableGrid() {
               handleWidgetPointerDown={handleWidgetPointerDownSafe}
               handleResizePointerDown={handleResizePointerDownSafe}
               handleContextMenu={handleContextMenu}
+              onRemoveWidget={removeWidget}
               dragInfo={dragInfo}
               isResizing={resizingWidgetId === widget.id}
             />

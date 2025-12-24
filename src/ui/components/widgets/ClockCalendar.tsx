@@ -1,11 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useRenderTracking } from '../../../utils/performanceMonitoring';
 
+/**
+ * Performance-optimized clock using requestAnimationFrame.
+ * Only updates when second changes to avoid unnecessary re-renders.
+ */
 export default function ClockCalendar() {
+  // Performance tracking
+  useRenderTracking('ClockCalendar');
+
   const [now, setNow] = useState(new Date());
+  const frameRef = useRef<number | null>(null);
+  const lastSecondRef = useRef(now.getSeconds());
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
+    const animate = () => {
+      const current = new Date();
+      const currentSecond = current.getSeconds();
+
+      // Only update state when second changes
+      if (currentSecond !== lastSecondRef.current) {
+        setNow(current);
+        lastSecondRef.current = currentSecond;
+      }
+
+      frameRef.current = requestAnimationFrame(animate);
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+      }
+    };
   }, []);
 
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

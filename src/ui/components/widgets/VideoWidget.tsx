@@ -116,6 +116,7 @@ export function VideoWidget({ widget }: Props) {
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
                 title={isPlaying ? 'Pause' : 'Play'}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isPlaying ? '⏸' : '▶'}
               </button>
@@ -126,6 +127,7 @@ export function VideoWidget({ widget }: Props) {
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
                 title="Remove video"
+                aria-label="Remove video"
               >
                 ×
               </button>

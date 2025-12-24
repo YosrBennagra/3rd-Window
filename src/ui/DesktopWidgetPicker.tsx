@@ -80,14 +80,15 @@ export default function DesktopWidgetPicker() {
       await window.close();
     } catch (error) {
       console.error('Failed to spawn desktop widget:', error);
-      alert('Failed to add widget: ' + error);
+      // TODO: Replace with non-blocking notification system
+      // For now, just log - users will see console if needed
     } finally {
       setSpawning(false);
     }
   };
 
   return (
-    <div style={{
+    <main style={{
       width: '100vw',
       height: '100vh',
       background: 'linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%)',
@@ -95,22 +96,26 @@ export default function DesktopWidgetPicker() {
       display: 'flex',
       flexDirection: 'column',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-    }}>
-      <h2 style={{
-        margin: '0 0 8px 0',
-        fontSize: '20px',
-        fontWeight: 600,
-        color: '#e2e8f0',
-      }}>
-        Add Desktop Widget
-      </h2>
-      <p style={{
-        margin: '0 0 20px 0',
-        fontSize: '13px',
-        color: 'rgba(226, 232, 240, 0.6)',
-      }}>
-        Choose a widget to place on your desktop
-      </p>
+    }} 
+    role="main"
+    aria-label="Desktop widget picker">
+      <header>
+        <h1 style={{
+          margin: '0 0 8px 0',
+          fontSize: '20px',
+          fontWeight: 600,
+          color: '#e2e8f0',
+        }}>
+          Add Desktop Widget
+        </h1>
+        <p style={{
+          margin: '0 0 20px 0',
+          fontSize: '13px',
+          color: 'rgba(226, 232, 240, 0.6)',
+        }}>
+          Choose a widget to place on your desktop
+        </p>
+      </header>
 
       <div style={{
         display: 'grid',
@@ -118,12 +123,17 @@ export default function DesktopWidgetPicker() {
         gap: '12px',
         flex: 1,
         overflow: 'auto',
-      }}>
+      }}
+      role="list"
+      aria-label="Available widgets">
         {WIDGET_OPTIONS.map((widget) => (
           <button
             key={widget.type}
             onClick={() => handleAddWidget(widget)}
             disabled={spawning}
+            aria-label={`Add ${widget.title} widget: ${widget.description}`}
+            aria-busy={spawning}
+            role="listitem"
             style={{
               background: 'rgba(26, 31, 46, 0.7)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -151,7 +161,7 @@ export default function DesktopWidgetPicker() {
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            <div style={{ fontSize: '32px' }}>{widget.icon}</div>
+            <div style={{ fontSize: '32px' }} aria-hidden="true">{widget.icon}</div>
             <div style={{
               fontSize: '14px',
               fontWeight: 500,
@@ -171,6 +181,6 @@ export default function DesktopWidgetPicker() {
           </button>
         ))}
       </div>
-    </div>
+    </main>
   );
 }

@@ -125,6 +125,7 @@ function PDFWidget({ widget }: Props) {
                   onPointerDown={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   title="Zoom Out"
+                  aria-label="Zoom Out"
                 >
                   −
                 </button>
@@ -138,6 +139,7 @@ function PDFWidget({ widget }: Props) {
                   onPointerDown={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   title="Zoom In"
+                  aria-label="Zoom In"
                 >
                   +
                 </button>
@@ -148,6 +150,7 @@ function PDFWidget({ widget }: Props) {
                   onPointerDown={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   title="Reset Zoom"
+                  aria-label="Reset Zoom to 100%"
                 >
                   100%
                 </button>
@@ -158,6 +161,7 @@ function PDFWidget({ widget }: Props) {
                   onPointerDown={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   title="Remove PDF"
+                  aria-label="Remove PDF"
                 >
                   ×
                 </button>

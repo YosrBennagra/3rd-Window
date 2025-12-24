@@ -74,7 +74,8 @@ export default function WidgetPickerWindow() {
       handleClose();
     } catch (error) {
       console.error('Failed to add widget:', error);
-      alert('Failed to add widget: ' + error);
+      // TODO: Replace with non-blocking notification system
+      // For now, just log - users will see console if needed
     } finally {
       setIsSpawning(false);
     }

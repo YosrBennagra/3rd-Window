@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../../../application/stores/store';
+import { shallow } from 'zustand/shallow';
 import type { Monitor } from '../../../domain/models/system';
 import AdvancedSettings from '../AdvancedSettings';
+
+/**
+ * SettingsPanel Component (React 18 Best Practice)
+ * 
+ * Follows React principles:
+ * - Zustand selectors for minimal subscriptions
+ * - Extracted formatting logic to pure function
+ * - Controlled effects with explicit dependencies
+ * - No business logic in JSX
+ */
 
 const RAW_MONITOR_ID_PATTERN = /^\\\\\.\\DISPLAY\\d+$/i;
 
@@ -20,15 +31,22 @@ const formatMonitorLabel = (monitor: Monitor, index: number) => {
 
 export function SettingsPanel() {
   const [activeTab, setActiveTab] = useState<'general' | 'advanced'>('general');
-  const { 
-    settingsOpen, 
-    toggleSettings, 
-    settings,
-    monitors,
-    setFullscreen,
-    setSelectedMonitor,
-    loadMonitors,
-  } = useStore();
+  
+  // Performance: Use single selector with shallow comparison for related state
+  const { settingsOpen, settings, monitors } = useStore(
+    (state) => ({
+      settingsOpen: state.settingsOpen,
+      settings: state.settings,
+      monitors: state.monitors,
+    }),
+    shallow
+  );
+  
+  // Actions don't change - select once
+  const toggleSettings = useStore((state) => state.toggleSettings);
+  const setFullscreen = useStore((state) => state.setFullscreen);
+  const setSelectedMonitor = useStore((state) => state.setSelectedMonitor);
+  const loadMonitors = useStore((state) => state.loadMonitors);
 
   useEffect(() => {
     if (!settingsOpen) return;

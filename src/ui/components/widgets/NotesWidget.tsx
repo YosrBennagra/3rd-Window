@@ -134,6 +134,7 @@ export function NotesWidget({ widget }: NotesWidgetProps) {
             onClick={handleModeToggle}
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
+            aria-label="Switch to Notes mode"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -150,6 +151,7 @@ export function NotesWidget({ widget }: NotesWidgetProps) {
             onClick={handleModeToggle}
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
+            aria-label="Switch to Todos mode"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="9 11 12 14 22 4" />
@@ -165,6 +167,7 @@ export function NotesWidget({ widget }: NotesWidgetProps) {
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           title={mode === 'notes' ? 'Clear notes' : 'Clear all todos'}
+          aria-label={mode === 'notes' ? 'Clear notes' : 'Clear all todos'}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="3 6 5 6 21 6" />
@@ -208,6 +211,7 @@ export function NotesWidget({ widget }: NotesWidgetProps) {
               className="notes-widget__add-btn"
               onPointerDown={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
+              aria-label="Add todo"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19" />
