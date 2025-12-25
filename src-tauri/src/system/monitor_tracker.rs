@@ -119,8 +119,6 @@ impl MonitorTracker {
 
     /// Get current monitor configuration
     async fn get_current_monitors(&self, app: &AppHandle) -> Result<Vec<Monitor>, String> {
-        use tauri::command;
-        
         let monitors = app
             .available_monitors()
             .map_err(|e| format!("Failed to get monitors: {}", e))?;

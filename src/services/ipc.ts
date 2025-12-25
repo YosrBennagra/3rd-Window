@@ -170,7 +170,10 @@ export const WindowCommands = {
       throw new Error('Invalid request: fullscreen must be boolean');
     }
     
-    return await trackedInvoke('apply_fullscreen', { fullscreen: request.fullscreen });
+    return await trackedInvoke('apply_fullscreen', { 
+      fullscreen: request.fullscreen,
+      targetWindow: request.targetWindow || 'main',
+    });
   },
 
   /**
@@ -179,7 +182,10 @@ export const WindowCommands = {
   async moveToMonitor(request: MoveToMonitorRequest): Promise<VoidResponse> {
     validateMonitorIndex(request.monitorIndex);
     
-    return await trackedInvoke('move_to_monitor', { monitorIndex: request.monitorIndex });
+    return await trackedInvoke('move_to_monitor', { 
+      monitorIndex: request.monitorIndex,
+      targetWindow: request.targetWindow || 'main',
+    });
   },
 
   /**

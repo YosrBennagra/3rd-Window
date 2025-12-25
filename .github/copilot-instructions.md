@@ -3,23 +3,30 @@
 
 You are working in the ThirdScreen repo.
 
-## Skill-aware workflow (required)
+## Skill-aware workflow (MANDATORY)
 
-This repo contains “skills” that define quality standards and implementation checklists:
+This repo contains "skills" that define quality standards and implementation checklists:
 
 - Skills live under `.github/copilot/skills/<skill-name>/skill.md`.
 
-Whenever the user prompt implies applying one or more skills (explicitly or implicitly), you MUST:
+**For EVERY code change request (except purely informational questions), you MUST:**
 
-1. Identify the most relevant skill(s) based on the user request.
-2. Open and follow the corresponding `skill.md` as the source-of-truth checklist.
-3. Apply the skill guidance to the codebase changes you make (not just advice).
+1. **Before making any changes**, identify the smallest set of relevant skills that directly affect the files you're working on.
+2. **Pick one random additional skill** from the heuristics list and check if it applies to your changes.
+3. **Open and read** the corresponding `skill.md` files as the source-of-truth checklist.
+4. **Apply the skill guidance** to validate and improve the codebase changes you make.
+5. **State which skills you applied** in your response to the user.
+
+This is NOT optional - skills ensure code quality and consistency across the entire application.
 
 ### How to choose skills
 
-- If the user explicitly names a skill (e.g., “apply accessibility best practices”), load that exact skill.
-- If the user does not name a skill, infer likely skills from the prompt.
-- If multiple skills could plausibly apply, pick the smallest set that directly affects the request.
+- If the user explicitly names a skill (e.g., "apply accessibility best practices"), load that exact skill.
+- If the user does not name a skill, **automatically scan** the skill heuristics below and identify which skills are relevant based on:
+  - The files you're modifying
+  - The type of change being made
+  - The systems/patterns involved
+- Pick the **smallest set** that directly affects the request, PLUS **one random skill** to validate against.
 - If the skill choice is ambiguous, ask up to 2 clarifying questions before making large changes.
 
 ### Skill selection heuristics (use as hints)
@@ -48,11 +55,14 @@ Whenever the user prompt implies applying one or more skills (explicitly or impl
 
 ### When no skill applies
 
-If the request is purely informational or a tiny change, proceed normally.
+Only skip skill application if the request is:
+- Purely informational (no code changes)
+- Simple questions about the codebase
+- Reading/understanding existing code without modifications
 
 ## Guardrails
 
 - Prefer minimal, surgical changes.
-- Don’t invent new UX beyond what’s requested.
+- Don't invent new UX beyond what's requested.
 - Validate with the closest build/test command when feasible.
 

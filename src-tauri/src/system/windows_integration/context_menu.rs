@@ -20,7 +20,9 @@ use std::io;
 use winreg::enums::*;
 use winreg::RegKey;
 
+#[allow(dead_code)]
 const APP_NAME: &str = "ThirdScreen";
+#[allow(dead_code)]
 const MODERN_HANDLER_CLSID: &str = "{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}";
 
 /**
@@ -40,6 +42,7 @@ const MODERN_HANDLER_CLSID: &str = "{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}";
  *     @            = "<exe> thirdscreen://open-picker"
  * ```
  */
+#[allow(dead_code)]
 pub fn install() -> Result<(), io::Error> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     

@@ -81,7 +81,7 @@ pub fn apply_migrations(mut state: PersistedState) -> Result<PersistedState, Str
     
     // Apply migrations in sequence
     // When adding new versions, add migration steps here
-    let mut current_version = start_version;
+    let _current_version = start_version;
     
     // Example migration chain (currently just v1):
     // if current_version == 1 {

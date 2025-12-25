@@ -127,6 +127,7 @@ pub fn recover_state(state: Option<PersistedState>) -> RecoveryResult {
 ///
 /// Returns false only if we should consider the recovery a failure
 /// (though even failures provide safe defaults).
+#[allow(dead_code)]
 pub fn is_recovery_acceptable(result: &RecoveryResult) -> bool {
     match result.mode {
         RecoveryMode::Clean => true,

@@ -134,6 +134,7 @@ pub fn list_registry_keys() -> Vec<String> {
  * - Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}
  * - Software\Microsoft\Windows\CurrentVersion\Run
  */
+#[allow(dead_code)]
 pub fn validate_key_path(path: &str) -> bool {
     let allowed_prefixes = [
         r"Software\Classes\thirdscreen",

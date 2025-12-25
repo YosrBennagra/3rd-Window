@@ -16,7 +16,7 @@
 
 use super::schemas::PersistedState;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
 const STATE_FILENAME: &str = "state.json";
@@ -171,6 +171,7 @@ pub fn save_state(app: &AppHandle, state: &PersistedState) -> Result<(), String>
 ///
 /// This is a destructive operation used for testing or explicit user reset.
 /// Returns the number of files successfully deleted.
+#[allow(dead_code)]
 pub fn delete_state(app: &AppHandle) -> Result<usize, String> {
     let mut deleted = 0;
     
@@ -202,6 +203,7 @@ pub fn delete_state(app: &AppHandle) -> Result<usize, String> {
 }
 
 /// Checks if state files exist
+#[allow(dead_code)]
 pub fn state_exists(app: &AppHandle) -> Result<bool, String> {
     let state_path = get_state_path(app)?;
     Ok(state_path.exists())

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../application/stores/store';
 import { useGridStore } from '../application/stores/gridStore';
-import { SettingsPanel } from './components/settings/SettingsPanel';
 import { DraggableGrid } from './components/layout/DraggableGrid';
 import WidgetPickerWindow from './WidgetPickerWindow';
+import SettingsWindow from './SettingsWindow';
 import DesktopWidgetApp from './DesktopWidgetApp';
 import DesktopWidgetPicker from './DesktopWidgetPicker';
 import { initializeWidgetSystem } from '../domain/init/widgetSystem';
@@ -36,12 +36,14 @@ export default function App() {
   const [isWidgetPicker, setIsWidgetPicker] = useState(window.location.hash === '#/widget-picker');
   const [isDesktopWidget, setIsDesktopWidget] = useState(window.location.hash.startsWith('#/desktop-widget'));
   const [isDesktopWidgetPicker, setIsDesktopWidgetPicker] = useState(window.location.hash === '#/desktop-widget-picker');
+  const [isSettingsWindow, setIsSettingsWindow] = useState(window.location.hash === '#/settings');
 
   useEffect(() => {
     const handleHashChange = () => {
       setIsWidgetPicker(window.location.hash === '#/widget-picker');
       setIsDesktopWidget(window.location.hash.startsWith('#/desktop-widget'));
       setIsDesktopWidgetPicker(window.location.hash === '#/desktop-widget-picker');
+      setIsSettingsWindow(window.location.hash === '#/settings');
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -49,7 +51,7 @@ export default function App() {
 
   // React 18 Best Practice: Single initialization effect with proper cleanup
   useEffect(() => {
-    if (isWidgetPicker || isDesktopWidget || isDesktopWidgetPicker) return; // Don't load heavy state for special windows
+    if (isWidgetPicker || isDesktopWidget || isDesktopWidgetPicker || isSettingsWindow) return; // Don't load heavy state for special windows
 
     const initializeApp = async () => {
       // Widget Contract Design: Initialize widget system first
@@ -75,7 +77,7 @@ export default function App() {
     return () => {
       stopMonitorEventHandling();
     };
-  }, [isWidgetPicker, isDesktopWidget, isDesktopWidgetPicker, loadSettings, loadMonitors, loadDashboard]);
+  }, [isWidgetPicker, isDesktopWidget, isDesktopWidgetPicker, isSettingsWindow, loadSettings, loadMonitors, loadDashboard]);
 
   if (isWidgetPicker) {
     return <WidgetPickerWindow />;
@@ -89,10 +91,13 @@ export default function App() {
     return <DesktopWidgetPicker />;
   }
 
+  if (isSettingsWindow) {
+    return <SettingsWindow />;
+  }
+
   return (
     <div className="app">
       <DraggableGrid />
-      <SettingsPanel />
     </div>
   );
 }

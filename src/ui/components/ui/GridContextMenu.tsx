@@ -5,7 +5,6 @@ import './GridContextMenu.css';
 export type MenuAction = 
   | 'exit-fullscreen'
   | 'settings'
-  | 'widget-settings'
   | 'remove-widget'
   | 'add-widget'
   | 'resize'
@@ -23,19 +22,11 @@ interface Props {
   menu: ContextMenuState | null;
   onClose: () => void;
   onAction: (action: MenuAction, widget?: WidgetLayout | null) => void;
-  widgetDisplayName?: (widgetType: string) => string;
   isAdjustGridMode?: boolean;
   isFullscreen?: boolean;
 }
 
-const defaultWidgetNames: Record<string, string> = {
-  'clock': 'Clock',
-  'cpu-temp': 'CPU Temperature',
-  'gpu-temp': 'GPU Temperature',
-  'timer': 'Timer',
-};
-
-export default function GridContextMenu({ menu, onClose, onAction, widgetDisplayName, isAdjustGridMode, isFullscreen = false }: Props) {
+export default function GridContextMenu({ menu, onClose, onAction, isAdjustGridMode, isFullscreen = false }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: -9999, top: -9999 });
 
@@ -120,11 +111,6 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
 
   if (!menu) return null;
 
-  const getWidgetName = (type: string) => {
-    if (widgetDisplayName) return widgetDisplayName(type);
-    return defaultWidgetNames[type] || type;
-  };
-
   const isWidgetLocked = menu.widget?.locked ?? false;
 
   const handleItemClick = (action: MenuAction) => {
@@ -153,14 +139,6 @@ export default function GridContextMenu({ menu, onClose, onAction, widgetDisplay
       {/* Widget-specific settings (only if clicked on a widget) */}
       {menu.widget && (
         <>
-          <button
-            className="grid-context-menu__item"
-            onClick={() => handleItemClick('widget-settings')}
-          >
-            <span className="grid-context-menu__icon">⚙</span>
-            {getWidgetName(menu.widget.widgetType)} Settings
-          </button>
-
           <button
             className="grid-context-menu__item"
             onClick={() => handleItemClick('resize')}

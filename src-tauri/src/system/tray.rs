@@ -7,6 +7,7 @@ use tauri::{
 pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     // Create menu items
     let show_dashboard = MenuItem::with_id(app, "show_dashboard", "Show Dashboard", true, None::<&str>)?;
+    let settings_item = MenuItem::with_id(app, "open_settings", "Settings", true, None::<&str>)?;
     let separator1 = PredefinedMenuItem::separator(app)?;
     
     // Widget submenu
@@ -37,6 +38,7 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         app,
         &[
             &show_dashboard,
+            &settings_item,
             &separator1,
             &widgets_menu,
             &separator2,
@@ -63,6 +65,11 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                         let _ = WINDOW_MANAGER.show(app, &window_type);
                         let _ = WINDOW_MANAGER.focus(app, &window_type);
                     }
+                }
+                "open_settings" => {
+                    use crate::system::{WINDOW_MANAGER, WindowConfig};
+                    let config = WindowConfig::settings();
+                    let _ = WINDOW_MANAGER.create_window(app, config);
                 }
                 "add_clock" => spawn_widget_from_tray(app, "clock"),
                 "add_temperature" => spawn_widget_from_tray(app, "temperature"),

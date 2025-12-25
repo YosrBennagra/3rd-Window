@@ -20,11 +20,9 @@ interface AppState {
   settings: AppSettings;
   
   // Runtime state
-  settingsOpen: boolean;
   monitors: Monitor[];
   
   // Actions
-  toggleSettings: () => void;
   setFullscreen: (fullscreen: boolean) => Promise<void>;
   setSelectedMonitor: (monitorIndex: number) => Promise<void>;
   loadSettings: () => Promise<void>;
@@ -38,11 +36,8 @@ const defaultSettings: AppSettings = {
 };
 
 export const useStore = create<AppState>((set, get) => ({
-  settingsOpen: false,
   settings: defaultSettings,
   monitors: [],
-  
-  toggleSettings: () => set((state) => ({ settingsOpen: !state.settingsOpen })),
   
   setFullscreen: async (fullscreen) => {
     const previousSettings = get().settings;

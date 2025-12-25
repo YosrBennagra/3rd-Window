@@ -15,7 +15,6 @@ import type { WidgetLayout } from '../../domain/models/layout';
 export type MenuActionType =
   | 'exit-fullscreen'
   | 'settings'
-  | 'widget-settings'
   | 'resize'
   | 'toggle-adjust-grid'
   | 'remove-widget'
@@ -25,21 +24,18 @@ export type MenuActionType =
 
 export interface MenuActionContext {
   widget?: WidgetLayout | null;
-  selectedWidgetId?: string | null;
   settingsState?: { isFullscreen?: boolean };
   resizingWidgetId?: string | null;
   
   // Action handlers
   setFullscreen: (fullscreen: boolean) => Promise<void>;
-  toggleSettings: () => void;
-  setSelectedWidgetId: (id: string | null) => void;
-  setActivePanel: (panel: 'widget-settings' | 'add-widget' | null) => void;
   beginResize: (widget: WidgetLayout) => void;
   toggleDebugGrid: () => void;
   removeWidget: (id: string) => Promise<boolean>;
   setWidgetLock: (id: string, locked: boolean) => Promise<boolean>;
   cancelResizeMode: () => void;
   openWidgetPicker: () => Promise<void>;
+  openSettingsWindow: () => Promise<void>;
   handlePopOutWidget: (widget: WidgetLayout) => Promise<void>;
 }
 
@@ -57,15 +53,8 @@ export const menuActionHandlers: Record<
     await ctx.setFullscreen(ctx.settingsState?.isFullscreen ? false : true);
   },
 
-  'settings': (ctx) => {
-    ctx.toggleSettings();
-  },
-
-  'widget-settings': (ctx) => {
-    if (ctx.widget) {
-      ctx.setSelectedWidgetId(ctx.widget.id);
-      ctx.setActivePanel('widget-settings');
-    }
+  'settings': async (ctx) => {
+    await ctx.openSettingsWindow();
   },
 
   'resize': (ctx) => {
@@ -80,10 +69,6 @@ export const menuActionHandlers: Record<
 
   'remove-widget': async (ctx) => {
     if (ctx.widget) {
-      if (ctx.widget.id === ctx.selectedWidgetId) {
-        ctx.setSelectedWidgetId(null);
-        ctx.setActivePanel(null);
-      }
       await ctx.removeWidget(ctx.widget.id);
     }
   },
