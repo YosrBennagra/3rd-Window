@@ -6,8 +6,6 @@ import AddWidgetPanel from './components/panels/AddWidgetPanel';
 import { widgetDefinitions } from '../config/widgets';
 import './App.css';
 
-type AddDestination = 'grid' | 'desktop';
-
 export default function WidgetPickerWindow() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSpawning, setIsSpawning] = useState(false);
@@ -26,6 +24,7 @@ export default function WidgetPickerWindow() {
   );
 
   const handleClose = () => {
+    console.info('[WidgetPicker] Closing window');
     getCurrentWindow().close();
   };
 

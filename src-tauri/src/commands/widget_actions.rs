@@ -5,7 +5,7 @@
 /// - Graceful close with cleanup
 /// - Context menu actions
 
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Runtime};
 use crate::system::{WINDOW_MANAGER, WindowType};
 
 /// Minimize widget (hide it but keep in memory)

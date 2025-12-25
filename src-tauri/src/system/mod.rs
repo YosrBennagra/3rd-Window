@@ -18,5 +18,4 @@ pub use uptime::get_system_uptime;
 pub use window_tracker::get_active_window_info;
 pub use tray::create_tray;
 pub use window_manager::{WINDOW_MANAGER, WindowConfig, WindowType};
-pub use window_placement::{WindowPlacer, WindowPlacement, PlacementResult};
-pub use monitor_tracker::{MonitorTracker, MonitorEvent, init_monitor_tracking};
+pub use monitor_tracker::init_monitor_tracking;

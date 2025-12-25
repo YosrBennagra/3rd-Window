@@ -32,6 +32,7 @@ impl WindowType {
     }
 
     /// Get window's role/purpose
+    #[allow(dead_code)]
     pub fn purpose(&self) -> &str {
         match self {
             WindowType::Dashboard => "Main dashboard and control panel",
@@ -63,6 +64,7 @@ pub struct WindowConfig {
 
 impl WindowConfig {
     /// Create default config for dashboard window
+    #[allow(dead_code)]
     pub fn dashboard() -> Self {
         Self {
             window_type: WindowType::Dashboard,
@@ -115,8 +117,28 @@ impl WindowConfig {
             resizable: true,
             decorations: true,
             transparent: false,
-            always_on_top: true,
+            always_on_top: false,
             skip_taskbar: false,
+            center: true,
+            visible: true,
+        }
+    }
+
+    /// Create config for settings window
+    pub fn settings() -> Self {
+        Self {
+            window_type: WindowType::Settings,
+            title: "Settings".to_string(),
+            url: "/#/settings".to_string(),
+            width: 1270,
+            height: 650,
+            x: None,
+            y: None,
+            resizable: true,
+            decorations: true,
+            transparent: false,
+            always_on_top: false,
+            skip_taskbar: true,
             center: true,
             visible: true,
         }
@@ -125,6 +147,7 @@ impl WindowConfig {
 
 /// Tracks window state and metadata
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct WindowState {
     window_type: WindowType,
     created_at: std::time::Instant,
@@ -159,12 +182,16 @@ impl WindowManager {
             
             // Only set focus if explicitly requested via config flag
             // Default behavior: window appears but doesn't steal focus
-            if config.window_type == WindowType::Dashboard {
-                // Main dashboard can take focus when explicitly opened
-                existing.set_focus()
-                    .map_err(|e| format!("Failed to focus existing window: {}", e))?;
+            match config.window_type {
+                WindowType::Dashboard | WindowType::Settings | WindowType::WidgetPicker => {
+                    // UI windows should take focus when explicitly opened
+                    existing.set_focus()
+                        .map_err(|e| format!("Failed to focus existing window: {}", e))?;
+                }
+                _ => {
+                    // For widget windows, DON'T steal focus - let them appear passively
+                }
             }
-            // For widget windows, DON'T steal focus - let them appear passively
             
             return Ok(existing);
         }
@@ -335,6 +362,7 @@ impl WindowManager {
     }
 
     /// Get list of active window types
+    #[allow(dead_code)]
     pub fn active_windows(&self) -> Result<Vec<WindowType>, String> {
         let windows = self.windows.lock()
             .map_err(|e| format!("Failed to acquire window manager lock: {}", e))?;

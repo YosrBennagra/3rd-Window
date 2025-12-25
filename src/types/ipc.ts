@@ -109,16 +109,20 @@ export interface ActiveWindowInfo {
 
 /**
  * Request to move window to a different monitor
+ * @param targetWindow - Optional window label to target (defaults to 'main' dashboard)
  */
 export interface MoveToMonitorRequest {
   monitorIndex: number;
+  targetWindow?: string;
 }
 
 /**
  * Request to apply fullscreen state
+ * @param targetWindow - Optional window label to target (defaults to 'main' dashboard)
  */
 export interface ApplyFullscreenRequest {
   fullscreen: boolean;
+  targetWindow?: string;
 }
 
 /**

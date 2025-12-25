@@ -39,6 +39,7 @@ use tauri::{
  * @param app - Tauri application handle
  * @returns Result indicating success or error
  */
+#[allow(dead_code)]
 pub fn create_system_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     println!("[SystemTray] Creating system tray...");
     
@@ -75,6 +76,7 @@ pub fn create_system_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
  * - Widget submenu
  * - Quit action
  */
+#[allow(dead_code)]
 fn build_tray_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     // Main actions
     let show_dashboard = MenuItem::with_id(
@@ -114,6 +116,7 @@ fn build_tray_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
  * Creates submenu with all available desktop widgets.
  * Widgets are organized by category (system monitoring).
  */
+#[allow(dead_code)]
 fn build_widgets_submenu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
     let clock = MenuItem::with_id(app, "add_clock", "Clock", true, None::<&str>)?;
     let temperature = MenuItem::with_id(app, "add_temperature", "Temperature", true, None::<&str>)?;
@@ -135,6 +138,7 @@ fn build_widgets_submenu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submen
  * Dispatches menu actions to appropriate handlers.
  * Uses WindowManager for window operations.
  */
+#[allow(dead_code)]
 fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: tauri::menu::MenuEvent) {
     match event.id.as_ref() {
         "show_dashboard" => show_dashboard_window(app),
@@ -155,6 +159,7 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: tauri::menu::MenuEve
  * Left-click: Show dashboard
  * Right-click: Show menu (handled by Tauri)
  */
+#[allow(dead_code)]
 fn handle_tray_event<R: Runtime>(tray: &tauri::tray::TrayIcon<R>, event: TrayIconEvent) {
     if let TrayIconEvent::Click {
         button: MouseButton::Left,
@@ -172,6 +177,7 @@ fn handle_tray_event<R: Runtime>(tray: &tauri::tray::TrayIcon<R>, event: TrayIco
  * Brings dashboard window to front.
  * Creates window if it doesn't exist.
  */
+#[allow(dead_code)]
 fn show_dashboard_window<R: Runtime>(app: &AppHandle<R>) {
     use crate::system::{WINDOW_MANAGER, WindowType};
     
@@ -196,6 +202,7 @@ fn show_dashboard_window<R: Runtime>(app: &AppHandle<R>) {
  * Creates a new desktop widget window.
  * Widget appears at default position on primary monitor.
  */
+#[allow(dead_code)]
 fn spawn_desktop_widget<R: Runtime>(app: &AppHandle<R>, widget_type: &str) {
     use crate::commands::desktop_widgets::spawn_desktop_widget as spawn_cmd;
     use crate::ipc_types::WidgetWindowConfig;
@@ -232,6 +239,7 @@ fn spawn_desktop_widget<R: Runtime>(app: &AppHandle<R>, widget_type: &str) {
  * 
  * Returns appropriate default width for each widget type.
  */
+#[allow(dead_code)]
 fn get_default_width(widget_type: &str) -> u32 {
     match widget_type {
         "clock" => 300,
@@ -248,6 +256,7 @@ fn get_default_width(widget_type: &str) -> u32 {
  * 
  * Returns appropriate default height for each widget type.
  */
+#[allow(dead_code)]
 fn get_default_height(widget_type: &str) -> u32 {
     match widget_type {
         "clock" => 150,

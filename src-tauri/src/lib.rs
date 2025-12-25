@@ -176,6 +176,30 @@ fn open_widget_picker_desktop_mode<R: Runtime>(app: &AppHandle<R>) {
 }
 
 /**
+ * Open Settings Window
+ *
+ * Creates a settings window.
+ * Uses centralized WindowManager for predictable lifecycle management.
+ */
+#[allow(dead_code)]
+fn open_settings_window<R: Runtime>(app: &AppHandle<R>) {
+    use crate::system::{WINDOW_MANAGER, WindowConfig};
+
+    println!("[SETTINGS] Opening settings window");
+
+    let config = WindowConfig::settings();
+    
+    match WINDOW_MANAGER.create_window(app, config) {
+        Ok(_window) => {
+            println!("[SETTINGS] ✓ Settings window created successfully");
+        }
+        Err(e) => {
+            eprintln!("[SETTINGS] ✗ Failed to create settings window: {}", e);
+        }
+    }
+}
+
+/**
  * Application Entry Point
  *
  * Wires together Tauri plugins, system tray, deep link handlers, and IPC commands.
@@ -252,6 +276,7 @@ pub fn run() {
             apply_fullscreen,
             move_to_monitor,
             open_system_clock,
+            commands::windows::open_settings_window,
             // Monitor commands
             get_monitors,
             // Sensor commands

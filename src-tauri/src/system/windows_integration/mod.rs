@@ -38,6 +38,7 @@ use tauri::{AppHandle, Runtime};
  * @param app - Tauri application handle
  * @returns Result indicating success or error
  */
+#[allow(dead_code)]
 pub fn initialize_windows_integration<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     println!("[Windows Integration] Initializing...");
     
@@ -71,6 +72,7 @@ pub fn initialize_windows_integration<R: Runtime>(app: &AppHandle<R>) -> tauri::
  * @param keep_settings - If true, keep user preferences (only remove integration)
  * @returns Result indicating success or error
  */
+#[allow(dead_code)]
 pub fn cleanup_windows_integration(keep_settings: bool) -> Result<(), io::Error> {
     println!("[Windows Integration] Cleaning up...");
     
@@ -106,6 +108,7 @@ pub fn cleanup_windows_integration(keep_settings: bool) -> Result<(), io::Error>
  * Returns current state of all Windows integrations.
  * Useful for settings UI to show what's enabled.
  */
+#[allow(dead_code)]
 pub fn get_integration_status() -> IntegrationStatus {
     IntegrationStatus {
         context_menu_installed: context_menu::is_installed(),
@@ -122,6 +125,7 @@ pub fn get_integration_status() -> IntegrationStatus {
  */
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct IntegrationStatus {
     pub context_menu_installed: bool,
     pub startup_enabled: bool,

@@ -106,6 +106,7 @@ pub fn is_startup_enabled() -> bool {
  * 
  * @returns Some(command) if startup is enabled, None otherwise
  */
+#[allow(dead_code)]
 pub fn get_startup_command() -> Option<String> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     

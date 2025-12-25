@@ -49,6 +49,7 @@ pub fn check_compatibility(state_version: u32) -> CompatibilityStatus {
 /// Check if migration is safe
 ///
 /// Returns true if we can confidently migrate without data loss.
+#[allow(dead_code)]
 pub fn is_safe_to_migrate(state_version: u32) -> bool {
     matches!(
         check_compatibility(state_version),
@@ -59,6 +60,7 @@ pub fn is_safe_to_migrate(state_version: u32) -> bool {
 /// Check if state is from future version
 ///
 /// Future versions require special handling - we can't migrate backward.
+#[allow(dead_code)]
 pub fn is_future_version(state_version: u32) -> bool {
     state_version > CURRENT_VERSION
 }
@@ -109,6 +111,7 @@ pub fn get_compatibility_message(state_version: u32) -> String {
 pub const MIN_SUPPORTED_VERSION: u32 = 1;
 
 /// Check if version is supported
+#[allow(dead_code)]
 pub fn is_version_supported(state_version: u32) -> bool {
     state_version >= MIN_SUPPORTED_VERSION && state_version <= CURRENT_VERSION + 5
 }

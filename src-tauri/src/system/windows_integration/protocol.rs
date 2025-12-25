@@ -25,6 +25,7 @@ use winreg::enums::*;
 use winreg::RegKey;
 
 const PROTOCOL: &str = "thirdscreen";
+#[allow(dead_code)]
 const APP_NAME: &str = "ThirdScreen";
 
 /// Validate protocol registration
@@ -67,6 +68,7 @@ pub fn validate_protocol_registration() -> bool {
 ///
 /// Security: Protocol only launches ThirdScreen.exe with URL as argument.
 /// URL validation happens in handle_protocol_url().
+#[allow(dead_code)]
 pub fn register_protocol() -> Result<(), io::Error> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let exe_path = get_exe_path();
@@ -98,6 +100,7 @@ pub fn register_protocol() -> Result<(), io::Error> {
 ///
 /// Removes thirdscreen:// protocol from registry.
 /// Called during uninstall.
+#[allow(dead_code)]
 pub fn unregister_protocol() -> Result<(), io::Error> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let protocol_path = format!("Software\\Classes\\{}", PROTOCOL);
@@ -133,6 +136,7 @@ pub fn unregister_protocol() -> Result<(), io::Error> {
 ///
 /// # Returns
 /// Validated protocol action or None
+#[allow(dead_code)]
 pub fn validate_protocol_url(url: &str) -> Option<ProtocolAction> {
     // Normalize URL (remove trailing slashes, lowercase scheme)
     let url = url.trim().trim_end_matches('/');
@@ -183,6 +187,7 @@ pub fn validate_protocol_url(url: &str) -> Option<ProtocolAction> {
 /// - Length: 1-50 characters
 ///
 /// This prevents injection attacks via widget type parameter.
+#[allow(dead_code)]
 fn is_valid_widget_type(widget_type: &str) -> bool {
     if widget_type.is_empty() || widget_type.len() > 50 {
         return false;
@@ -192,6 +197,7 @@ fn is_valid_widget_type(widget_type: &str) -> bool {
 }
 
 /// Get executable path
+#[allow(dead_code)]
 fn get_exe_path() -> String {
     std::env::current_exe()
         .ok()
@@ -207,6 +213,7 @@ fn get_exe_path() -> String {
 /// Validated actions that can be executed via protocol handler.
 /// This is an explicit whitelist - only these actions are allowed.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ProtocolAction {
     /// Open widget picker window
     OpenPicker,

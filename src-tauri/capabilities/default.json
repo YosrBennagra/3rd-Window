@@ -4,7 +4,8 @@
   "description": "enables the default permissions",
   "windows": [
     "main",
-    "widget-picker"
+    "widget-picker",
+    "settings"
   ],
   "permissions": [
     "core:default",

@@ -171,3 +171,24 @@ pub async fn open_settings_window<R: Runtime>(app: AppHandle<R>) -> Result<(), S
         }
     }
 }
+#[tauri::command]
+    app: AppHandle<R>,
+    widget_id: String,
+) -> Result<(), String> {
+    use crate::system::{WINDOW_MANAGER, WindowConfig};
+
+
+    let config = WindowConfig::widget_settings(&widget_id);
+    
+    match WINDOW_MANAGER.create_window(&app, config) {
+        Ok(_window) => {
+            info!("[window] Widget settings window created successfully for: {}", widget_id);
+            Ok(())
+        }
+        Err(e) => {
+            let err = format!("Failed to create widget settings window: {}", e);
+            log::error!("[window] {}", err);
+            Err(err)
+        }
+    }
+}

@@ -10,10 +10,10 @@
  */
 
 use crate::error::AppError;
-use crate::ipc_types::{Monitor, MonitorPosition, MonitorSize};
+use crate::ipc_types::Monitor;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
-use tauri::{PhysicalPosition, PhysicalSize, Position, Size, Window};
+use tauri::{PhysicalPosition, PhysicalSize, Position, Runtime, Size, WebviewWindow};
 
 /// Window placement request with target monitor
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +44,7 @@ impl WindowPlacer {
     }
 
     /// Validate monitor index is within bounds
+    #[allow(dead_code)]
     pub fn validate_monitor_index(&self, index: usize) -> Result<(), AppError> {
         if index >= self.monitors.len() {
             return Err(AppError::Validation(format!(
@@ -156,9 +157,9 @@ impl WindowPlacer {
     }
 
     /// Place window on target monitor with safe fallback
-    pub async fn place_window(
+    pub async fn place_window<R: Runtime>(
         &self,
-        window: &Window,
+        window: &WebviewWindow<R>,
         placement: WindowPlacement,
     ) -> Result<PlacementResult, AppError> {
         let (monitor, fallback_used) = self.get_monitor_safe(placement.monitor_index);
@@ -201,13 +202,13 @@ impl WindowPlacer {
     }
 
     /// Move window between monitors preserving relative position
-    pub async fn move_to_monitor(
+    pub async fn move_to_monitor<R: Runtime>(
         &self,
-        window: &Window,
+        window: &WebviewWindow<R>,
         target_index: usize,
         preserve_relative: bool,
     ) -> Result<PlacementResult, AppError> {
-        let (target_monitor, fallback_used) = self.get_monitor_safe(target_index);
+        let (target_monitor, _fallback_used) = self.get_monitor_safe(target_index);
 
         info!(
             "[WindowPlacer] Moving window to monitor '{}' (preserve_relative: {})",
@@ -235,9 +236,9 @@ impl WindowPlacer {
     }
 
     /// Get window's relative position on current monitor
-    async fn get_relative_position(
+    async fn get_relative_position<R: Runtime>(
         &self,
-        window: &Window,
+        window: &WebviewWindow<R>,
     ) -> Result<(Option<f64>, Option<f64>), AppError> {
         let current_pos = window
             .outer_position()

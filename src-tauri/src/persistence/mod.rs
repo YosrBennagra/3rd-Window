@@ -18,9 +18,6 @@ pub mod migrations;
 pub mod recovery;
 pub mod compatibility;
 
-pub use schemas::{PersistedState, CURRENT_VERSION};
+pub use schemas::PersistedState;
 pub use storage::{load_state, save_state};
 pub use recovery::RecoveryMode;
-pub use compatibility::{
-    check_compatibility, is_safe_to_migrate, is_version_supported, CompatibilityStatus,
-};
