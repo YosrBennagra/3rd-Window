@@ -94,7 +94,6 @@ pub fn get_network_stats() -> Result<NetworkStats, String> {
     }
 
     *last_sample_lock = Some(current_sample);
-    drop(last_sample_lock);
 
     Ok(NetworkStats {
         interface_name: most_active_interface,

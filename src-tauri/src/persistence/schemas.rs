@@ -486,9 +486,14 @@ mod tests {
     #[test]
     fn test_round_trip_serialization() {
         let original = PersistedState::default();
-        let json = serde_json::to_string(&original).expect("Failed to serialize");
-        let deserialized: PersistedState =
-            serde_json::from_str(&json).expect("Failed to deserialize");
+        let json_result = serde_json::to_string(&original);
+        assert!(json_result.is_ok(), "Serialization should succeed");
+        
+        let json = json_result.expect("Checked in previous assertion");
+        let deserialize_result = serde_json::from_str::<PersistedState>(&json);
+        assert!(deserialize_result.is_ok(), "Deserialization should succeed");
+        
+        let deserialized = deserialize_result.expect("Checked in previous assertion");
 
         assert_eq!(original.version, deserialized.version);
         assert_eq!(

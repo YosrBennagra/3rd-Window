@@ -148,7 +148,6 @@ pub fn get_system_metrics() -> Result<SystemMetrics, String> {
         }
     }
     *last_sample_lock = Some(current_sample);
-    drop(last_sample_lock);
 
     // Temperatures
     let cpu_temp = get_cpu_temperature();

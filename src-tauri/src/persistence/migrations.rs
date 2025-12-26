@@ -149,7 +149,8 @@ mod tests {
 
         let result = apply_migrations(state.clone());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().version, CURRENT_VERSION);
+        let migrated = result.expect("Migration should succeed");
+        assert_eq!(migrated.version, CURRENT_VERSION);
     }
 
     #[test]
