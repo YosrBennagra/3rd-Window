@@ -1,16 +1,16 @@
 /**
  * System Tray Menu (SOLID: Single Responsibility)
- * 
+ *
  * Creates and manages the Windows system tray icon and menu.
  * Provides quick access to common actions and widget spawning.
- * 
+ *
  * Design Principles:
  * - Concise Menu: Only essential actions, no clutter
  * - Clear Labels: Descriptive text, no cryptic abbreviations
  * - Logical Grouping: Related items grouped with separators
  * - Safe Actions: No destructive actions without confirmation
  * - User Feedback: Tray icon reflects application state
- * 
+ *
  * Menu Structure:
  * - Show Dashboard
  * - ---
@@ -23,38 +23,36 @@
  * - ---
  * - Quit
  */
-
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Runtime, AppHandle,
+    AppHandle, Runtime,
 };
 
 /**
  * Create system tray icon and menu
- * 
+ *
  * Called once during application startup.
  * Tray icon persists until application quits.
- * 
+ *
  * @param app - Tauri application handle
  * @returns Result indicating success or error
  */
 #[allow(dead_code)]
 pub fn create_system_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     println!("[SystemTray] Creating system tray...");
-    
+
     // Build menu
     let menu = build_tray_menu(app)?;
-    
+
     // Get application icon
-    let icon = app.default_window_icon()
-        .ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "No default window icon available for tray"
-            )
-        })?;
-    
+    let icon = app.default_window_icon().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "No default window icon available for tray",
+        )
+    })?;
+
     // Create tray icon
     let _tray = TrayIconBuilder::new()
         .icon(icon.clone())
@@ -63,14 +61,14 @@ pub fn create_system_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .on_menu_event(handle_menu_event)
         .on_tray_icon_event(handle_tray_event)
         .build(app)?;
-    
+
     println!("[SystemTray] ✓ System tray created successfully");
     Ok(())
 }
 
 /**
  * Build tray menu structure
- * 
+ *
  * Creates hierarchical menu with:
  * - Main actions (Show Dashboard)
  * - Widget submenu
@@ -79,40 +77,26 @@ pub fn create_system_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 #[allow(dead_code)]
 fn build_tray_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     // Main actions
-    let show_dashboard = MenuItem::with_id(
-        app,
-        "show_dashboard",
-        "Show Dashboard",
-        true,
-        None::<&str>
-    )?;
-    
+    let show_dashboard =
+        MenuItem::with_id(app, "show_dashboard", "Show Dashboard", true, None::<&str>)?;
+
     // Widget submenu
     let widgets_menu = build_widgets_submenu(app)?;
-    
+
     // System actions
     let quit = PredefinedMenuItem::quit(app, Some("Quit"))?;
-    
+
     // Separators
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
-    
+
     // Assemble menu
-    Menu::with_items(
-        app,
-        &[
-            &show_dashboard,
-            &sep1,
-            &widgets_menu,
-            &sep2,
-            &quit,
-        ],
-    )
+    Menu::with_items(app, &[&show_dashboard, &sep1, &widgets_menu, &sep2, &quit])
 }
 
 /**
  * Build widgets submenu
- * 
+ *
  * Creates submenu with all available desktop widgets.
  * Widgets are organized by category (system monitoring).
  */
@@ -123,7 +107,7 @@ fn build_widgets_submenu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submen
     let ram = MenuItem::with_id(app, "add_ram", "RAM Usage", true, None::<&str>)?;
     let disk = MenuItem::with_id(app, "add_disk", "Disk Usage", true, None::<&str>)?;
     let network = MenuItem::with_id(app, "add_network", "Network Monitor", true, None::<&str>)?;
-    
+
     Submenu::with_items(
         app,
         "Add Widget to Desktop",
@@ -134,7 +118,7 @@ fn build_widgets_submenu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submen
 
 /**
  * Handle menu item clicks
- * 
+ *
  * Dispatches menu actions to appropriate handlers.
  * Uses WindowManager for window operations.
  */
@@ -155,7 +139,7 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: tauri::menu::MenuEve
 
 /**
  * Handle tray icon events
- * 
+ *
  * Left-click: Show dashboard
  * Right-click: Show menu (handled by Tauri)
  */
@@ -173,16 +157,16 @@ fn handle_tray_event<R: Runtime>(tray: &tauri::tray::TrayIcon<R>, event: TrayIco
 
 /**
  * Show dashboard window
- * 
+ *
  * Brings dashboard window to front.
  * Creates window if it doesn't exist.
  */
 #[allow(dead_code)]
 fn show_dashboard_window<R: Runtime>(app: &AppHandle<R>) {
-    use crate::system::{WINDOW_MANAGER, WindowType};
-    
+    use crate::system::{WindowType, WINDOW_MANAGER};
+
     let window_type = WindowType::Dashboard;
-    
+
     if WINDOW_MANAGER.window_exists(app, &window_type) {
         if let Err(e) = WINDOW_MANAGER.show(app, &window_type) {
             eprintln!("[SystemTray] Failed to show dashboard: {}", e);
@@ -198,7 +182,7 @@ fn show_dashboard_window<R: Runtime>(app: &AppHandle<R>) {
 
 /**
  * Spawn desktop widget from tray menu
- * 
+ *
  * Creates a new desktop widget window.
  * Widget appears at default position on primary monitor.
  */
@@ -207,12 +191,12 @@ fn spawn_desktop_widget<R: Runtime>(app: &AppHandle<R>, widget_type: &str) {
     use crate::commands::desktop_widgets::spawn_desktop_widget as spawn_cmd;
     use crate::ipc_types::WidgetWindowConfig;
     use uuid::Uuid;
-    
+
     println!("[SystemTray] Spawning widget: {}", widget_type);
-    
+
     // Generate unique widget ID
     let widget_id = Uuid::new_v4().to_string();
-    
+
     // Default widget configuration
     let config = WidgetWindowConfig {
         widget_id: widget_id.clone(),
@@ -223,7 +207,7 @@ fn spawn_desktop_widget<R: Runtime>(app: &AppHandle<R>, widget_type: &str) {
         height: get_default_height(widget_type),
         monitor_index: None, // Use primary monitor
     };
-    
+
     // Spawn widget asynchronously
     let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -236,7 +220,7 @@ fn spawn_desktop_widget<R: Runtime>(app: &AppHandle<R>, widget_type: &str) {
 
 /**
  * Get default widget width
- * 
+ *
  * Returns appropriate default width for each widget type.
  */
 #[allow(dead_code)]
@@ -253,7 +237,7 @@ fn get_default_width(widget_type: &str) -> u32 {
 
 /**
  * Get default widget height
- * 
+ *
  * Returns appropriate default height for each widget type.
  */
 #[allow(dead_code)]

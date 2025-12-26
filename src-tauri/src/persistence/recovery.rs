@@ -17,13 +17,13 @@ use super::schemas::PersistedState;
 pub enum RecoveryMode {
     /// No recovery needed - state loaded cleanly
     Clean,
-    
+
     /// State was sanitized but fully usable
     Sanitized,
-    
+
     /// Partial recovery - some data was discarded
     Partial,
-    
+
     /// Complete reset - state was unusable
     Reset,
 }
@@ -32,10 +32,10 @@ pub enum RecoveryMode {
 pub struct RecoveryResult {
     /// The recovered state (always safe to use)
     pub state: PersistedState,
-    
+
     /// How the state was recovered
     pub mode: RecoveryMode,
-    
+
     /// Human-readable recovery report
     pub report: Vec<String>,
 }
@@ -49,7 +49,7 @@ impl RecoveryResult {
             report: vec![],
         }
     }
-    
+
     /// Creates a sanitized recovery (minor fixes applied)
     pub fn sanitized(state: PersistedState, issues: Vec<String>) -> Self {
         Self {
@@ -58,7 +58,7 @@ impl RecoveryResult {
             report: issues,
         }
     }
-    
+
     /// Creates a partial recovery (some data lost)
     pub fn partial(state: PersistedState, issues: Vec<String>) -> Self {
         Self {
@@ -67,7 +67,7 @@ impl RecoveryResult {
             report: issues,
         }
     }
-    
+
     /// Creates a reset recovery (full reset to defaults)
     pub fn reset(reason: String) -> Self {
         Self {
@@ -94,7 +94,7 @@ pub fn recover_state(state: Option<PersistedState>) -> RecoveryResult {
         Some(state) => {
             // Validate the loaded state
             let warnings = state.validate();
-            
+
             if warnings.is_empty() {
                 // State is perfectly valid
                 log::info!("Persisted state loaded successfully (v{})", state.version);
@@ -105,10 +105,10 @@ pub fn recover_state(state: Option<PersistedState>) -> RecoveryResult {
                 for warning in &warnings {
                     log::warn!("  - {}", warning);
                 }
-                
+
                 let sanitized = state.sanitize();
                 let post_warnings = sanitized.validate();
-                
+
                 if post_warnings.is_empty() {
                     // Sanitization fixed all issues
                     log::info!("State sanitized successfully");
@@ -144,15 +144,18 @@ pub fn is_recovery_acceptable(result: &RecoveryResult) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::persistence::schemas::{WidgetLayout, GridConfig};
-    
+    use crate::persistence::schemas::{GridConfig, WidgetLayout};
+
     #[test]
     fn test_recover_none_gives_reset() {
         let result = recover_state(None);
         assert_eq!(result.mode, RecoveryMode::Reset);
-        assert_eq!(result.state.version, crate::persistence::schemas::CURRENT_VERSION);
+        assert_eq!(
+            result.state.version,
+            crate::persistence::schemas::CURRENT_VERSION
+        );
     }
-    
+
     #[test]
     fn test_recover_valid_state_is_clean() {
         let state = PersistedState::default();
@@ -160,13 +163,13 @@ mod tests {
         assert_eq!(result.mode, RecoveryMode::Clean);
         assert!(result.report.is_empty());
     }
-    
+
     #[test]
     fn test_recover_invalid_grid_sanitizes() {
         let mut state = PersistedState::default();
         state.layout.grid.columns = 1000; // Too large
         state.layout.grid.rows = 1; // Too small
-        
+
         let result = recover_state(Some(state));
         assert!(
             result.mode == RecoveryMode::Sanitized || result.mode == RecoveryMode::Partial,
@@ -175,7 +178,7 @@ mod tests {
         assert_eq!(result.state.layout.grid.columns, 100); // Clamped
         assert_eq!(result.state.layout.grid.rows, 4); // Clamped
     }
-    
+
     #[test]
     fn test_recover_out_of_bounds_widgets() {
         let mut state = PersistedState::default();
@@ -189,23 +192,28 @@ mod tests {
             locked: false,
             settings: None,
         });
-        
+
         let result = recover_state(Some(state));
         assert!(result.mode == RecoveryMode::Sanitized || result.mode == RecoveryMode::Partial);
-        assert_eq!(result.state.layout.widgets.len(), 0, "Bad widget should be removed");
+        assert_eq!(
+            result.state.layout.widgets.len(),
+            0,
+            "Bad widget should be removed"
+        );
     }
-    
+
     #[test]
     fn test_all_recovery_modes_are_acceptable() {
         let clean = RecoveryResult::clean(PersistedState::default());
         assert!(is_recovery_acceptable(&clean));
-        
-        let sanitized = RecoveryResult::sanitized(PersistedState::default(), vec!["test".to_string()]);
+
+        let sanitized =
+            RecoveryResult::sanitized(PersistedState::default(), vec!["test".to_string()]);
         assert!(is_recovery_acceptable(&sanitized));
-        
+
         let partial = RecoveryResult::partial(PersistedState::default(), vec!["test".to_string()]);
         assert!(is_recovery_acceptable(&partial));
-        
+
         let reset = RecoveryResult::reset("test".to_string());
         assert!(is_recovery_acceptable(&reset));
     }

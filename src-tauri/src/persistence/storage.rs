@@ -63,12 +63,12 @@ fn get_temp_path(app: &AppHandle) -> Result<PathBuf, String> {
 /// Returns Err(msg) if file exists but is corrupted
 pub fn load_state(app: &AppHandle) -> Result<Option<PersistedState>, String> {
     let state_path = get_state_path(app)?;
-    
+
     if !state_path.exists() {
         // First run or state was deleted - this is OK
         return Ok(None);
     }
-    
+
     // Try to read and parse the state file
     match fs::read_to_string(&state_path) {
         Ok(json) => {
@@ -95,26 +95,24 @@ pub fn load_state(app: &AppHandle) -> Result<Option<PersistedState>, String> {
 /// Attempts to load the backup state file
 fn load_backup(app: &AppHandle) -> Result<Option<PersistedState>, String> {
     let backup_path = get_backup_path(app)?;
-    
+
     if !backup_path.exists() {
         return Err("State file corrupted and no backup available".to_string());
     }
-    
+
     log::warn!("Attempting to load from backup...");
-    
+
     match fs::read_to_string(&backup_path) {
-        Ok(json) => {
-            match serde_json::from_str::<PersistedState>(&json) {
-                Ok(state) => {
-                    log::info!("Successfully loaded from backup (v{})", state.version);
-                    Ok(Some(state))
-                }
-                Err(e) => {
-                    log::error!("Backup is also corrupted: {}", e);
-                    Err("Both state file and backup are corrupted".to_string())
-                }
+        Ok(json) => match serde_json::from_str::<PersistedState>(&json) {
+            Ok(state) => {
+                log::info!("Successfully loaded from backup (v{})", state.version);
+                Ok(Some(state))
             }
-        }
+            Err(e) => {
+                log::error!("Backup is also corrupted: {}", e);
+                Err("Both state file and backup are corrupted".to_string())
+            }
+        },
         Err(e) => {
             log::error!("Failed to read backup file: {}", e);
             Err(format!("Failed to read backup: {}", e))
@@ -135,13 +133,13 @@ pub fn save_state(app: &AppHandle, state: &PersistedState) -> Result<(), String>
     let state_path = get_state_path(app)?;
     let backup_path = get_backup_path(app)?;
     let temp_path = get_temp_path(app)?;
-    
+
     // Ensure app data directory exists
     if let Some(parent) = state_path.parent() {
         fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create app data directory: {}", e))?;
     }
-    
+
     // Backup existing state file before overwriting
     if state_path.exists() {
         if let Err(e) = fs::copy(&state_path, &backup_path) {
@@ -149,21 +147,20 @@ pub fn save_state(app: &AppHandle, state: &PersistedState) -> Result<(), String>
             // Continue anyway - backup failure shouldn't block saves
         }
     }
-    
+
     // Serialize state to JSON (pretty-printed for human readability)
     let json = serde_json::to_string_pretty(state)
         .map_err(|e| format!("Failed to serialize state: {}", e))?;
-    
+
     // Write to temporary file first
-    fs::write(&temp_path, &json)
-        .map_err(|e| format!("Failed to write temp state file: {}", e))?;
-    
+    fs::write(&temp_path, &json).map_err(|e| format!("Failed to write temp state file: {}", e))?;
+
     // Atomic rename (replaces existing state file)
     fs::rename(&temp_path, &state_path)
         .map_err(|e| format!("Failed to finalize state file: {}", e))?;
-    
+
     log::info!("Persisted state v{} ({} bytes)", state.version, json.len());
-    
+
     Ok(())
 }
 
@@ -174,21 +171,20 @@ pub fn save_state(app: &AppHandle, state: &PersistedState) -> Result<(), String>
 #[allow(dead_code)]
 pub fn delete_state(app: &AppHandle) -> Result<usize, String> {
     let mut deleted = 0;
-    
+
     let state_path = get_state_path(app)?;
     if state_path.exists() {
-        fs::remove_file(&state_path)
-            .map_err(|e| format!("Failed to delete state file: {}", e))?;
+        fs::remove_file(&state_path).map_err(|e| format!("Failed to delete state file: {}", e))?;
         deleted += 1;
     }
-    
+
     let backup_path = get_backup_path(app)?;
     if backup_path.exists() {
         fs::remove_file(&backup_path)
             .map_err(|e| format!("Failed to delete backup file: {}", e))?;
         deleted += 1;
     }
-    
+
     let temp_path = get_temp_path(app)?;
     if temp_path.exists() {
         if let Err(e) = fs::remove_file(&temp_path) {
@@ -197,7 +193,7 @@ pub fn delete_state(app: &AppHandle) -> Result<usize, String> {
             deleted += 1;
         }
     }
-    
+
     log::info!("Deleted {} state file(s)", deleted);
     Ok(deleted)
 }
@@ -212,14 +208,14 @@ pub fn state_exists(app: &AppHandle) -> Result<bool, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_state_filename_constants() {
         assert_eq!(STATE_FILENAME, "state.json");
         assert_eq!(BACKUP_FILENAME, "state.backup.json");
         assert_eq!(TEMP_FILENAME, "state.tmp.json");
     }
-    
+
     // Note: Testing actual file I/O requires a Tauri app handle,
     // which is not available in unit tests. Integration tests should
     // cover save/load/backup scenarios.

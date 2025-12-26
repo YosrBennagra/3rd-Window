@@ -37,13 +37,15 @@ const APP_NAME: &str = "ThirdScreen";
 pub fn validate_protocol_registration() -> bool {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let protocol_path = format!("Software\\Classes\\{}", PROTOCOL);
-    
+
     match hkcu.open_subkey(&protocol_path) {
         Ok(key) => {
             // Verify it has required keys
             let has_url_protocol = key.get_value::<String, _>("URL Protocol").is_ok();
-            let has_command = hkcu.open_subkey(format!("{}\\shell\\open\\command", protocol_path)).is_ok();
-            
+            let has_command = hkcu
+                .open_subkey(format!("{}\\shell\\open\\command", protocol_path))
+                .is_ok();
+
             has_url_protocol && has_command
         }
         Err(_) => false,
@@ -72,26 +74,26 @@ pub fn validate_protocol_registration() -> bool {
 pub fn register_protocol() -> Result<(), io::Error> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let exe_path = get_exe_path();
-    
+
     println!("[Protocol] Registering thirdscreen:// protocol...");
-    
+
     let protocol_path = format!("Software\\Classes\\{}", PROTOCOL);
     let (protocol_key, _) = hkcu.create_subkey(&protocol_path)?;
-    
+
     // Protocol properties
     protocol_key.set_value("", &format!("URL:{} Protocol", APP_NAME))?;
     protocol_key.set_value("URL Protocol", &"")?; // Empty string signals URL protocol
-    
+
     // Default icon
     let icon_path = format!("{}\\DefaultIcon", protocol_path);
     let (icon_key, _) = hkcu.create_subkey(&icon_path)?;
     icon_key.set_value("", &format!("\"{}\",0", exe_path))?;
-    
+
     // Command to execute (passes URL as %1)
     let command_path = format!("{}\\shell\\open\\command", protocol_path);
     let (command_key, _) = hkcu.create_subkey(&command_path)?;
     command_key.set_value("", &format!("\"{}\" \"%1\"", exe_path))?;
-    
+
     println!("[Protocol] ✓ Protocol registered successfully");
     Ok(())
 }
@@ -104,9 +106,9 @@ pub fn register_protocol() -> Result<(), io::Error> {
 pub fn unregister_protocol() -> Result<(), io::Error> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let protocol_path = format!("Software\\Classes\\{}", PROTOCOL);
-    
+
     println!("[Protocol] Unregistering thirdscreen:// protocol...");
-    
+
     match hkcu.delete_subkey_all(&protocol_path) {
         Ok(_) => {
             println!("[Protocol] ✓ Protocol unregistered successfully");
@@ -140,16 +142,16 @@ pub fn unregister_protocol() -> Result<(), io::Error> {
 pub fn validate_protocol_url(url: &str) -> Option<ProtocolAction> {
     // Normalize URL (remove trailing slashes, lowercase scheme)
     let url = url.trim().trim_end_matches('/');
-    
+
     // Must start with thirdscreen://
     if !url.starts_with("thirdscreen://") {
         eprintln!("[Protocol] Invalid protocol: {}", url);
         return None;
     }
-    
+
     // Extract action path
     let action = url.strip_prefix("thirdscreen://").unwrap_or("");
-    
+
     // Parse and validate action
     match action {
         "open-picker" => {
@@ -162,7 +164,7 @@ pub fn validate_protocol_url(url: &str) -> Option<ProtocolAction> {
         }
         _ if action.starts_with("add-widget/") => {
             let widget_type = action.strip_prefix("add-widget/").unwrap_or("");
-            
+
             // Validate widget type (only alphanumeric + hyphen)
             if is_valid_widget_type(widget_type) {
                 println!("[Protocol] ✓ Valid action: add-widget/{}", widget_type);
@@ -192,8 +194,10 @@ fn is_valid_widget_type(widget_type: &str) -> bool {
     if widget_type.is_empty() || widget_type.len() > 50 {
         return false;
     }
-    
-    widget_type.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+
+    widget_type
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-')
 }
 
 /// Get executable path
@@ -217,10 +221,10 @@ fn get_exe_path() -> String {
 pub enum ProtocolAction {
     /// Open widget picker window
     OpenPicker,
-    
+
     /// Show main dashboard window
     ShowDashboard,
-    
+
     /// Add specific widget to desktop
     /// Widget type must be validated (alphanumeric + hyphen only)
     AddWidget(String),
@@ -233,47 +237,56 @@ pub enum ProtocolAction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_validate_protocol_url_valid() {
         assert_eq!(
             validate_protocol_url("thirdscreen://open-picker"),
             Some(ProtocolAction::OpenPicker)
         );
-        
+
         assert_eq!(
             validate_protocol_url("thirdscreen://show-dashboard"),
             Some(ProtocolAction::ShowDashboard)
         );
-        
+
         assert_eq!(
             validate_protocol_url("thirdscreen://add-widget/clock"),
             Some(ProtocolAction::AddWidget("clock".to_string()))
         );
-        
+
         // Trailing slash should be stripped
         assert_eq!(
             validate_protocol_url("thirdscreen://open-picker/"),
             Some(ProtocolAction::OpenPicker)
         );
     }
-    
+
     #[test]
     fn test_validate_protocol_url_invalid() {
         // Wrong protocol
         assert_eq!(validate_protocol_url("http://example.com"), None);
         assert_eq!(validate_protocol_url("javascript:alert(1)"), None);
-        
+
         // Unsupported actions
         assert_eq!(validate_protocol_url("thirdscreen://exec/cmd"), None);
         assert_eq!(validate_protocol_url("thirdscreen://shell/evil"), None);
-        
+
         // Invalid widget types
-        assert_eq!(validate_protocol_url("thirdscreen://add-widget/../../etc/passwd"), None);
-        assert_eq!(validate_protocol_url("thirdscreen://add-widget/cmd.exe"), None);
-        assert_eq!(validate_protocol_url("thirdscreen://add-widget/widget;rm -rf /"), None);
+        assert_eq!(
+            validate_protocol_url("thirdscreen://add-widget/../../etc/passwd"),
+            None
+        );
+        assert_eq!(
+            validate_protocol_url("thirdscreen://add-widget/cmd.exe"),
+            None
+        );
+        assert_eq!(
+            validate_protocol_url("thirdscreen://add-widget/widget;rm -rf /"),
+            None
+        );
     }
-    
+
     #[test]
     fn test_is_valid_widget_type() {
         // Valid
@@ -281,7 +294,7 @@ mod tests {
         assert!(is_valid_widget_type("network-monitor"));
         assert!(is_valid_widget_type("ram"));
         assert!(is_valid_widget_type("widget-123"));
-        
+
         // Invalid
         assert!(!is_valid_widget_type(""));
         assert!(!is_valid_widget_type("../../evil"));

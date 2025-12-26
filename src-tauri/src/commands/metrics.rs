@@ -30,13 +30,13 @@ lazy_static::lazy_static! {
 #[cfg(target_os = "windows")]
 fn get_cpu_temperature() -> f32 {
     use wmi::{COMLibrary, Variant, WMIConnection};
-    
+
     match COMLibrary::new() {
         Ok(com_lib) => {
             match WMIConnection::new(com_lib) {
                 Ok(wmi_con) => {
                     let query = "SELECT CurrentTemperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation";
-                    
+
                     match wmi_con.raw_query::<std::collections::HashMap<String, Variant>>(query) {
                         Ok(results) => {
                             for result in results {
@@ -83,7 +83,7 @@ pub fn get_system_metrics() -> Result<SystemMetrics, String> {
     sys.refresh_cpu_all();
     std::thread::sleep(std::time::Duration::from_millis(200));
     sys.refresh_cpu_all();
-    
+
     let cpu_usage = sys.global_cpu_usage();
 
     // Memory
@@ -93,7 +93,7 @@ pub fn get_system_metrics() -> Result<SystemMetrics, String> {
     // Disk - get primary disk
     let disks = Disks::new_with_refreshed_list();
     let (mut disk_used, mut disk_total) = (0u64, 0u64);
-    
+
     // Find the largest disk (likely C:\ on Windows)
     for disk in disks.iter() {
         let total = disk.total_space();
@@ -126,15 +126,22 @@ pub fn get_system_metrics() -> Result<SystemMetrics, String> {
         total_transmitted,
     };
 
-    let mut last_sample_lock = LAST_NET_SAMPLE.lock()
+    let mut last_sample_lock = LAST_NET_SAMPLE
+        .lock()
         .map_err(|e| format!("Failed to acquire metrics sample lock: {}", e))?;
     if let Some(ref last_sample) = *last_sample_lock {
-        let elapsed = current_sample.timestamp.duration_since(last_sample.timestamp);
+        let elapsed = current_sample
+            .timestamp
+            .duration_since(last_sample.timestamp);
         let elapsed_secs = elapsed.as_secs_f64();
 
         if elapsed_secs > 0.0 {
-            let received_diff = current_sample.total_received.saturating_sub(last_sample.total_received);
-            let transmitted_diff = current_sample.total_transmitted.saturating_sub(last_sample.total_transmitted);
+            let received_diff = current_sample
+                .total_received
+                .saturating_sub(last_sample.total_received);
+            let transmitted_diff = current_sample
+                .total_transmitted
+                .saturating_sub(last_sample.total_transmitted);
 
             net_down_mbps = (received_diff as f64 / elapsed_secs) / (1024.0 * 1024.0);
             net_up_mbps = (transmitted_diff as f64 / elapsed_secs) / (1024.0 * 1024.0);

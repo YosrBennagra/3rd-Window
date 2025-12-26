@@ -1,13 +1,12 @@
 /**
  * Monitor Hot-Plug Event Detection
- * 
+ *
  * Detects monitor connect/disconnect events and notifies the frontend.
  * Following multi-monitor UX principles:
  * - Graceful handling of monitor changes
  * - Safe window recovery when monitors disconnect
  * - Notification system for frontend state updates
  */
-
 use crate::ipc_types::Monitor;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
@@ -84,7 +83,8 @@ impl MonitorTracker {
                 let new_monitor = &current_monitors[current_count - 1];
                 info!(
                     "[MonitorTracker] Monitor connected: '{}' (index: {})",
-                    new_monitor.name, current_count - 1
+                    new_monitor.name,
+                    current_count - 1
                 );
                 Some(MonitorEvent::MonitorConnected {
                     monitor_index: current_count - 1,
@@ -97,7 +97,7 @@ impl MonitorTracker {
                     .get(removed_index)
                     .map(|m| m.name.clone())
                     .unwrap_or_else(|| format!("Monitor {}", removed_index + 1));
-                
+
                 warn!(
                     "[MonitorTracker] Monitor disconnected: '{}' (index: {})",
                     removed_name, removed_index
@@ -128,7 +128,7 @@ impl MonitorTracker {
         } else {
             warn!("[MonitorTracker] Failed to update last_count (mutex poisoned)");
         }
-        
+
         if let Ok(mut guard) = self.last_config.lock() {
             *guard = current_monitors;
         } else {
@@ -210,7 +210,7 @@ impl MonitorTracker {
     pub async fn emit_if_changed(&self, app: &AppHandle) {
         if let Some(event) = self.check_for_changes(app).await {
             info!("[MonitorTracker] Emitting event: {:?}", event);
-            
+
             // Emit to all webview windows
             if let Err(e) = app.emit("monitor-changed", &event) {
                 warn!("[MonitorTracker] Failed to emit event: {}", e);
@@ -237,7 +237,7 @@ pub fn init_monitor_tracking(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         loop {
             tracker.emit_if_changed(&app_handle).await;
-            
+
             // Poll every 2 seconds
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         }

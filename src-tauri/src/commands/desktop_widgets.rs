@@ -1,39 +1,44 @@
 use crate::ipc_types::WidgetWindowConfig;
-use crate::system::{WINDOW_MANAGER, WindowConfig, WindowType};
-use tauri::{AppHandle, Manager, Runtime};
+use crate::system::{WindowConfig, WindowType, WINDOW_MANAGER};
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager, Runtime};
 
 // Track active widget windows
 static WIDGET_WINDOWS: Mutex<Option<HashMap<String, WidgetWindowConfig>>> = Mutex::new(None);
 
 fn get_widget_windows() -> Result<HashMap<String, WidgetWindowConfig>, String> {
-    let mut guard = WIDGET_WINDOWS.lock()
+    let mut guard = WIDGET_WINDOWS
+        .lock()
         .map_err(|e| format!("Failed to acquire widget lock: {}", e))?;
     if guard.is_none() {
         *guard = Some(HashMap::new());
     }
-    Ok(guard.as_ref()
-        .ok_or("Widget map unexpectedly None")?  
+    Ok(guard
+        .as_ref()
+        .ok_or("Widget map unexpectedly None")?
         .clone())
 }
 
 fn add_widget_window(widget_id: String, config: WidgetWindowConfig) -> Result<(), String> {
-    let mut guard = WIDGET_WINDOWS.lock()
+    let mut guard = WIDGET_WINDOWS
+        .lock()
         .map_err(|e| format!("Failed to acquire widget lock: {}", e))?;
     if guard.is_none() {
         *guard = Some(HashMap::new());
     }
-    guard.as_mut()
+    guard
+        .as_mut()
         .ok_or("Widget map unexpectedly None")?
         .insert(widget_id, config);
     Ok(())
 }
 
 fn remove_widget_window(widget_id: &str) -> Result<(), String> {
-    let mut guard = WIDGET_WINDOWS.lock()
+    let mut guard = WIDGET_WINDOWS
+        .lock()
         .map_err(|e| format!("Failed to acquire widget lock: {}", e))?;
     if let Some(map) = guard.as_mut() {
         map.remove(widget_id);
@@ -54,7 +59,7 @@ fn get_widgets_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
 fn save_widgets_to_disk<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     let widgets_path = get_widgets_path(app)?;
     let widgets = get_widget_windows()?;
-    
+
     if let Some(parent) = widgets_path.parent() {
         fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create widgets directory: {}", e))?;
@@ -64,15 +69,16 @@ fn save_widgets_to_disk<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&configs)
         .map_err(|e| format!("Failed to serialize widgets: {}", e))?;
 
-    fs::write(&widgets_path, json)
-        .map_err(|e| format!("Failed to write widgets: {}", e))?;
+    fs::write(&widgets_path, json).map_err(|e| format!("Failed to write widgets: {}", e))?;
 
     Ok(())
 }
 
-fn load_widgets_from_disk<R: Runtime>(app: &AppHandle<R>) -> Result<Vec<WidgetWindowConfig>, String> {
+fn load_widgets_from_disk<R: Runtime>(
+    app: &AppHandle<R>,
+) -> Result<Vec<WidgetWindowConfig>, String> {
     let widgets_path = get_widgets_path(app)?;
-    
+
     if !widgets_path.exists() {
         return Ok(Vec::new());
     }
@@ -80,8 +86,8 @@ fn load_widgets_from_disk<R: Runtime>(app: &AppHandle<R>) -> Result<Vec<WidgetWi
     let json = fs::read_to_string(&widgets_path)
         .map_err(|e| format!("Failed to read widgets file: {}", e))?;
 
-    let configs: Vec<WidgetWindowConfig> = serde_json::from_str(&json)
-        .map_err(|e| format!("Failed to parse widgets: {}", e))?;
+    let configs: Vec<WidgetWindowConfig> =
+        serde_json::from_str(&json).map_err(|e| format!("Failed to parse widgets: {}", e))?;
 
     Ok(configs)
 }
@@ -92,8 +98,7 @@ pub async fn spawn_desktop_widget<R: Runtime>(
     config: WidgetWindowConfig,
 ) -> Result<String, String> {
     // Validate input
-    crate::validation::validate_widget_config(&config)
-        .map_err(|e| e.to_string())?;
+    crate::validation::validate_widget_config(&config).map_err(|e| e.to_string())?;
 
     let widget_id = config.widget_id.clone();
     let window_type = WindowType::Widget(widget_id.clone());
@@ -125,7 +130,7 @@ pub async fn spawn_desktop_widget<R: Runtime>(
 
     // Track the widget window
     add_widget_window(widget_id.clone(), config.clone())?;
-    
+
     // Persist to disk
     save_widgets_to_disk(&app)?;
 
@@ -138,22 +143,21 @@ pub async fn close_desktop_widget<R: Runtime>(
     widget_id: String,
 ) -> Result<(), String> {
     // Validate input
-    crate::validation::validate_widget_id(&widget_id)
-        .map_err(|e| e.to_string())?;
+    crate::validation::validate_widget_id(&widget_id).map_err(|e| e.to_string())?;
 
     let window_type = WindowType::Widget(widget_id.clone());
 
     // Close window via centralized manager
     WINDOW_MANAGER.close_window(&app, &window_type)?;
-    
+
     // Remove from tracking
     remove_widget_window(&widget_id)?;
-    
+
     // Persist to disk (log error but don't fail the close operation)
     if let Err(e) = save_widgets_to_disk(&app) {
         eprintln!("Warning: Failed to save widgets after close: {}", e);
     }
-    
+
     Ok(())
 }
 
@@ -165,10 +169,8 @@ pub async fn update_widget_position<R: Runtime>(
     y: i32,
 ) -> Result<(), String> {
     // Validate inputs
-    crate::validation::validate_widget_id(&widget_id)
-        .map_err(|e| e.to_string())?;
-    crate::validation::validate_coordinates(x, y)
-        .map_err(|e| e.to_string())?;
+    crate::validation::validate_widget_id(&widget_id).map_err(|e| e.to_string())?;
+    crate::validation::validate_coordinates(x, y).map_err(|e| e.to_string())?;
 
     let window_type = WindowType::Widget(widget_id.clone());
 
@@ -180,10 +182,11 @@ pub async fn update_widget_position<R: Runtime>(
     if let Some(config) = windows.get_mut(&widget_id) {
         config.x = x;
         config.y = y;
-        let mut guard = WIDGET_WINDOWS.lock()
+        let mut guard = WIDGET_WINDOWS
+            .lock()
             .map_err(|e| format!("Failed to acquire widget lock: {}", e))?;
         *guard = Some(windows);
-        
+
         // Persist to disk
         save_widgets_to_disk(&app)?;
     }
@@ -192,7 +195,9 @@ pub async fn update_widget_position<R: Runtime>(
 }
 
 #[tauri::command]
-pub fn get_desktop_widgets<R: Runtime>(app: AppHandle<R>) -> Result<Vec<WidgetWindowConfig>, String> {
+pub fn get_desktop_widgets<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<Vec<WidgetWindowConfig>, String> {
     // Load from disk instead of memory to ensure persistence across restarts
     load_widgets_from_disk(&app)
 }
@@ -205,10 +210,8 @@ pub async fn update_widget_size<R: Runtime>(
     height: u32,
 ) -> Result<(), String> {
     // Validate inputs
-    crate::validation::validate_widget_id(&widget_id)
-        .map_err(|e| e.to_string())?;
-    crate::validation::validate_dimensions(width, height)
-        .map_err(|e| e.to_string())?;
+    crate::validation::validate_widget_id(&widget_id).map_err(|e| e.to_string())?;
+    crate::validation::validate_dimensions(width, height).map_err(|e| e.to_string())?;
 
     let window_type = WindowType::Widget(widget_id.clone());
 
@@ -220,11 +223,12 @@ pub async fn update_widget_size<R: Runtime>(
     if let Some(config) = windows.get_mut(&widget_id) {
         config.width = width;
         config.height = height;
-        let mut guard = WIDGET_WINDOWS.lock()
+        let mut guard = WIDGET_WINDOWS
+            .lock()
             .map_err(|e| format!("Failed to acquire widget lock: {}", e))?;
         *guard = Some(windows);
-        
-        // Persist to disk  
+
+        // Persist to disk
         save_widgets_to_disk(&app)?;
     }
 

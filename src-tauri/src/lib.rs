@@ -11,20 +11,19 @@
  * - Clear Command Ownership: Each command has single, clear purpose
  * - Security First: Minimal, scoped OS access
  */
-
 // Module declarations
 mod commands;
 mod error;
-mod system;
 mod ipc_types;
-mod validation;
 mod persistence;
+mod system;
 mod uninstaller;
+mod validation;
 
 // Re-export IPC types for external use
 pub use ipc_types::{
-    AppSettings, Monitor, MonitorPosition, MonitorSize, WidgetWindowConfig, SystemMetrics,
-    NetworkStats, ActiveWindowInfo,
+    ActiveWindowInfo, AppSettings, Monitor, MonitorPosition, MonitorSize, NetworkStats,
+    SystemMetrics, WidgetWindowConfig,
 };
 
 // Re-export persistence types
@@ -34,57 +33,47 @@ pub use persistence::{PersistedState, RecoveryMode};
 pub use commands::{
     // Window control commands
     apply_fullscreen,
-    move_to_monitor,
-    open_system_clock,
-    toggle_fullscreen,
-    // Monitor commands
-    get_monitors,
-    // Settings commands
-    load_settings,
-    save_settings,
-    // Sensor commands
-    get_system_temps,
-    // Network commands
-    get_network_stats,
-    // Metrics commands
-    get_system_metrics,
     // Desktop widget commands
     close_desktop_widget,
     get_desktop_widgets,
-    spawn_desktop_widget,
-    update_widget_position,
-    update_widget_size,
-    // Widget action commands
-    minimize_desktop_widget,
-    restore_desktop_widget,
-    toggle_widget_always_on_top,
-    set_widget_opacity,
+    // Monitor commands
+    get_monitors,
+    // Network commands
+    get_network_stats,
+    get_schema_version,
+    // Metrics commands
+    get_system_metrics,
+    // Sensor commands
+    get_system_temps,
     // Persistence commands
     load_persisted_state,
-    save_persisted_state,
+    // Settings commands
+    load_settings,
+    // Widget action commands
+    minimize_desktop_widget,
+    move_to_monitor,
+    open_system_clock,
     reset_persisted_state,
-    get_schema_version,
+    restore_desktop_widget,
+    save_persisted_state,
+    save_settings,
+    set_widget_opacity,
+    spawn_desktop_widget,
+    toggle_fullscreen,
+    toggle_widget_always_on_top,
+    update_widget_position,
+    update_widget_size,
 };
 
 #[cfg(target_os = "windows")]
 pub use commands::{
-    check_context_menu_installed,
-    disable_context_menu,
-    enable_context_menu,
-    enable_startup,
-    disable_startup,
-    check_startup_enabled,
-    toggle_startup,
-    list_integration_registry_keys,
-    check_registry_keys_exist,
+    check_context_menu_installed, check_registry_keys_exist, check_startup_enabled,
+    disable_context_menu, disable_startup, enable_context_menu, enable_startup,
+    list_integration_registry_keys, toggle_startup,
 };
 
 // Re-export uninstaller functions
-pub use uninstaller::{
-    check_active_integrations,
-    list_integrations,
-    uninstall_cleanup,
-};
+pub use uninstaller::{check_active_integrations, list_integrations, uninstall_cleanup};
 
 // Re-export system utilities that commands delegate to
 pub use system::{create_tray, get_active_window_info, get_system_uptime, init_monitor_tracking};
@@ -159,12 +148,12 @@ fn handle_deep_link<R: Runtime>(app: &AppHandle<R>, urls: Vec<Url>) {
  * Uses centralized WindowManager for predictable lifecycle management.
  */
 fn open_widget_picker_desktop_mode<R: Runtime>(app: &AppHandle<R>) {
-    use crate::system::{WINDOW_MANAGER, WindowConfig};
+    use crate::system::{WindowConfig, WINDOW_MANAGER};
 
     println!("[PICKER] Opening widget picker in desktop mode");
 
     let config = WindowConfig::widget_picker();
-    
+
     match WINDOW_MANAGER.create_window(app, config) {
         Ok(_window) => {
             println!("[PICKER] ✓ Widget picker window created successfully");
@@ -183,12 +172,12 @@ fn open_widget_picker_desktop_mode<R: Runtime>(app: &AppHandle<R>) {
  */
 #[allow(dead_code)]
 fn open_settings_window<R: Runtime>(app: &AppHandle<R>) {
-    use crate::system::{WINDOW_MANAGER, WindowConfig};
+    use crate::system::{WindowConfig, WINDOW_MANAGER};
 
     println!("[SETTINGS] Opening settings window");
 
     let config = WindowConfig::settings();
-    
+
     match WINDOW_MANAGER.create_window(app, config) {
         Ok(_window) => {
             println!("[SETTINGS] ✓ Settings window created successfully");
@@ -231,7 +220,7 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                
+
                 println!("[SETUP] Initializing deep link handler");
                 let app_handle = app.handle().clone();
 
@@ -257,7 +246,8 @@ pub fn run() {
                 // Initialize monitor hot-plug tracking
                 println!("[SETUP] Initializing monitor tracking");
                 init_monitor_tracking(&app.handle());
-                println!("[SETUP] ✓ Monitor tracking started");            }
+                println!("[SETUP] ✓ Monitor tracking started");
+            }
 
             Ok(())
         })
@@ -332,4 +322,3 @@ pub fn run() {
         .map_err(|e| eprintln!("Failed to start application: {}", e))
         .ok();
 }
-

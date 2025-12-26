@@ -178,7 +178,8 @@ fn hardware_id_candidates(device_id: &str) -> Vec<String> {
 fn collect_monitor_display_names() -> HashMap<String, String> {
     use windows::core::PCWSTR;
     use windows::Win32::Graphics::Gdi::{
-        EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE, DISPLAY_DEVICE_MIRRORING_DRIVER,
+        EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE,
+        DISPLAY_DEVICE_MIRRORING_DRIVER,
     };
 
     let mut friendly_names = HashMap::new();
@@ -322,7 +323,7 @@ pub async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String>
         let size = monitor.size();
         let position = monitor.position();
         let scale_factor = monitor.scale_factor();
-        
+
         let is_primary = match (&raw_identifier, &primary_identifier) {
             (Some(current), Some(primary)) => current == primary,
             (None, None) => index == 0,
@@ -355,8 +356,10 @@ pub async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String>
                 height: 1080,
             },
             position: MonitorPosition { x: 0, y: 0 },
-            is_primary: true,            scale_factor: 1.0,
-            refresh_rate: None,        });
+            is_primary: true,
+            scale_factor: 1.0,
+            refresh_rate: None,
+        });
     }
 
     Ok(result)

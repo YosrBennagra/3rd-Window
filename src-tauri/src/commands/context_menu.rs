@@ -5,8 +5,7 @@ use winreg::RegKey;
 const APP_NAME: &str = "ThirdScreen";
 const PROTOCOL: &str = "thirdscreen";
 const MODERN_HANDLER_CLSID: &str = "{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}";
-const MODERN_HANDLER_KEY: &str =
-    r"Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}";
+const MODERN_HANDLER_KEY: &str = r"Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}";
 
 /// Install context menu items to Windows registry
 pub fn install_context_menu() -> Result<(), io::Error> {
@@ -78,7 +77,6 @@ fn menu_label() -> String {
     format!("{} - Add Widget", APP_NAME)
 }
 
-
 fn get_exe_path() -> String {
     std::env::current_exe()
         .ok()
@@ -90,33 +88,31 @@ fn get_exe_path() -> String {
 fn register_protocol(hkcu: &RegKey) -> Result<(), io::Error> {
     let protocol_path = format!("Software\\Classes\\{}", PROTOCOL);
     let (protocol_key, _) = hkcu.create_subkey(&protocol_path)?;
-    
+
     // Set protocol properties
     protocol_key.set_value("", &format!("URL:{} Protocol", APP_NAME))?;
     protocol_key.set_value("URL Protocol", &"")?;
-    
+
     // Set default icon
     let (icon_key, _) = hkcu.create_subkey(format!("{}\\DefaultIcon", protocol_path))?;
     icon_key.set_value("", &format!("\"{}\",0", get_exe_path()))?;
-    
+
     // Set command to execute
     let command_path = format!("{}\\shell\\open\\command", protocol_path);
     let (command_key, _) = hkcu.create_subkey(&command_path)?;
     command_key.set_value("", &format!("\"{}\" \"%1\"", get_exe_path()))?;
-    
+
     Ok(())
 }
 
 #[tauri::command]
 pub async fn enable_context_menu() -> Result<(), String> {
-    install_context_menu()
-        .map_err(|e| format!("Failed to install context menu: {}", e))
+    install_context_menu().map_err(|e| format!("Failed to install context menu: {}", e))
 }
 
 #[tauri::command]
 pub async fn disable_context_menu() -> Result<(), String> {
-    uninstall_context_menu()
-        .map_err(|e| format!("Failed to uninstall context menu: {}", e))
+    uninstall_context_menu().map_err(|e| format!("Failed to uninstall context menu: {}", e))
 }
 
 #[tauri::command]

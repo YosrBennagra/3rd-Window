@@ -12,12 +12,12 @@
 // - IO is isolated from domain logic
 // - Round-trip integrity is guaranteed
 
-pub mod schemas;
-pub mod storage;
+pub mod compatibility;
 pub mod migrations;
 pub mod recovery;
-pub mod compatibility;
+pub mod schemas;
+pub mod storage;
 
+pub use recovery::RecoveryMode;
 pub use schemas::PersistedState;
 pub use storage::{load_state, save_state};
-pub use recovery::RecoveryMode;

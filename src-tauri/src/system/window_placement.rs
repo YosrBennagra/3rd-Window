@@ -1,6 +1,6 @@
 /**
  * Multi-Monitor Window Placement Service
- * 
+ *
  * Implements safe, predictable window placement across multi-monitor setups.
  * Following multi-monitor UX principles:
  * - Monitor-aware by default
@@ -8,7 +8,6 @@
  * - Safe fallbacks when monitors disconnect
  * - DPI-aware positioning
  */
-
 use crate::error::AppError;
 use crate::ipc_types::Monitor;
 use log::{info, warn};
@@ -61,10 +60,7 @@ impl WindowPlacer {
         match self.monitors.get(index) {
             Some(monitor) => (monitor, false),
             None => {
-                warn!(
-                    "Monitor index {} not found, falling back to primary",
-                    index
-                );
+                warn!("Monitor index {} not found, falling back to primary", index);
                 let primary_idx = self.find_primary_index();
                 let primary = &self.monitors[primary_idx];
                 (primary, true)
@@ -74,10 +70,7 @@ impl WindowPlacer {
 
     /// Find primary monitor index
     pub fn find_primary_index(&self) -> usize {
-        self.monitors
-            .iter()
-            .position(|m| m.is_primary)
-            .unwrap_or(0)
+        self.monitors.iter().position(|m| m.is_primary).unwrap_or(0)
     }
 
     /// Calculate safe window position on target monitor
@@ -251,8 +244,8 @@ impl WindowPlacer {
             .find(|m| self.contains_point(m, current_pos.x, current_pos.y))
             .ok_or_else(|| AppError::Window("Window not on any monitor".to_string()))?;
 
-        let rel_x = (current_pos.x - current_monitor.position.x) as f64
-            / current_monitor.size.width as f64;
+        let rel_x =
+            (current_pos.x - current_monitor.position.x) as f64 / current_monitor.size.width as f64;
         let rel_y = (current_pos.y - current_monitor.position.y) as f64
             / current_monitor.size.height as f64;
 
@@ -292,10 +285,7 @@ mod tests {
 
     #[test]
     fn test_validate_monitor_index() {
-        let monitors = vec![
-            create_test_monitor(0, true),
-            create_test_monitor(1, false),
-        ];
+        let monitors = vec![create_test_monitor(0, true), create_test_monitor(1, false)];
         let placer = WindowPlacer::new(monitors);
 
         assert!(placer.validate_monitor_index(0).is_ok());
@@ -305,10 +295,7 @@ mod tests {
 
     #[test]
     fn test_get_monitor_safe_fallback() {
-        let monitors = vec![
-            create_test_monitor(0, true),
-            create_test_monitor(1, false),
-        ];
+        let monitors = vec![create_test_monitor(0, true), create_test_monitor(1, false)];
         let placer = WindowPlacer::new(monitors);
 
         let (monitor, fallback) = placer.get_monitor_safe(5);

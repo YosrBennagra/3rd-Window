@@ -1,10 +1,9 @@
 /**
  * Windows Integration Commands (IPC Layer)
- * 
+ *
  * Thin command wrappers that delegate to system::windows_integration modules.
  * These commands are registered in Tauri's invoke_handler for frontend access.
  */
-
 use crate::system::windows_integration::{registry_utils, startup};
 
 // ============================================================================

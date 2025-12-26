@@ -93,11 +93,22 @@ Essential validation & troubleshooting
 ```bash
 npm run build:validate
 ```
+
+- **Format Rust code before committing** (recommended workflow):
+```bash
+# Auto-format all Rust code to match CI standards
+cargo fmt --manifest-path src-tauri/Cargo.toml --all
+
+# Check without modifying (what CI runs)
+cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+```
+
 - Common fixes
   - If Rust toolchain error: `rustup update stable` then `rustc --version`.
   - If version mismatch: `node scripts/sync-version.js <version>` then commit.
   - If CI fails due to signing: ensure code-signing secrets exist in repository Secrets.
   - If SonarCloud fails: verify `SONAR_TOKEN` secret and update project key in `sonar-project.properties`.
+  - **If CI fails with "cargo fmt -- --check detected differences"**: Run `cargo fmt --manifest-path src-tauri/Cargo.toml --all`, then commit the formatted code. This is expected after refactors.
 
 Prioritized future improvements
 1. Auto-update: integrate Tauri updater, delta updates, and a rollback mechanism.

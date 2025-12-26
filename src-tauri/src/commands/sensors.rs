@@ -64,7 +64,8 @@ fn get_wmi_temps() -> (Option<f32>, Vec<String>) {
                         )
                     {
                         for result in results {
-                            if let Some(Variant::UI4(temp_kelvin)) = result.get("CurrentTemperature")
+                            if let Some(Variant::UI4(temp_kelvin)) =
+                                result.get("CurrentTemperature")
                             {
                                 let temp_celsius = (*temp_kelvin as f32 / 10.0) - 273.15;
                                 if temp_celsius > 0.0 && temp_celsius < 150.0 {

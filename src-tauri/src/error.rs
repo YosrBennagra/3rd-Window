@@ -1,8 +1,7 @@
 /// Centralized error types for ThirdScreen backend
-/// 
+///
 /// This module provides domain-specific error types that map low-level
 /// errors to meaningful, user-safe messages following Rust safety principles.
-
 use std::fmt;
 
 /// Main error type for Tauri commands
@@ -38,7 +37,9 @@ impl fmt::Display for AppError {
             AppError::LockPoisoned(msg) => write!(f, "Internal synchronization error: {}", msg),
             AppError::System(msg) => write!(f, "System operation failed: {}", msg),
             AppError::NotFound(msg) => write!(f, "Resource not found: {}", msg),
-            AppError::AlreadyExists(msg) => write!(f, "Resource already exists: {}", msg),            AppError::Validation(msg) => write!(f, "Validation error: {}", msg),        }
+            AppError::AlreadyExists(msg) => write!(f, "Resource already exists: {}", msg),
+            AppError::Validation(msg) => write!(f, "Validation error: {}", msg),
+        }
     }
 }
 

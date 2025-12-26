@@ -89,9 +89,11 @@ jobs:
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
 
   # SonarCloud code quality analysis
+  # TODO: Enable after completing setup in .github/SONARCLOUD_SETUP.md
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
+    if: false  # Disabled until SonarCloud project is configured
     steps:
       - uses: actions/checkout@v4
         with:
@@ -111,7 +113,7 @@ jobs:
         continue-on-error: true
       
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

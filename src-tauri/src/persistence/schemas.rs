@@ -21,13 +21,13 @@ pub const CURRENT_VERSION: u32 = 1;
 pub struct PersistedState {
     /// Schema version for migration support
     pub version: u32,
-    
+
     /// Application settings (window, monitor, fullscreen)
     pub app_settings: AppSettingsV1,
-    
+
     /// Grid layout and widget positions
     pub layout: LayoutStateV1,
-    
+
     /// User preferences (theme, refresh rate, etc.)
     pub preferences: PreferencesV1,
 }
@@ -56,13 +56,13 @@ impl Default for PersistedState {
 pub struct AppSettingsV1 {
     /// Whether the app is in fullscreen mode
     pub is_fullscreen: bool,
-    
+
     /// Selected monitor index (validated on load)
     pub selected_monitor: usize,
-    
+
     /// Whether window is always on top
     pub always_on_top: bool,
-    
+
     /// Last known window position (for non-fullscreen restoration)
     pub window_position: Option<WindowPosition>,
 }
@@ -99,7 +99,7 @@ pub struct WindowPosition {
 pub struct LayoutStateV1 {
     /// Grid configuration (columns and rows)
     pub grid: GridConfig,
-    
+
     /// Widget layouts on the grid
     pub widgets: Vec<WidgetLayout>,
 }
@@ -107,7 +107,10 @@ pub struct LayoutStateV1 {
 impl Default for LayoutStateV1 {
     fn default() -> Self {
         Self {
-            grid: GridConfig { columns: 24, rows: 12 },
+            grid: GridConfig {
+                columns: 24,
+                rows: 12,
+            },
             widgets: vec![],
         }
     }
@@ -124,21 +127,21 @@ pub struct GridConfig {
 pub struct WidgetLayout {
     /// Unique widget instance ID
     pub id: String,
-    
+
     /// Widget type (e.g., "clock", "timer", "network-monitor")
     pub widget_type: String,
-    
+
     /// Grid position
     pub x: u32,
     pub y: u32,
-    
+
     /// Grid size
     pub width: u32,
     pub height: u32,
-    
+
     /// Whether widget is locked (prevents drag/resize)
     pub locked: bool,
-    
+
     /// Widget-specific settings (opaque JSON object)
     /// Each widget type defines its own settings schema
     #[serde(default)]
@@ -158,29 +161,29 @@ pub struct WidgetLayout {
 pub struct PreferencesV1 {
     /// UI theme
     pub theme: Theme,
-    
+
     /// Power saving mode enabled
     pub power_saving: bool,
-    
+
     /// Metrics refresh interval (milliseconds)
     pub refresh_interval: u64,
-    
+
     /// Widget visibility overrides
     #[serde(default)]
     pub widget_visibility: HashMap<String, bool>,
-    
+
     /// Widget scale overrides
     #[serde(default)]
     pub widget_scale: HashMap<String, WidgetScale>,
-    
+
     /// Widget rendering order (Z-index)
     #[serde(default)]
     pub widget_order: Vec<String>,
-    
+
     /// Alert rules
     #[serde(default)]
     pub alert_rules: Vec<AlertRule>,
-    
+
     /// User notes (freeform text)
     #[serde(default)]
     pub notes: String,
@@ -238,7 +241,7 @@ impl PersistedState {
     /// Fatal issues should be handled by recovery logic before this is called.
     pub fn validate(&self) -> Vec<String> {
         let mut warnings = Vec::new();
-        
+
         // Validate version
         if self.version > CURRENT_VERSION {
             warnings.push(format!(
@@ -246,29 +249,30 @@ impl PersistedState {
                 self.version, CURRENT_VERSION
             ));
         }
-        
+
         // Validate grid dimensions
         if self.layout.grid.columns == 0 || self.layout.grid.rows == 0 {
             warnings.push("Invalid grid dimensions (zero columns or rows)".to_string());
         }
-        
+
         if self.layout.grid.columns > 100 || self.layout.grid.rows > 100 {
             warnings.push(format!(
                 "Unusually large grid ({}x{}), may impact performance",
                 self.layout.grid.columns, self.layout.grid.rows
             ));
         }
-        
+
         // Validate widgets are within grid bounds
         for widget in &self.layout.widgets {
-            if widget.x + widget.width > self.layout.grid.columns ||
-               widget.y + widget.height > self.layout.grid.rows {
+            if widget.x + widget.width > self.layout.grid.columns
+                || widget.y + widget.height > self.layout.grid.rows
+            {
                 warnings.push(format!(
                     "Widget '{}' ({}) is outside grid bounds",
                     widget.id, widget.widget_type
                 ));
             }
-            
+
             if widget.width == 0 || widget.height == 0 {
                 warnings.push(format!(
                     "Widget '{}' ({}) has zero size",
@@ -276,7 +280,7 @@ impl PersistedState {
                 ));
             }
         }
-        
+
         // Validate widget IDs are unique
         let mut seen_ids = std::collections::HashSet::new();
         for widget in &self.layout.widgets {
@@ -284,19 +288,19 @@ impl PersistedState {
                 warnings.push(format!("Duplicate widget ID: {}", widget.id));
             }
         }
-        
+
         // Validate refresh interval is reasonable
         if self.preferences.refresh_interval < 1000 {
             warnings.push("Refresh interval < 1s may impact performance".to_string());
         }
-        
+
         if self.preferences.refresh_interval > 60000 {
             warnings.push("Refresh interval > 60s may feel unresponsive".to_string());
         }
-        
+
         warnings
     }
-    
+
     /// Sanitizes the state to ensure it's safe to use
     ///
     /// This is called after validation to fix any non-fatal issues.
@@ -305,23 +309,26 @@ impl PersistedState {
         // Clamp grid dimensions to reasonable values
         self.layout.grid.columns = self.layout.grid.columns.clamp(6, 100);
         self.layout.grid.rows = self.layout.grid.rows.clamp(4, 100);
-        
+
         // Remove widgets outside bounds or with invalid dimensions
         self.layout.widgets.retain(|w| {
-            w.width > 0 && w.height > 0 &&
-            w.x + w.width <= self.layout.grid.columns &&
-            w.y + w.height <= self.layout.grid.rows
+            w.width > 0
+                && w.height > 0
+                && w.x + w.width <= self.layout.grid.columns
+                && w.y + w.height <= self.layout.grid.rows
         });
-        
+
         // Deduplicate widget IDs (keep first occurrence)
         let mut seen_ids = std::collections::HashSet::new();
-        self.layout.widgets.retain(|w| seen_ids.insert(w.id.clone()));
-        
+        self.layout
+            .widgets
+            .retain(|w| seen_ids.insert(w.id.clone()));
+
         // Clamp refresh interval to reasonable range (1s - 60s)
         self.preferences.refresh_interval = self.preferences.refresh_interval.clamp(1000, 60000);
-        
+
         // Validate monitor index will be checked at runtime against available monitors
-        
+
         self
     }
 }
@@ -329,14 +336,14 @@ impl PersistedState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_state_is_valid() {
         let state = PersistedState::default();
         let warnings = state.validate();
         assert!(warnings.is_empty(), "Default state should have no warnings");
     }
-    
+
     #[test]
     fn test_validate_detects_out_of_bounds_widgets() {
         let mut state = PersistedState::default();
@@ -350,106 +357,151 @@ mod tests {
             locked: false,
             settings: None,
         });
-        
+
         let warnings = state.validate();
         assert!(!warnings.is_empty(), "Should detect out-of-bounds widget");
         assert!(warnings.iter().any(|w| w.contains("outside grid bounds")));
     }
-    
+
     #[test]
     fn test_validate_detects_duplicate_ids() {
         let mut state = PersistedState::default();
         state.layout.widgets.push(WidgetLayout {
             id: "duplicate".to_string(),
             widget_type: "clock".to_string(),
-            x: 0, y: 0, width: 4, height: 4, locked: false, settings: None,
+            x: 0,
+            y: 0,
+            width: 4,
+            height: 4,
+            locked: false,
+            settings: None,
         });
         state.layout.widgets.push(WidgetLayout {
             id: "duplicate".to_string(),
             widget_type: "timer".to_string(),
-            x: 4, y: 0, width: 4, height: 4, locked: false, settings: None,
+            x: 4,
+            y: 0,
+            width: 4,
+            height: 4,
+            locked: false,
+            settings: None,
         });
-        
+
         let warnings = state.validate();
         assert!(warnings.iter().any(|w| w.contains("Duplicate widget ID")));
     }
-    
+
     #[test]
     fn test_sanitize_clamps_grid_dimensions() {
         let mut state = PersistedState::default();
         state.layout.grid.columns = 1000; // Too large
         state.layout.grid.rows = 2; // Too small
-        
+
         let sanitized = state.sanitize();
         assert_eq!(sanitized.layout.grid.columns, 100); // Clamped to max
         assert_eq!(sanitized.layout.grid.rows, 4); // Clamped to min
     }
-    
+
     #[test]
     fn test_sanitize_removes_invalid_widgets() {
         let mut state = PersistedState::default();
         state.layout.widgets.push(WidgetLayout {
             id: "valid".to_string(),
             widget_type: "clock".to_string(),
-            x: 0, y: 0, width: 4, height: 4, locked: false, settings: None,
+            x: 0,
+            y: 0,
+            width: 4,
+            height: 4,
+            locked: false,
+            settings: None,
         });
         state.layout.widgets.push(WidgetLayout {
             id: "zero-size".to_string(),
             widget_type: "timer".to_string(),
-            x: 0, y: 0, width: 0, height: 0, locked: false, settings: None,
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            locked: false,
+            settings: None,
         });
         state.layout.widgets.push(WidgetLayout {
             id: "out-of-bounds".to_string(),
             widget_type: "notes".to_string(),
-            x: 100, y: 100, width: 4, height: 4, locked: false, settings: None,
+            x: 100,
+            y: 100,
+            width: 4,
+            height: 4,
+            locked: false,
+            settings: None,
         });
-        
+
         let sanitized = state.sanitize();
         assert_eq!(sanitized.layout.widgets.len(), 1);
         assert_eq!(sanitized.layout.widgets[0].id, "valid");
     }
-    
+
     #[test]
     fn test_sanitize_deduplicates_widget_ids() {
         let mut state = PersistedState::default();
         state.layout.widgets.push(WidgetLayout {
             id: "keep-me".to_string(),
             widget_type: "clock".to_string(),
-            x: 0, y: 0, width: 4, height: 4, locked: false, settings: None,
+            x: 0,
+            y: 0,
+            width: 4,
+            height: 4,
+            locked: false,
+            settings: None,
         });
         state.layout.widgets.push(WidgetLayout {
             id: "keep-me".to_string(),
             widget_type: "timer".to_string(),
-            x: 4, y: 0, width: 4, height: 4, locked: false, settings: None,
+            x: 4,
+            y: 0,
+            width: 4,
+            height: 4,
+            locked: false,
+            settings: None,
         });
-        
+
         let sanitized = state.sanitize();
         assert_eq!(sanitized.layout.widgets.len(), 1);
         assert_eq!(sanitized.layout.widgets[0].widget_type, "clock"); // First kept
     }
-    
+
     #[test]
     fn test_sanitize_clamps_refresh_interval() {
         let mut state = PersistedState::default();
         state.preferences.refresh_interval = 100; // Too fast
-        
+
         let sanitized = state.sanitize();
         assert_eq!(sanitized.preferences.refresh_interval, 1000);
-        
+
         state.preferences.refresh_interval = 100000; // Too slow
         let sanitized = state.sanitize();
         assert_eq!(sanitized.preferences.refresh_interval, 60000);
     }
-    
+
     #[test]
     fn test_round_trip_serialization() {
         let original = PersistedState::default();
         let json = serde_json::to_string(&original).expect("Failed to serialize");
-        let deserialized: PersistedState = serde_json::from_str(&json).expect("Failed to deserialize");
-        
+        let deserialized: PersistedState =
+            serde_json::from_str(&json).expect("Failed to deserialize");
+
         assert_eq!(original.version, deserialized.version);
-        assert_eq!(original.app_settings.is_fullscreen, deserialized.app_settings.is_fullscreen);
-        assert_eq!(original.layout.grid.columns, deserialized.layout.grid.columns);
-        assert_eq!(original.preferences.theme as u8, deserialized.preferences.theme as u8);
+        assert_eq!(
+            original.app_settings.is_fullscreen,
+            deserialized.app_settings.is_fullscreen
+        );
+        assert_eq!(
+            original.layout.grid.columns,
+            deserialized.layout.grid.columns
+        );
+        assert_eq!(
+            original.preferences.theme as u8,
+            deserialized.preferences.theme as u8
+        );
     }
 }

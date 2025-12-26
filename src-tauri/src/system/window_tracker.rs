@@ -54,7 +54,8 @@ pub fn get_active_window_info() -> Result<ActiveWindowInfo, String> {
             };
 
             // Track window focus duration
-            let mut tracker = WINDOW_TRACKER.lock()
+            let mut tracker = WINDOW_TRACKER
+                .lock()
                 .map_err(|e| format!("Failed to acquire window tracker lock: {}", e))?;
             let current_time = current_timestamp();
 

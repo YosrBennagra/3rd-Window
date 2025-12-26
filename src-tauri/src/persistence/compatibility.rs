@@ -13,16 +13,16 @@ use super::schemas::CURRENT_VERSION;
 pub enum CompatibilityStatus {
     /// Versions are fully compatible (same version)
     FullyCompatible,
-    
+
     /// Minor version difference - migration available
     MigrationAvailable,
-    
+
     /// Major version difference - migration may be lossy
     MigrationRisky,
-    
+
     /// State from future version - can't migrate backward
     FutureVersion,
-    
+
     /// Too many versions apart - migration not safe
     Incompatible,
 }
@@ -37,7 +37,7 @@ pub fn check_compatibility(state_version: u32) -> CompatibilityStatus {
     } else {
         CURRENT_VERSION - state_version
     };
-    
+
     match version_diff {
         0 => CompatibilityStatus::FullyCompatible,
         1..=2 => CompatibilityStatus::MigrationAvailable,
@@ -152,7 +152,7 @@ mod tests {
             check_compatibility(1),
             CompatibilityStatus::FullyCompatible // v1 is current
         );
-        
+
         // When we reach v10, v1 should be incompatible
         if CURRENT_VERSION >= 10 {
             assert_eq!(

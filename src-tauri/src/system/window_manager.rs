@@ -1,11 +1,13 @@
-/// Centralized Window Manager for ThirdScreen
-/// 
-/// Manages window lifecycle, identity, and coordination following multi-window
-/// management principles: centralized control, predictable lifecycle, clear identity.
-
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Position, Runtime, Size, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use std::collections::HashMap;
 use std::sync::Mutex;
+/// Centralized Window Manager for ThirdScreen
+///
+/// Manages window lifecycle, identity, and coordination following multi-window
+/// management principles: centralized control, predictable lifecycle, clear identity.
+use tauri::{
+    AppHandle, Manager, PhysicalPosition, PhysicalSize, Position, Runtime, Size, WebviewUrl,
+    WebviewWindow, WebviewWindowBuilder,
+};
 
 /// Window type identifiers
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -13,7 +15,7 @@ pub enum WindowType {
     /// Main dashboard window
     Dashboard,
     /// Desktop widget window
-    Widget(String),  // widget_id
+    Widget(String), // widget_id
     /// Widget picker/selector window
     WidgetPicker,
     /// Settings window
@@ -85,7 +87,14 @@ impl WindowConfig {
     }
 
     /// Create config for widget window
-    pub fn widget(widget_id: String, widget_type: String, width: u32, height: u32, x: i32, y: i32) -> Self {
+    pub fn widget(
+        widget_id: String,
+        widget_type: String,
+        width: u32,
+        height: u32,
+        x: i32,
+        y: i32,
+    ) -> Self {
         Self {
             window_type: WindowType::Widget(widget_id.clone()),
             title: format!("Widget: {}", widget_type),
@@ -100,7 +109,7 @@ impl WindowConfig {
             always_on_top: true,
             skip_taskbar: true,
             center: false,
-            visible: false,  // Start hidden, show after load
+            visible: false, // Start hidden, show after load
         }
     }
 
@@ -177,22 +186,24 @@ impl WindowManager {
         // Check if window already exists
         if let Some(existing) = app.get_webview_window(&label) {
             // Window exists - show but don't force focus (non-intrusive)
-            existing.show()
+            existing
+                .show()
                 .map_err(|e| format!("Failed to show existing window: {}", e))?;
-            
+
             // Only set focus if explicitly requested via config flag
             // Default behavior: window appears but doesn't steal focus
             match config.window_type {
                 WindowType::Dashboard | WindowType::Settings | WindowType::WidgetPicker => {
                     // UI windows should take focus when explicitly opened
-                    existing.set_focus()
+                    existing
+                        .set_focus()
                         .map_err(|e| format!("Failed to focus existing window: {}", e))?;
                 }
                 _ => {
                     // For widget windows, DON'T steal focus - let them appear passively
                 }
             }
-            
+
             return Ok(existing);
         }
 
@@ -203,8 +214,9 @@ impl WindowManager {
             "tauri://localhost"
         };
         let full_url = format!("{}{}", base_url, config.url);
-        
-        let parsed_url = full_url.parse()
+
+        let parsed_url = full_url
+            .parse()
             .map_err(|e| format!("Failed to parse window URL: {}", e))?;
 
         // Create new window
@@ -225,18 +237,24 @@ impl WindowManager {
             builder = builder.position(x as f64, y as f64);
         }
 
-        let window = builder.build()
+        let window = builder
+            .build()
             .map_err(|e| format!("Failed to create window: {}", e))?;
 
         // Track window
-        let mut windows = self.windows.lock()
+        let mut windows = self
+            .windows
+            .lock()
             .map_err(|e| format!("Failed to acquire window manager lock: {}", e))?;
-        
-        windows.insert(label, WindowState {
-            window_type: config.window_type.clone(),
-            created_at: std::time::Instant::now(),
-            config,
-        });
+
+        windows.insert(
+            label,
+            WindowState {
+                window_type: config.window_type.clone(),
+                created_at: std::time::Instant::now(),
+                config,
+            },
+        );
 
         Ok(window)
     }
@@ -250,12 +268,15 @@ impl WindowManager {
         let label = window_type.to_label();
 
         if let Some(window) = app.get_webview_window(&label) {
-            window.close()
+            window
+                .close()
                 .map_err(|e| format!("Failed to close window: {}", e))?;
         }
 
         // Remove from tracking
-        let mut windows = self.windows.lock()
+        let mut windows = self
+            .windows
+            .lock()
             .map_err(|e| format!("Failed to acquire window manager lock: {}", e))?;
         windows.remove(&label);
 
@@ -263,11 +284,7 @@ impl WindowManager {
     }
 
     /// Check if a window exists
-    pub fn window_exists<R: Runtime>(
-        &self,
-        app: &AppHandle<R>,
-        window_type: &WindowType,
-    ) -> bool {
+    pub fn window_exists<R: Runtime>(&self, app: &AppHandle<R>, window_type: &WindowType) -> bool {
         let label = window_type.to_label();
         app.get_webview_window(&label).is_some()
     }
@@ -290,10 +307,12 @@ impl WindowManager {
         x: i32,
         y: i32,
     ) -> Result<(), String> {
-        let window = self.get_window(app, window_type)
+        let window = self
+            .get_window(app, window_type)
             .ok_or_else(|| format!("Window not found: {:?}", window_type))?;
 
-        window.set_position(Position::Physical(PhysicalPosition { x, y }))
+        window
+            .set_position(Position::Physical(PhysicalPosition { x, y }))
             .map_err(|e| format!("Failed to set window position: {}", e))?;
 
         Ok(())
@@ -307,10 +326,12 @@ impl WindowManager {
         width: u32,
         height: u32,
     ) -> Result<(), String> {
-        let window = self.get_window(app, window_type)
+        let window = self
+            .get_window(app, window_type)
             .ok_or_else(|| format!("Window not found: {:?}", window_type))?;
 
-        window.set_size(Size::Physical(PhysicalSize { width, height }))
+        window
+            .set_size(Size::Physical(PhysicalSize { width, height }))
             .map_err(|e| format!("Failed to set window size: {}", e))?;
 
         Ok(())
@@ -322,10 +343,12 @@ impl WindowManager {
         app: &AppHandle<R>,
         window_type: &WindowType,
     ) -> Result<(), String> {
-        let window = self.get_window(app, window_type)
+        let window = self
+            .get_window(app, window_type)
             .ok_or_else(|| format!("Window not found: {:?}", window_type))?;
 
-        window.show()
+        window
+            .show()
             .map_err(|e| format!("Failed to show window: {}", e))?;
 
         Ok(())
@@ -337,10 +360,12 @@ impl WindowManager {
         app: &AppHandle<R>,
         window_type: &WindowType,
     ) -> Result<(), String> {
-        let window = self.get_window(app, window_type)
+        let window = self
+            .get_window(app, window_type)
             .ok_or_else(|| format!("Window not found: {:?}", window_type))?;
 
-        window.hide()
+        window
+            .hide()
             .map_err(|e| format!("Failed to hide window: {}", e))?;
 
         Ok(())
@@ -352,10 +377,12 @@ impl WindowManager {
         app: &AppHandle<R>,
         window_type: &WindowType,
     ) -> Result<(), String> {
-        let window = self.get_window(app, window_type)
+        let window = self
+            .get_window(app, window_type)
             .ok_or_else(|| format!("Window not found: {:?}", window_type))?;
 
-        window.set_focus()
+        window
+            .set_focus()
             .map_err(|e| format!("Failed to focus window: {}", e))?;
 
         Ok(())
@@ -364,10 +391,15 @@ impl WindowManager {
     /// Get list of active window types
     #[allow(dead_code)]
     pub fn active_windows(&self) -> Result<Vec<WindowType>, String> {
-        let windows = self.windows.lock()
+        let windows = self
+            .windows
+            .lock()
             .map_err(|e| format!("Failed to acquire window manager lock: {}", e))?;
 
-        Ok(windows.values().map(|state| state.window_type.clone()).collect())
+        Ok(windows
+            .values()
+            .map(|state| state.window_type.clone())
+            .collect())
     }
 }
 

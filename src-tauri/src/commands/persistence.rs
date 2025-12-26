@@ -5,9 +5,8 @@
 // the persistence layer modules.
 
 use crate::persistence::{
-    load_state, save_state, PersistedState, RecoveryMode,
-    migrations::apply_migrations,
-    recovery::recover_state,
+    load_state, migrations::apply_migrations, recovery::recover_state, save_state, PersistedState,
+    RecoveryMode,
 };
 use tauri::AppHandle;
 
@@ -23,7 +22,7 @@ use tauri::AppHandle;
 #[tauri::command]
 pub async fn load_persisted_state(app: AppHandle) -> Result<PersistedState, String> {
     log::info!("Loading persisted state...");
-    
+
     // Step 1: Load raw state from disk
     let raw_state = match load_state(&app) {
         Ok(state) => state,
@@ -33,7 +32,7 @@ pub async fn load_persisted_state(app: AppHandle) -> Result<PersistedState, Stri
             None
         }
     };
-    
+
     // Step 2: Apply migrations if needed
     let migrated_state = match raw_state {
         Some(state) => {
@@ -48,23 +47,29 @@ pub async fn load_persisted_state(app: AppHandle) -> Result<PersistedState, Stri
         }
         None => None,
     };
-    
+
     // Step 3: Validate and recover
     let recovery_result = recover_state(migrated_state);
-    
+
     // Log recovery details
     match recovery_result.mode {
         RecoveryMode::Clean => {
             log::info!("State loaded cleanly (v{})", recovery_result.state.version);
         }
         RecoveryMode::Sanitized => {
-            log::warn!("State sanitized ({} issue(s) fixed)", recovery_result.report.len());
+            log::warn!(
+                "State sanitized ({} issue(s) fixed)",
+                recovery_result.report.len()
+            );
             for issue in &recovery_result.report {
                 log::warn!("  - {}", issue);
             }
         }
         RecoveryMode::Partial => {
-            log::warn!("Partial recovery ({} issue(s) remain)", recovery_result.report.len());
+            log::warn!(
+                "Partial recovery ({} issue(s) remain)",
+                recovery_result.report.len()
+            );
             for issue in &recovery_result.report {
                 log::warn!("  - {}", issue);
             }
@@ -76,7 +81,7 @@ pub async fn load_persisted_state(app: AppHandle) -> Result<PersistedState, Stri
             }
         }
     }
-    
+
     Ok(recovery_result.state)
 }
 
@@ -85,25 +90,25 @@ pub async fn load_persisted_state(app: AppHandle) -> Result<PersistedState, Stri
 /// This performs atomic writes with backup, ensuring we never corrupt
 /// the state file even if the app crashes during save.
 #[tauri::command]
-pub async fn save_persisted_state(
-    app: AppHandle,
-    state: PersistedState,
-) -> Result<(), String> {
+pub async fn save_persisted_state(app: AppHandle, state: PersistedState) -> Result<(), String> {
     log::info!("Saving persisted state (v{})...", state.version);
-    
+
     // Validate before saving
     let warnings = state.validate();
     if !warnings.is_empty() {
-        log::warn!("Saving state with {} validation warning(s):", warnings.len());
+        log::warn!(
+            "Saving state with {} validation warning(s):",
+            warnings.len()
+        );
         for warning in &warnings {
             log::warn!("  - {}", warning);
         }
         // Continue anyway - validation warnings are not fatal
     }
-    
+
     // Save to disk atomically
     save_state(&app, &state)?;
-    
+
     log::info!("Persisted state saved successfully");
     Ok(())
 }
@@ -117,10 +122,10 @@ pub async fn save_persisted_state(
 #[tauri::command]
 pub async fn reset_persisted_state(app: AppHandle) -> Result<PersistedState, String> {
     log::warn!("Resetting persisted state to defaults...");
-    
+
     let default_state = PersistedState::default();
     save_state(&app, &default_state)?;
-    
+
     log::info!("State reset complete");
     Ok(default_state)
 }

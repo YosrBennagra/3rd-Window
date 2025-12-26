@@ -1,5 +1,10 @@
 # SonarCloud Setup Guide for ThirdScreen
 
+## ⚠️ Important: Job is Currently Disabled
+
+The SonarCloud job is temporarily disabled in the CI pipeline (see `.github/workflows/build.yml`).
+Follow this guide to enable it properly.
+
 ## Quick Setup (5 minutes)
 
 ### 1. Configure SonarCloud Project
@@ -46,7 +51,19 @@ Edit `.github/workflows/build.yml` and update the SonarCloud arguments:
 -Dsonar.organization=YOUR_ORG_HERE
 ```
 
-### 5. Test It
+### 5. Enable the SonarCloud Job
+
+In `.github/workflows/build.yml`, find the `sonarcloud` job and change:
+```yaml
+if: false  # Disabled until SonarCloud project is configured
+```
+to:
+```yaml
+if: true  # Enabled after SonarCloud setup complete
+```
+Or simply remove the `if` line entirely.
+
+### 6. Test It
 
 Push a commit to any branch:
 ```bash

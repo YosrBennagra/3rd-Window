@@ -1,7 +1,7 @@
+use crate::system::window_placement::WindowPlacer;
 use log::info;
 use std::process::Command;
-use tauri::{Window, AppHandle, Manager, Runtime};
-use crate::system::window_placement::WindowPlacer;
+use tauri::{AppHandle, Manager, Runtime, Window};
 
 #[tauri::command]
 pub async fn toggle_fullscreen(window: Window) -> Result<bool, String> {
@@ -27,8 +27,11 @@ pub async fn apply_fullscreen<R: Runtime>(
 ) -> Result<(), String> {
     // Determine which window to apply fullscreen to
     let window_label = target_window.unwrap_or_else(|| "main".to_string());
-    
-    info!("[window] apply_fullscreen: {} on window '{}'", fullscreen, window_label);
+
+    info!(
+        "[window] apply_fullscreen: {} on window '{}'",
+        fullscreen, window_label
+    );
 
     let window = app
         .get_webview_window(&window_label)
@@ -61,8 +64,7 @@ pub async fn move_to_monitor<R: Runtime>(
     target_window: Option<String>,
 ) -> Result<(), String> {
     // Validate input
-    crate::validation::validate_monitor_index(monitor_index)
-        .map_err(|e| e.to_string())?;
+    crate::validation::validate_monitor_index(monitor_index).map_err(|e| e.to_string())?;
 
     // Determine which window to move
     let window_label = target_window.unwrap_or_else(|| "main".to_string());
@@ -88,7 +90,10 @@ pub async fn move_to_monitor<R: Runtime>(
             let scale_factor = m.scale_factor();
             crate::ipc_types::Monitor {
                 identifier: m.name().map(|s| s.to_string()),
-                name: m.name().map(|s| s.to_string()).unwrap_or_else(|| format!("Monitor {}", idx + 1)),
+                name: m
+                    .name()
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| format!("Monitor {}", idx + 1)),
                 size: crate::ipc_types::MonitorSize {
                     width: size.width,
                     height: size.height,
@@ -105,7 +110,7 @@ pub async fn move_to_monitor<R: Runtime>(
         .collect();
 
     let placer = WindowPlacer::new(monitors);
-    
+
     // Use safe placement with relative position preservation
     let result = placer
         .move_to_monitor(&window, monitor_index, true)
@@ -113,7 +118,10 @@ pub async fn move_to_monitor<R: Runtime>(
         .map_err(|e| e.to_string())?;
 
     if result.fallback_used {
-        info!("[window] move_to_monitor -> fallback used: {:?}", result.reason);
+        info!(
+            "[window] move_to_monitor -> fallback used: {:?}",
+            result.reason
+        );
     }
 
     std::thread::sleep(std::time::Duration::from_millis(30));
@@ -153,12 +161,12 @@ pub async fn open_system_clock() -> Result<(), String> {
 
 #[tauri::command]
 pub async fn open_settings_window<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    use crate::system::{WINDOW_MANAGER, WindowConfig};
+    use crate::system::{WindowConfig, WINDOW_MANAGER};
 
     info!("[window] open_settings_window called");
 
     let config = WindowConfig::settings();
-    
+
     match WINDOW_MANAGER.create_window(&app, config) {
         Ok(_window) => {
             info!("[window] Settings window created successfully");
