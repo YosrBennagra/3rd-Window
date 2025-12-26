@@ -1,12 +1,12 @@
-import { WidgetDefinition } from '../types/widgets';
+import { WidgetDefinition } from '../domain/models/widgets';
 
 export const widgetDefinitions: WidgetDefinition[] = [
-  { id: 'notifications', title: 'Notifications', component: 'Notifications', defaultSize: { w: 3, h: 4 }, description: 'App, system, and connector notifications' },
+  // Working Widgets
   { id: 'temperature', title: 'CPU/GPU Temp', component: 'TemperatureWidget', defaultSize: { w: 3, h: 4 }, description: 'Monitor CPU and GPU temperatures' },
   { id: 'ram', title: 'RAM Usage', component: 'RamUsageWidget', defaultSize: { w: 3, h: 4 }, description: 'Memory usage statistics' },
   { id: 'disk', title: 'Disk Usage', component: 'DiskUsageWidget', defaultSize: { w: 3, h: 4 }, description: 'Storage space monitoring' },
   { id: 'network-monitor', title: 'Network Monitor', component: 'NetworkMonitorWidget', defaultSize: { w: 4, h: 5 }, description: 'Real-time network speed and data transfer statistics' },
-  { id: 'clock', title: 'Clock/Calendar', component: 'ClockCalendar', defaultSize: { w: 2, h: 2 } },
+  { id: 'clock', title: 'Clock', component: 'ClockCalendar', defaultSize: { w: 2, h: 2 }, description: 'Current time and date display' },
   { id: 'notes', title: 'Notes', component: 'NotesWidget', defaultSize: { w: 4, h: 4 }, description: 'Quick notes and todo lists' },
   { id: 'quicklinks', title: 'Quick Links', component: 'QuickLinksWidget', defaultSize: { w: 4, h: 4 }, description: 'Bookmarks and shortcuts' },
   { id: 'image', title: 'Picture', component: 'ImageWidget', defaultSize: { w: 3, h: 3 }, description: 'Display your favorite images' },
@@ -14,6 +14,30 @@ export const widgetDefinitions: WidgetDefinition[] = [
   { id: 'pdf', title: 'PDF Viewer', component: 'PDFWidget', defaultSize: { w: 6, h: 6 }, description: 'View PDF documents with zoom controls' },
   { id: 'alerts', title: 'Alerts', component: 'Alerts', defaultSize: { w: 3, h: 3 }, description: 'Threshold-based signal for critical events' },
   { id: 'activity', title: 'Activity Monitor', component: 'ActivityWidget', defaultSize: { w: 6, h: 4 }, description: 'System uptime and active window tracking' },
+  
+  // Coming Soon Widgets
+  { id: 'notifications', title: 'Notifications', component: 'Notifications', defaultSize: { w: 3, h: 4 }, description: 'Coming Soon: App, system, and connector notifications', disabled: true },
+  { id: 'calendar', title: 'Calendar/Events', component: 'Calendar', defaultSize: { w: 4, h: 5 }, description: 'Coming Soon: Event scheduling and reminders', disabled: true },
+  { id: 'github', title: 'GitHub', component: 'GitHub', defaultSize: { w: 4, h: 5 }, description: 'Coming Soon: Repository stats and notifications', disabled: true },
+  { id: 'crypto-stock', title: 'Crypto/Stock Ticker', component: 'CryptoStock', defaultSize: { w: 4, h: 3 }, description: 'Coming Soon: Real-time market prices', disabled: true },
+  { id: 'webcam', title: 'Webcam Feed', component: 'Webcam', defaultSize: { w: 4, h: 4 }, description: 'Coming Soon: Live webcam preview', disabled: true },
+  { id: 'process-monitor', title: 'Process Monitor', component: 'ProcessMonitor', defaultSize: { w: 5, h: 5 }, description: 'Coming Soon: Running processes and resource usage', disabled: true },
+  { id: 'volume-master', title: 'Volume Master', component: 'VolumeMaster', defaultSize: { w: 3, h: 4 }, description: 'Coming Soon: System audio control', disabled: true },
+  { id: 'music-player', title: 'Music Player', component: 'MusicPlayer', defaultSize: { w: 5, h: 3 }, description: 'Coming Soon: Media playback controls', disabled: true },
+  { id: 'api-tester', title: 'API Tester', component: 'APITester', defaultSize: { w: 6, h: 5 }, description: 'Coming Soon: Test and debug API requests', disabled: true },
+  { id: 'log-viewer', title: 'Log Viewer', component: 'LogViewer', defaultSize: { w: 6, h: 5 }, description: 'Coming Soon: Real-time log monitoring', disabled: true },
+  { id: 'monitoring', title: 'Monitoring', component: 'Monitoring', defaultSize: { w: 5, h: 4 }, description: 'Coming Soon: Service health monitoring', disabled: true },
+  { id: 'world-clocks', title: 'World Clocks', component: 'WorldClocks', defaultSize: { w: 4, h: 3 }, description: 'Coming Soon: Multiple timezone display', disabled: true },
+  { id: 'ai-assistant', title: 'AI Assistant', component: 'AIAssistant', defaultSize: { w: 5, h: 6 }, description: 'Coming Soon: AI-powered chat assistant', disabled: true },
+  { id: 'password-vault', title: 'Password Vault', component: 'PasswordVault', defaultSize: { w: 4, h: 5 }, description: 'Coming Soon: Secure password manager', disabled: true },
+  { id: 'secure-notes', title: 'Secure Notes', component: 'SecureNotes', defaultSize: { w: 4, h: 4 }, description: 'Coming Soon: Encrypted note storage', disabled: true },
+  { id: 'clipboard-history', title: 'Clipboard History', component: 'ClipboardHistory', defaultSize: { w: 4, h: 5 }, description: 'Coming Soon: Clipboard management', disabled: true },
+  { id: 'color-picker', title: 'Color Picker', component: 'ColorPicker', defaultSize: { w: 3, h: 4 }, description: 'Coming Soon: Screen color sampling', disabled: true },
+  { id: 'message-inbox', title: 'Message Inbox', component: 'MessageInbox', defaultSize: { w: 4, h: 5 }, description: 'Coming Soon: Unified message center', disabled: true },
+  { id: 'file-preview', title: 'File Preview', component: 'FilePreview', defaultSize: { w: 5, h: 5 }, description: 'Coming Soon: Quick file viewer', disabled: true },
+  { id: 'pinned-folders', title: 'Pinned Folders', component: 'PinnedFolders', defaultSize: { w: 4, h: 4 }, description: 'Coming Soon: Quick folder access', disabled: true },
+  { id: 'game-vault', title: 'Game Vault', component: 'GameVault', defaultSize: { w: 4, h: 5 }, description: 'Coming Soon: Game library launcher', disabled: true },
+  { id: 'battery', title: 'Battery', component: 'Battery', defaultSize: { w: 3, h: 2 }, description: 'Coming Soon: Battery status and health', disabled: true },
   { id: 'integrations', title: 'Integrations', component: 'Integrations', defaultSize: { w: 3, h: 3 }, description: 'Coming Soon: Discord, Slack, WhatsApp, Facebook, Messenger', disabled: true },
   { id: 'pipelines', title: 'Pipelines', component: 'Pipelines', defaultSize: { w: 3, h: 3 }, description: 'Coming Soon: n8n and automation health', disabled: true },
   { id: 'shortcuts', title: 'Shortcuts & Games', component: 'Shortcuts', defaultSize: { w: 3, h: 2 }, description: 'Use Quick Links widget instead', disabled: true },

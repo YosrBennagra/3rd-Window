@@ -21,6 +21,39 @@
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
 }
 
+.settings-panel--window {
+  width: 100%;
+  max-height: none;
+  height: 100%;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-panel--window .settings__header {
+  background: transparent;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.settings-panel--window .settings__tabs {
+  flex-shrink: 0;
+  padding: 0 var(--spacing-lg);
+}
+
+.settings-panel--window .settings__content {
+  flex: 1;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+  min-height: 0;
+  gap: var(--spacing-lg);
+}
+
 .settings__header {
   display: flex;
   justify-content: space-between;
@@ -43,7 +76,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-lg);
   scrollbar-width: thin;
   scrollbar-color: var(--os-border) transparent;
 }
