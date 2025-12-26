@@ -1,5 +1,5 @@
 // App launcher widget - Use QuickLinks for now
-export default function Shortcuts() {
+export function Shortcuts() {
   return (
     <div className="widget-content" style={{
       display: 'flex',

@@ -24,7 +24,7 @@ GhostWidget.displayName = 'GhostWidget';
 /**
  * Ghost follows cursor freely - looks like the actual widget being dragged
  */
-export default function GridGhost({ ghostStyle, dragInfo, widgets, widgetComponents }: Props) {
+export function GridGhost({ ghostStyle, dragInfo, widgets, widgetComponents }: Props) {
   if (!ghostStyle || !dragInfo) return null;
 
   const movingWidget = widgets.find((w) => w.id === dragInfo.id);

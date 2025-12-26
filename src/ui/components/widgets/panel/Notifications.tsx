@@ -2,7 +2,7 @@
 import { useNotifications } from '../../../../application/selectors';
 import { formatRelative } from '../../../../utils/system';
 
-export default function Notifications() {
+export function Notifications() {
   const notifications = useNotifications();
 
   if (!notifications.length) return <p className="muted">No notifications</p>;

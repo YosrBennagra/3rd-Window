@@ -5,15 +5,15 @@
  * They are arranged in a grid layout and support power saving modes.
  */
 
-export { default as Notifications } from './Notifications';
-export { default as Temperature } from './Temperature';
-export { default as RamUsage } from './RamUsage';
-export { default as DiskUsage } from './DiskUsage';
-export { default as NetworkSpeed } from './NetworkSpeed';
-export { default as ClockCalendar } from './ClockCalendar';
-export { default as Notes } from './Notes';
-export { default as Alerts } from './Alerts';
-export { default as Shortcuts } from './Shortcuts';
-export { default as Integrations } from './Integrations';
-export { default as Pipelines } from './Pipelines';
-export { default as PowerMode } from './PowerMode';
+export { Notifications } from './Notifications';
+export { Temperature } from './Temperature';
+export { RamUsage } from './RamUsage';
+export { DiskUsage } from './DiskUsage';
+export { NetworkSpeed } from './NetworkSpeed';
+export { ClockCalendar } from './ClockCalendar';
+export { Notes } from './Notes';
+export { Alerts } from './Alerts';
+export { Shortcuts } from './Shortcuts';
+export { Integrations } from './Integrations';
+export { Pipelines } from './Pipelines';
+export { PowerMode } from './PowerMode';

@@ -7,7 +7,7 @@ type Props = {
   scale?: 'small' | 'medium' | 'large';
 };
 
-export default function WidgetFrame({ title, description: _description, children, scale = 'medium' }: Props) {
+export function WidgetFrame({ title, description: _description, children, scale = 'medium' }: Props) {
   return (
     <div className={`widget-frame widget-frame--${scale}`}>
       <div className="widget-frame__header">

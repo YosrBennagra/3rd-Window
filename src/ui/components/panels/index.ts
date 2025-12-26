@@ -1,1 +1,5 @@
-export { default as AddWidgetPanel } from './AddWidgetPanel';
+/**
+ * Panel Components Barrel Export
+ */
+
+export { AddWidgetPanel } from './AddWidgetPanel';

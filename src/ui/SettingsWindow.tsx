@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { SettingsPanel } from './components/settings/SettingsPanel';
+import { SettingsPanel } from './components/settings';
 import './App.css';
 
-export default function SettingsWindow() {
+export function SettingsWindow() {
   const handleClose = () => {
     console.info('[WidgetPicker] Closing window');
     getCurrentWindow().close();

@@ -1,5 +1,5 @@
 // External API integration widget - Coming Soon
-export default function Pipelines() {
+export function Pipelines() {
   return (
     <div className="widget-content" style={{
       display: 'flex',

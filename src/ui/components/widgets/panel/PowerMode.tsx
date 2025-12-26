@@ -1,5 +1,5 @@
 // System power management widget - Coming Soon
-export default function PowerMode() {
+export function PowerMode() {
   return (
     <div className="widget-content" style={{
       display: 'flex',

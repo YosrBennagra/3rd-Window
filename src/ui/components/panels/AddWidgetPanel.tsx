@@ -319,7 +319,7 @@ const getWidgetIcon = (widgetId: string) => {
   );
 };
 
-export default function AddWidgetPanel({ onClose, onAddToGrid, onAddToDesktop, widgets, searchTerm = '', onSearchChange, isSpawning }: Props) {
+export function AddWidgetPanel({ onClose, onAddToGrid, onAddToDesktop, widgets, searchTerm = '', onSearchChange, isSpawning }: Props) {
   return (
     <>
       <div className="explorer-header" data-tauri-drag-region>

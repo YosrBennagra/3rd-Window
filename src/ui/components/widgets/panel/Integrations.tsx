@@ -1,5 +1,5 @@
 // External API integration widget - Coming Soon
-export default function Integrations() {
+export function Integrations() {
   return (
     <div className="widget-content" style={{
       display: 'flex',

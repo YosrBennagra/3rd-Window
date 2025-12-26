@@ -2,7 +2,7 @@
 import { useMetrics } from '../../../../application/selectors';
 import { formatBytes } from '../../../../utils/system';
 
-export default function DiskUsage() {
+export function DiskUsage() {
   const metrics = useMetrics();
   
   if (!metrics) {

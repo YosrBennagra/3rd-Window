@@ -5,7 +5,7 @@ import { useRenderTracking } from '../../../../utils/performanceMonitoring';
  * Performance-optimized clock using requestAnimationFrame.
  * Only updates when second changes to avoid unnecessary re-renders.
  */
-export default function ClockCalendar() {
+export function ClockCalendar() {
   // Performance tracking
   useRenderTracking('ClockCalendar');
 

@@ -60,7 +60,7 @@ export function DesktopWidgetView({ widgetId, widgetType }: DesktopWidgetViewPro
   );
 }
 
-export default function DesktopWidgetApp() {
+export function DesktopWidgetApp() {
   const [widgetId, setWidgetId] = useState<string>('');
   const [widgetType, setWidgetType] = useState<string>('');
 

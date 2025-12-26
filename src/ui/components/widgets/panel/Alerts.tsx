@@ -8,7 +8,7 @@ const severityLabel: Record<string, string> = {
   critical: 'Critical'
 };
 
-export default function Alerts() {
+export function Alerts() {
   const alerts = useAlerts();
 
   if (!alerts.length) return <p className="muted">No active alerts</p>;

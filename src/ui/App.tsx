@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../application/stores/store';
 import { useGridStore } from '../application/stores/gridStore';
-import { DraggableGrid } from './components/layout/DraggableGrid';
-import WidgetPickerWindow from './WidgetPickerWindow';
-import SettingsWindow from './SettingsWindow';
-import DesktopWidgetApp from './DesktopWidgetApp';
-import DesktopWidgetPicker from './DesktopWidgetPicker';
+import { DraggableGrid } from './components/layout';
+import { WidgetPickerWindow } from './WidgetPickerWindow';
+import { SettingsWindow } from './SettingsWindow';
+import { DesktopWidgetApp } from './DesktopWidgetApp';
+import { DesktopWidgetPicker } from './DesktopWidgetPicker';
 import { initializeWidgetSystem } from '../domain/init/widgetSystem';
 import { initMonitorEventHandling, stopMonitorEventHandling } from '../application/services/monitorEvents';
 import './App.css';
@@ -27,7 +27,7 @@ import './App.css';
 // Initialize widget system once (module-level)
 let widgetSystemInitialized = false;
 
-export default function App() {
+export function App() {
   // React 18 Best Practice: Use Zustand selectors
   const loadSettings = useStore((state) => state.loadSettings);
   const loadMonitors = useStore((state) => state.loadMonitors);

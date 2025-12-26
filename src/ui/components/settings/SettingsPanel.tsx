@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../../../application/stores/store';
 import { shallow } from 'zustand/shallow';
 import type { Monitor } from '../../../domain/models/system';
-import AdvancedSettings from '../AdvancedSettings';
+import { AdvancedSettings } from './AdvancedSettings';
 
 /**
  * SettingsPanel Component (React 18 Best Practice)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { enableContextMenu, disableContextMenu, checkContextMenuInstalled } from '../../infrastructure/ipc/context-menu';
+import { enableContextMenu, disableContextMenu, checkContextMenuInstalled } from '../../../infrastructure/ipc/context-menu';
 
-export default function AdvancedSettings() {
+export function AdvancedSettings() {
   const [contextMenuEnabled, setContextMenuEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,2 +1,7 @@
+/**
+ * UI Primitives Barrel Export
+ */
+
 export { ContextMenu } from './ContextMenu';
-export { default as SplitView } from './SplitView';
+export { SplitView } from './SplitView';
+export { GridContextMenu } from './GridContextMenu';

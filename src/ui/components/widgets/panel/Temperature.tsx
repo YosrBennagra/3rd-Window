@@ -1,7 +1,7 @@
 
 import { useMetrics } from '../../../../application/selectors';
 
-export default function Temperature() {
+export function Temperature() {
   const metrics = useMetrics();
   
   if (!metrics) {

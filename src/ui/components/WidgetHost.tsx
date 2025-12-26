@@ -1,17 +1,19 @@
-import WidgetFrame from './WidgetFrame';
+import { WidgetFrame } from './WidgetFrame';
 import { widgetDefinitions } from '../../config/widgets';
-import Notifications from './widgets/panel/Notifications';
-import Temperature from './widgets/panel/Temperature';
-import RamUsage from './widgets/panel/RamUsage';
-import DiskUsage from './widgets/panel/DiskUsage';
-import NetworkSpeed from './widgets/panel/NetworkSpeed';
-import ClockCalendar from './widgets/panel/ClockCalendar';
-import Notes from './widgets/panel/Notes';
-import Alerts from './widgets/panel/Alerts';
-import Shortcuts from './widgets/panel/Shortcuts';
-import Integrations from './widgets/panel/Integrations';
-import Pipelines from './widgets/panel/Pipelines';
-import PowerMode from './widgets/panel/PowerMode';
+import {
+  Notifications,
+  Temperature,
+  RamUsage,
+  DiskUsage,
+  NetworkSpeed,
+  ClockCalendar,
+  Notes,
+  Alerts,
+  Shortcuts,
+  Integrations,
+  Pipelines,
+  PowerMode
+} from './widgets/panel';
 import { useAppStore } from '../../application/store';
 
 const widgetMap: Record<string, React.ComponentType> = {
@@ -29,7 +31,7 @@ const widgetMap: Record<string, React.ComponentType> = {
   PowerMode
 };
 
-export default function WidgetHost() {
+export function WidgetHost() {
   const powerSaving = useAppStore((s) => s.powerSaving);
   const visibleInPowerSaving = useAppStore((s) => s.powerSavingVisible);
   const widgetVisibility = useAppStore((s) => s.widgetVisibility);

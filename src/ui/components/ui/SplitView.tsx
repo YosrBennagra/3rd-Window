@@ -9,7 +9,7 @@ interface SplitViewProps {
   onSplitChange?: (percent: number) => void;
 }
 
-export default function SplitView({
+export function SplitView({
   children,
   initialSplit = 20,
   minSize = 50,

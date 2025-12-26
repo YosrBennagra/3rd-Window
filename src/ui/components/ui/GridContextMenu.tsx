@@ -26,7 +26,7 @@ interface Props {
   isFullscreen?: boolean;
 }
 
-export default function GridContextMenu({ menu, onClose, onAction, isAdjustGridMode, isFullscreen = false }: Props) {
+export function GridContextMenu({ menu, onClose, onAction, isAdjustGridMode, isFullscreen = false }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: -9999, top: -9999 });
 

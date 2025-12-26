@@ -19,7 +19,7 @@ interface Props {
   isResizing?: boolean;
 }
 
-function GridWidgetItem({
+function GridWidgetItemComponent({
   widget,
   WidgetComponent,
   handleWidgetPointerDown,
@@ -106,4 +106,4 @@ function GridWidgetItem({
   );
 }
 
-export default memo(GridWidgetItem);
+export const GridWidgetItem = memo(GridWidgetItemComponent);

@@ -9,7 +9,7 @@ interface Props {
   isResizing?: boolean;
 }
 
-export default function GridCells({ grid, highlight, debugGrid, isBlocked, isDragging, isResizing }: Props) {
+export function GridCells({ grid, highlight, debugGrid, isBlocked, isDragging, isResizing }: Props) {
   const cells: React.ReactNode[] = [];
 
   const isHighlighted = (col: number, row: number) => {

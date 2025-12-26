@@ -54,7 +54,7 @@ const WIDGET_OPTIONS: WidgetOption[] = [
   },
 ];
 
-export default function DesktopWidgetPicker() {
+export function DesktopWidgetPicker() {
   const [spawning, setSpawning] = useState(false);
 
   const handleAddWidget = async (widget: WidgetOption) => {

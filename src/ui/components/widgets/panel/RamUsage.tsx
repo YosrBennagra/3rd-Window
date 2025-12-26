@@ -2,7 +2,7 @@
 import { useMetrics } from '../../../../application/selectors';
 import { formatBytes } from '../../../../utils/system';
 
-export default function RamUsage() {
+export function RamUsage() {
   const metrics = useMetrics();
   
   if (!metrics) {

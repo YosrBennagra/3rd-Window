@@ -1,7 +1,7 @@
 
 import { useMetrics } from '../../../../application/selectors';
 
-export default function NetworkSpeed() {
+export function NetworkSpeed() {
   const metrics = useMetrics();
   
   if (!metrics) {
