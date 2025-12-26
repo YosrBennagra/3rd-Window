@@ -116,11 +116,7 @@ pub async fn get_system_temps() -> Result<SystemTemps, String> {
         available_sensors.push(format!("Simulated GPU: {:.1}°C", gpu_temp));
     }
 
-    log::info!(
-        "[sensors] CPU={:.1}°C, GPU={:.1}°C",
-        cpu_temp.unwrap_or(0.0),
-        gpu_temp
-    );
+    log::info!("[sensors] CPU={:.1}°C, GPU={:.1}°C", cpu_temp.unwrap_or(0.0), gpu_temp);
 
     Ok(SystemTemps { cpu_temp, gpu_temp: Some(gpu_temp), cpu_usage, available_sensors })
 }
