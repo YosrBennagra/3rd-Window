@@ -132,7 +132,7 @@ pub fn is_recovery_acceptable(result: &RecoveryResult) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::persistence::schemas::{GridConfig, WidgetLayout};
+    use crate::persistence::schemas::WidgetLayout;
 
     #[test]
     fn test_recover_none_gives_reset() {

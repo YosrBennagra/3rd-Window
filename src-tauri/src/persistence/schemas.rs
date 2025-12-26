@@ -51,7 +51,7 @@ impl Default for PersistedState {
 ///
 /// This controls window behavior, monitor selection, and fullscreen state.
 /// Changes here require careful validation to avoid invalid window states.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettingsV1 {
     /// Whether the app is in fullscreen mode
@@ -65,17 +65,6 @@ pub struct AppSettingsV1 {
 
     /// Last known window position (for non-fullscreen restoration)
     pub window_position: Option<WindowPosition>,
-}
-
-impl Default for AppSettingsV1 {
-    fn default() -> Self {
-        Self {
-            is_fullscreen: false,
-            selected_monitor: 0,
-            always_on_top: false,
-            window_position: None,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -468,6 +457,7 @@ mod tests {
         let sanitized = state.sanitize();
         assert_eq!(sanitized.preferences.refresh_interval, 1000);
 
+        let mut state = PersistedState::default();
         state.preferences.refresh_interval = 100000; // Too slow
         let sanitized = state.sanitize();
         assert_eq!(sanitized.preferences.refresh_interval, 60000);

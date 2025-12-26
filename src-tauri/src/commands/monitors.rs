@@ -186,8 +186,10 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
     let mut adapter_index = 0;
 
     loop {
-        let mut adapter = DISPLAY_DEVICEW::default();
-        adapter.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
+        let mut adapter = DISPLAY_DEVICEW {
+            cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
+            ..Default::default()
+        };
 
         // SAFETY: EnumDisplayDevicesW is safe when passed a properly initialized DISPLAY_DEVICEW
         // struct with correct cb size. PCWSTR::null() is a valid parameter for enumerating adapters.
@@ -208,8 +210,10 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
 
         let mut monitor_index = 0;
         loop {
-            let mut monitor = DISPLAY_DEVICEW::default();
-            monitor.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
+            let mut monitor = DISPLAY_DEVICEW {
+                cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
+                ..Default::default()
+            };
 
             // SAFETY: EnumDisplayDevicesW is safe when passed a valid adapter PCWSTR and properly
             // initialized DISPLAY_DEVICEW struct. adapter_ptr is derived from adapter.DeviceName.

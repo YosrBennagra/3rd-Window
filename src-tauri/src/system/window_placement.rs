@@ -84,8 +84,8 @@ impl WindowPlacer {
         let rel_y = relative_y.unwrap_or(0.05); // Default: 5% from top
 
         // Clamp to 0.0-1.0 range
-        let clamped_x = rel_x.max(0.0).min(1.0);
-        let clamped_y = rel_y.max(0.0).min(1.0);
+        let clamped_x = rel_x.clamp(0.0, 1.0);
+        let clamped_y = rel_y.clamp(0.0, 1.0);
 
         PhysicalPosition {
             x: monitor.position.x + (monitor.size.width as f64 * clamped_x) as i32,
@@ -257,6 +257,7 @@ impl WindowPlacer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{MonitorPosition, MonitorSize};
 
     fn create_test_monitor(index: usize, is_primary: bool) -> Monitor {
         Monitor {

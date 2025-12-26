@@ -75,7 +75,7 @@ pub fn cleanup_all_registry_keys() -> Result<(), io::Error> {
     } else {
         let error_msg = errors.join(", ");
         eprintln!("[Registry] ✗ Some errors occurred during cleanup: {}", error_msg);
-        Err(io::Error::new(io::ErrorKind::Other, error_msg))
+        Err(io::Error::other(error_msg))
     }
 }
 

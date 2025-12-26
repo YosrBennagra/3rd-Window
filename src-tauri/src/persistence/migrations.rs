@@ -147,8 +147,10 @@ mod tests {
 
     #[test]
     fn test_future_version_doesnt_error() {
-        let mut state = PersistedState::default();
-        state.version = CURRENT_VERSION + 10; // From the future
+        let state = PersistedState {
+            version: CURRENT_VERSION + 10, // From the future
+            ..Default::default()
+        };
 
         let result = apply_migrations(state);
         assert!(result.is_ok(), "Should not error on future version");

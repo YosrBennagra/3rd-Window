@@ -214,7 +214,7 @@ pub fn run() {
             }
 
             // Initialize system tray
-            system::create_tray(&app.handle())?;
+            system::create_tray(app.handle())?;
 
             // Register deep link protocol handler
             #[cfg(desktop)]
@@ -245,7 +245,7 @@ pub fn run() {
                 println!("[SETUP] ✓ Deep link listener registered");
                 // Initialize monitor hot-plug tracking
                 println!("[SETUP] Initializing monitor tracking");
-                init_monitor_tracking(&app.handle());
+                init_monitor_tracking(app.handle());
                 println!("[SETUP] ✓ Monitor tracking started");
             }
 

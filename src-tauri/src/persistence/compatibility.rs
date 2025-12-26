@@ -113,7 +113,7 @@ pub const MIN_SUPPORTED_VERSION: u32 = 1;
 /// Check if version is supported
 #[allow(dead_code)]
 pub fn is_version_supported(state_version: u32) -> bool {
-    state_version >= MIN_SUPPORTED_VERSION && state_version <= CURRENT_VERSION + 5
+    (MIN_SUPPORTED_VERSION..=CURRENT_VERSION + 5).contains(&state_version)
 }
 
 #[cfg(test)]
