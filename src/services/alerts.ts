@@ -6,7 +6,7 @@ export function evaluateAlerts(
   rules: AlertRule[] = []
 ): AlertItem[] {
   const alerts: AlertItem[] = [];
-  const now = Date.now();
+  const now = new Date();
 
   // Evaluate custom rules
   for (const rule of rules) {
@@ -26,7 +26,8 @@ export function evaluateAlerts(
         severity: rule.severity,
         title: `${rule.metric} threshold exceeded`,
         message: `${rule.metric} is ${value.toFixed(1)} (${rule.operator} ${rule.threshold})`,
-        createdAt: now
+        timestamp: new Date(),
+        createdAt: new Date()
       });
     }
   }
@@ -39,6 +40,7 @@ export function evaluateAlerts(
         severity: 'critical',
         title: 'CPU temperature high',
         message: `CPU at ${metrics.cpuTempC.toFixed(1)}°C`,
+        timestamp: now,
         createdAt: now
       });
     } else if (metrics.cpuTempC > 72) {
@@ -47,6 +49,7 @@ export function evaluateAlerts(
         severity: 'warning',
         title: 'CPU temperature elevated',
         message: `CPU at ${metrics.cpuTempC.toFixed(1)}°C`,
+        timestamp: now,
         createdAt: now
       });
     }
@@ -57,7 +60,8 @@ export function evaluateAlerts(
         severity: 'warning',
         title: 'GPU temperature elevated',
         message: `GPU at ${metrics.gpuTempC.toFixed(1)}°C`,
-      createdAt: now
+        timestamp: now,
+        createdAt: now
       });
     }
 
@@ -68,6 +72,7 @@ export function evaluateAlerts(
         severity: 'warning',
         title: 'RAM pressure',
         message: `RAM at ${ramPct.toFixed(0)}%`,
+        timestamp: now,
         createdAt: now
       });
     }
@@ -79,6 +84,7 @@ export function evaluateAlerts(
         severity: 'info',
         title: 'Disk filling up',
         message: `Disk at ${diskPct.toFixed(0)}%`,
+        timestamp: now,
         createdAt: now
       });
     }
@@ -89,6 +95,7 @@ export function evaluateAlerts(
         severity: 'warning',
         title: 'Slow download',
         message: `${metrics.netDownMbps.toFixed(1)} Mbps down`,
+        timestamp: now,
         createdAt: now
       });
     }

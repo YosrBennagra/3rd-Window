@@ -1,0 +1,8 @@
+      {/* Exit Fullscreen */}
+      <button
+        className="grid-context-menu__item"
+        onClick={() => handleItemClick('exit-fullscreen')}
+      >
+        <span className="grid-context-menu__icon">ƒ>ô</span>
+        Exit Fullscreen
+      </button>

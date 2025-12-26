@@ -1,0 +1,44 @@
+:root {
+  /* Productivity OS-Like Color System */
+  --os-bg-primary: #1e1e1e;
+  --os-bg-secondary: #252525;
+  --os-bg-tertiary: #2d2d2d;
+  --os-surface: #2a2a2a;
+  --os-surface-raised: #323232;
+  --os-surface-hover: #333333;
+  --os-border: #3f3f3f;
+  --os-border-subtle: #333333;
+  --os-border-hover: #4f4f4f;
+  --os-text-primary: #e4e4e4;
+  --os-text-secondary: #a8a8a8;
+  --os-text-tertiary: #808080;
+  --os-text-disabled: #6e6e6e;
+  --os-accent: #e4e4e4;
+  --os-accent-hover: #ffffff;
+  --os-accent-pressed: #cccccc;
+  --os-danger: #e81123;
+  --os-danger-hover: #f1343e;
+  --os-focus: #e4e4e4;
+  
+  /* Spacing System */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  
+  /* Border Radius */
+  --radius: 4px;
+  
+  /* Typography Scale */
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-base: 13px;
+  --font-md: 14px;
+  --font-lg: 16px;
+  --font-xl: 20px;
+  
+  /* Transitions */
+  --transition-fast: 100ms ease;
+  --transition-base: 150ms ease;
+}

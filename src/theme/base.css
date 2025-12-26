@@ -1,0 +1,30 @@
+/* Global Drag Disable */
+* {
+  -webkit-app-region: no-drag;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--os-bg-primary);
+  color: var(--os-text-primary);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  font-size: var(--font-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  background: var(--os-bg-primary);
+}
