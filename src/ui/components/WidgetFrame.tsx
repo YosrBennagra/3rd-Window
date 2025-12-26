@@ -1,5 +1,23 @@
 import { ReactNode } from 'react';
 
+/**
+ * WidgetFrame Component
+ * 
+ * Wrapper component for panel widgets providing consistent styling and layout.
+ * Used by WidgetHost to render dashboard widgets with title and content area.
+ * 
+ * @param title - Display title for the widget
+ * @param description - Optional description (currently unused)
+ * @param children - Widget content to render
+ * @param scale - Size scale: 'small', 'medium', or 'large'
+ * 
+ * @example
+ * ```tsx
+ * <WidgetFrame title="CPU Temperature" scale="medium">
+ *   <TemperatureWidget />
+ * </WidgetFrame>
+ * ```
+ */
 type Props = { 
   title: string; 
   description?: string; 

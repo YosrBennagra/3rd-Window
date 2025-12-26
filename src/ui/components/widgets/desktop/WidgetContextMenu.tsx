@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { IpcService } from '../../services/ipc';
+import { IpcService } from '../../../../services/ipc';
 import './WidgetContextMenu.css';
 
 interface ContextMenuProps {

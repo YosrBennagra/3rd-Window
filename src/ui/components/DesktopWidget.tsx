@@ -2,9 +2,33 @@ import { useEffect, useState, useRef } from 'react';
 import { updateWidgetPosition } from '../../infrastructure/ipc/desktop-widgets';
 import { IpcService } from '../../services/ipc';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { WidgetContextMenu } from './WidgetContextMenu';
+import { WidgetContextMenu } from './widgets/desktop/WidgetContextMenu';
 import './DesktopWidget.css';
 
+/**
+ * DesktopWidget Component
+ * 
+ * Wrapper for floating desktop widgets that run in separate Tauri windows.
+ * Provides drag functionality, control buttons, and context menu.
+ * 
+ * Features:
+ * - Window dragging via mouse
+ * - Hover controls (close, settings)
+ * - Right-click context menu
+ * - Always-on-top support
+ * - Opacity control
+ * 
+ * @param widgetId - Unique identifier for this widget instance
+ * @param widgetType - Type of widget (e.g., 'clock', 'temperature')
+ * @param children - The actual widget component to render
+ * 
+ * @example
+ * ```tsx
+ * <DesktopWidget widgetId="clock-1" widgetType="clock">
+ *   <ClockWidget widget={widgetLayout} />
+ * </DesktopWidget>
+ * ```
+ */
 interface DesktopWidgetProps {
   widgetId: string;
   widgetType: string;

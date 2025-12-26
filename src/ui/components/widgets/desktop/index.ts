@@ -18,3 +18,4 @@ export { TemperatureWidget } from './TemperatureWidget';
 export { RamUsageWidget } from './RamUsageWidget';
 export { DiskUsageWidget } from './DiskUsageWidget';
 export { PDFWidget } from './PDFWidget';
+export { WidgetContextMenu } from './WidgetContextMenu';

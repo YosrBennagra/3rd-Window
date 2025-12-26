@@ -25,7 +25,6 @@ export { GridContextMenu } from './ui/GridContextMenu';
 
 // Desktop widget components
 export { DesktopWidget } from './DesktopWidget';
-export { WidgetContextMenu } from './WidgetContextMenu';
 
 // Panel widget wrapper
 export { WidgetFrame } from './WidgetFrame';

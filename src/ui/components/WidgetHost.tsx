@@ -16,6 +16,28 @@ import {
 } from './widgets/panel';
 import { useAppStore } from '../../application/store';
 
+/**
+ * WidgetHost Component
+ * 
+ * Main container for panel widgets in the dashboard.
+ * Manages widget visibility, ordering, power saving mode, and scaling.
+ * 
+ * Features:
+ * - Dynamic widget loading based on user configuration
+ * - Power saving mode filtering
+ * - Customizable widget order
+ * - Per-widget scaling
+ * - Empty state display
+ * 
+ * Widget Mapping:
+ * Maps widget IDs from configuration to their component implementations.
+ * Add new panel widgets here and to the widgetMap.
+ * 
+ * @example
+ * ```tsx
+ * <WidgetHost /> // Automatically renders configured widgets
+ * ```
+ */
 const widgetMap: Record<string, React.ComponentType> = {
   Notifications,
   Temperature,
