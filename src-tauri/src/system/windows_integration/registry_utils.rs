@@ -47,20 +47,16 @@ pub fn cleanup_all_registry_keys() -> Result<(), io::Error> {
     }
 
     // Remove context menu (classic)
-    if let Err(e) = remove_key(
-        &hkcu,
-        r"Software\Classes\DesktopBackground\Shell\ThirdScreen",
-    ) {
+    if let Err(e) = remove_key(&hkcu, r"Software\Classes\DesktopBackground\Shell\ThirdScreen") {
         if e.kind() != io::ErrorKind::NotFound {
             errors.push(format!("Classic context menu: {}", e));
         }
     }
 
     // Remove context menu (modern handler)
-    if let Err(e) = remove_key(
-        &hkcu,
-        r"Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}",
-    ) {
+    if let Err(e) =
+        remove_key(&hkcu, r"Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}")
+    {
         if e.kind() != io::ErrorKind::NotFound {
             errors.push(format!("Modern context menu handler: {}", e));
         }
@@ -78,10 +74,7 @@ pub fn cleanup_all_registry_keys() -> Result<(), io::Error> {
         Ok(())
     } else {
         let error_msg = errors.join(", ");
-        eprintln!(
-            "[Registry] ✗ Some errors occurred during cleanup: {}",
-            error_msg
-        );
+        eprintln!("[Registry] ✗ Some errors occurred during cleanup: {}", error_msg);
         Err(io::Error::new(io::ErrorKind::Other, error_msg))
     }
 }
@@ -96,14 +89,8 @@ pub fn has_registry_keys() -> bool {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
 
     key_exists(&hkcu, r"Software\Classes\thirdscreen")
-        || key_exists(
-            &hkcu,
-            r"Software\Classes\DesktopBackground\Shell\ThirdScreen",
-        )
-        || key_exists(
-            &hkcu,
-            r"Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}",
-        )
+        || key_exists(&hkcu, r"Software\Classes\DesktopBackground\Shell\ThirdScreen")
+        || key_exists(&hkcu, r"Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}")
         || startup_entry_exists(&hkcu)
 }
 
@@ -121,27 +108,18 @@ pub fn list_registry_keys() -> Vec<String> {
         keys.push(r"HKCU:\Software\Classes\thirdscreen".to_string());
     }
 
-    if key_exists(
-        &hkcu,
-        r"Software\Classes\DesktopBackground\Shell\ThirdScreen",
-    ) {
+    if key_exists(&hkcu, r"Software\Classes\DesktopBackground\Shell\ThirdScreen") {
         keys.push(r"HKCU:\Software\Classes\DesktopBackground\Shell\ThirdScreen".to_string());
     }
 
-    if key_exists(
-        &hkcu,
-        r"Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}",
-    ) {
+    if key_exists(&hkcu, r"Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}") {
         keys.push(
             r"HKCU:\Software\Classes\CLSID\{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}".to_string(),
         );
     }
 
     if startup_entry_exists(&hkcu) {
-        keys.push(format!(
-            r"HKCU:\Software\Microsoft\Windows\CurrentVersion\Run\{}",
-            APP_NAME
-        ));
+        keys.push(format!(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\Run\{}", APP_NAME));
     }
 
     keys
@@ -168,9 +146,7 @@ pub fn validate_key_path(path: &str) -> bool {
         r"Software\Microsoft\Windows\CurrentVersion\Run",
     ];
 
-    allowed_prefixes
-        .iter()
-        .any(|prefix| path.starts_with(prefix))
+    allowed_prefixes.iter().any(|prefix| path.starts_with(prefix))
 }
 
 // ============================================================================
@@ -187,7 +163,7 @@ fn remove_key(hkcu: &RegKey, path: &str) -> Result<(), io::Error> {
         Ok(_) => {
             println!("[Registry] ✓ Removed: {}", path);
             Ok(())
-        }
+        },
         Err(e) => {
             if e.kind() == io::ErrorKind::NotFound {
                 println!("[Registry] ℹ Key not found: {}", path);
@@ -195,7 +171,7 @@ fn remove_key(hkcu: &RegKey, path: &str) -> Result<(), io::Error> {
                 eprintln!("[Registry] ✗ Failed to remove {}: {}", path, e);
             }
             Err(e)
-        }
+        },
     }
 }
 
@@ -245,12 +221,8 @@ mod tests {
         // Valid paths
         assert!(validate_key_path(r"Software\Classes\thirdscreen"));
         assert!(validate_key_path(r"Software\Classes\thirdscreen\shell"));
-        assert!(validate_key_path(
-            r"Software\Classes\DesktopBackground\Shell\ThirdScreen"
-        ));
-        assert!(validate_key_path(
-            r"Software\Microsoft\Windows\CurrentVersion\Run"
-        ));
+        assert!(validate_key_path(r"Software\Classes\DesktopBackground\Shell\ThirdScreen"));
+        assert!(validate_key_path(r"Software\Microsoft\Windows\CurrentVersion\Run"));
 
         // Invalid paths
         assert!(!validate_key_path(r"Software\Classes\otherapp"));

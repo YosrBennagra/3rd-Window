@@ -106,13 +106,7 @@ pub struct LayoutStateV1 {
 
 impl Default for LayoutStateV1 {
     fn default() -> Self {
-        Self {
-            grid: GridConfig {
-                columns: 24,
-                rows: 12,
-            },
-            widgets: vec![],
-        }
+        Self { grid: GridConfig { columns: 24, rows: 12 }, widgets: vec![] }
     }
 }
 
@@ -274,10 +268,8 @@ impl PersistedState {
             }
 
             if widget.width == 0 || widget.height == 0 {
-                warnings.push(format!(
-                    "Widget '{}' ({}) has zero size",
-                    widget.id, widget.widget_type
-                ));
+                warnings
+                    .push(format!("Widget '{}' ({}) has zero size", widget.id, widget.widget_type));
             }
         }
 
@@ -320,9 +312,7 @@ impl PersistedState {
 
         // Deduplicate widget IDs (keep first occurrence)
         let mut seen_ids = std::collections::HashSet::new();
-        self.layout
-            .widgets
-            .retain(|w| seen_ids.insert(w.id.clone()));
+        self.layout.widgets.retain(|w| seen_ids.insert(w.id.clone()));
 
         // Clamp refresh interval to reasonable range (1s - 60s)
         self.preferences.refresh_interval = self.preferences.refresh_interval.clamp(1000, 60000);
@@ -488,25 +478,16 @@ mod tests {
         let original = PersistedState::default();
         let json_result = serde_json::to_string(&original);
         assert!(json_result.is_ok(), "Serialization should succeed");
-        
+
         let json = json_result.expect("Checked in previous assertion");
         let deserialize_result = serde_json::from_str::<PersistedState>(&json);
         assert!(deserialize_result.is_ok(), "Deserialization should succeed");
-        
+
         let deserialized = deserialize_result.expect("Checked in previous assertion");
 
         assert_eq!(original.version, deserialized.version);
-        assert_eq!(
-            original.app_settings.is_fullscreen,
-            deserialized.app_settings.is_fullscreen
-        );
-        assert_eq!(
-            original.layout.grid.columns,
-            deserialized.layout.grid.columns
-        );
-        assert_eq!(
-            original.preferences.theme as u8,
-            deserialized.preferences.theme as u8
-        );
+        assert_eq!(original.app_settings.is_fullscreen, deserialized.app_settings.is_fullscreen);
+        assert_eq!(original.layout.grid.columns, deserialized.layout.grid.columns);
+        assert_eq!(original.preferences.theme as u8, deserialized.preferences.theme as u8);
     }
 }

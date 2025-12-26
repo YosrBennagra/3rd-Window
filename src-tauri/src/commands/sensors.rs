@@ -80,7 +80,7 @@ fn get_wmi_temps() -> (Option<f32>, Vec<String>) {
                     }
                 }
             }
-        }
+        },
         Err(e) => log::info!("[sensors] COM library error: {}", e),
     }
 
@@ -122,10 +122,5 @@ pub async fn get_system_temps() -> Result<SystemTemps, String> {
         gpu_temp.unwrap_or(0.0)
     );
 
-    Ok(SystemTemps {
-        cpu_temp,
-        gpu_temp,
-        cpu_usage,
-        available_sensors,
-    })
+    Ok(SystemTemps { cpu_temp, gpu_temp, cpu_usage, available_sensors })
 }

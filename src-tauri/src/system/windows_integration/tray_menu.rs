@@ -133,7 +133,7 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: tauri::menu::MenuEve
         "add_network" => spawn_desktop_widget(app, "network-monitor"),
         id => {
             eprintln!("[SystemTray] Unknown menu action: {}", id);
-        }
+        },
     }
 }
 

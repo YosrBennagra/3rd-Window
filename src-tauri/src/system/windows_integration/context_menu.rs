@@ -79,7 +79,7 @@ pub fn uninstall() -> Result<(), io::Error> {
             Ok(_) => println!("[ContextMenu] ✓ Removed classic menu"),
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
                 println!("[ContextMenu] ℹ Classic menu not found (already removed)")
-            }
+            },
             Err(e) => eprintln!("[ContextMenu] ✗ Failed to remove classic menu: {}", e),
         }
     }
@@ -90,7 +90,7 @@ pub fn uninstall() -> Result<(), io::Error> {
         Ok(_) => println!("[ContextMenu] ✓ Removed modern handler"),
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
             println!("[ContextMenu] ℹ Modern handler not found (already removed)")
-        }
+        },
         Err(e) => eprintln!("[ContextMenu] ✗ Failed to remove modern handler: {}", e),
     }
 

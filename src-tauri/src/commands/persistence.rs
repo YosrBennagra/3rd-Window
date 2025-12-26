@@ -30,7 +30,7 @@ pub async fn load_persisted_state(app: AppHandle) -> Result<PersistedState, Stri
             log::error!("Failed to load state file: {}", e);
             // Treat as if no state exists - recovery will use defaults
             None
-        }
+        },
     };
 
     // Step 2: Apply migrations if needed
@@ -42,9 +42,9 @@ pub async fn load_persisted_state(app: AppHandle) -> Result<PersistedState, Stri
                     log::error!("Migration failed: {}", e);
                     // Treat as corrupted - recovery will handle
                     None
-                }
+                },
             }
-        }
+        },
         None => None,
     };
 
@@ -55,31 +55,25 @@ pub async fn load_persisted_state(app: AppHandle) -> Result<PersistedState, Stri
     match recovery_result.mode {
         RecoveryMode::Clean => {
             log::info!("State loaded cleanly (v{})", recovery_result.state.version);
-        }
+        },
         RecoveryMode::Sanitized => {
-            log::warn!(
-                "State sanitized ({} issue(s) fixed)",
-                recovery_result.report.len()
-            );
+            log::warn!("State sanitized ({} issue(s) fixed)", recovery_result.report.len());
             for issue in &recovery_result.report {
                 log::warn!("  - {}", issue);
             }
-        }
+        },
         RecoveryMode::Partial => {
-            log::warn!(
-                "Partial recovery ({} issue(s) remain)",
-                recovery_result.report.len()
-            );
+            log::warn!("Partial recovery ({} issue(s) remain)", recovery_result.report.len());
             for issue in &recovery_result.report {
                 log::warn!("  - {}", issue);
             }
-        }
+        },
         RecoveryMode::Reset => {
             log::warn!("State reset to defaults");
             for reason in &recovery_result.report {
                 log::warn!("  - {}", reason);
             }
-        }
+        },
     }
 
     Ok(recovery_result.state)
@@ -96,10 +90,7 @@ pub async fn save_persisted_state(app: AppHandle, state: PersistedState) -> Resu
     // Validate before saving
     let warnings = state.validate();
     if !warnings.is_empty() {
-        log::warn!(
-            "Saving state with {} validation warning(s):",
-            warnings.len()
-        );
+        log::warn!("Saving state with {} validation warning(s):", warnings.len());
         for warning in &warnings {
             log::warn!("  - {}", warning);
         }

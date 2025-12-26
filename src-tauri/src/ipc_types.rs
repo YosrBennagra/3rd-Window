@@ -18,10 +18,7 @@ pub struct AppSettings {
 
 impl Default for AppSettings {
     fn default() -> Self {
-        Self {
-            is_fullscreen: false,
-            selected_monitor: 0,
-        }
+        Self { is_fullscreen: false, selected_monitor: 0 }
     }
 }
 

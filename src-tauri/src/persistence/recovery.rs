@@ -43,29 +43,17 @@ pub struct RecoveryResult {
 impl RecoveryResult {
     /// Creates a clean recovery (no issues)
     pub fn clean(state: PersistedState) -> Self {
-        Self {
-            state,
-            mode: RecoveryMode::Clean,
-            report: vec![],
-        }
+        Self { state, mode: RecoveryMode::Clean, report: vec![] }
     }
 
     /// Creates a sanitized recovery (minor fixes applied)
     pub fn sanitized(state: PersistedState, issues: Vec<String>) -> Self {
-        Self {
-            state,
-            mode: RecoveryMode::Sanitized,
-            report: issues,
-        }
+        Self { state, mode: RecoveryMode::Sanitized, report: issues }
     }
 
     /// Creates a partial recovery (some data lost)
     pub fn partial(state: PersistedState, issues: Vec<String>) -> Self {
-        Self {
-            state,
-            mode: RecoveryMode::Partial,
-            report: issues,
-        }
+        Self { state, mode: RecoveryMode::Partial, report: issues }
     }
 
     /// Creates a reset recovery (full reset to defaults)
@@ -90,7 +78,7 @@ pub fn recover_state(state: Option<PersistedState>) -> RecoveryResult {
             // No state file - first run
             log::info!("No persisted state found, using defaults (first run)");
             RecoveryResult::reset("No previous state (first run)".to_string())
-        }
+        },
         Some(state) => {
             // Validate the loaded state
             let warnings = state.validate();
@@ -119,7 +107,7 @@ pub fn recover_state(state: Option<PersistedState>) -> RecoveryResult {
                     RecoveryResult::partial(sanitized, post_warnings)
                 }
             }
-        }
+        },
     }
 }
 
@@ -136,7 +124,7 @@ pub fn is_recovery_acceptable(result: &RecoveryResult) -> bool {
             // Partial recovery is acceptable if critical data is intact
             // Check if app settings are present
             result.state.app_settings.selected_monitor == 0 // Primary monitor
-        }
+        },
         RecoveryMode::Reset => true, // Reset is always safe
     }
 }
@@ -150,10 +138,7 @@ mod tests {
     fn test_recover_none_gives_reset() {
         let result = recover_state(None);
         assert_eq!(result.mode, RecoveryMode::Reset);
-        assert_eq!(
-            result.state.version,
-            crate::persistence::schemas::CURRENT_VERSION
-        );
+        assert_eq!(result.state.version, crate::persistence::schemas::CURRENT_VERSION);
     }
 
     #[test]
@@ -195,11 +180,7 @@ mod tests {
 
         let result = recover_state(Some(state));
         assert!(result.mode == RecoveryMode::Sanitized || result.mode == RecoveryMode::Partial);
-        assert_eq!(
-            result.state.layout.widgets.len(),
-            0,
-            "Bad widget should be removed"
-        );
+        assert_eq!(result.state.layout.widgets.len(), 0, "Bad widget should be removed");
     }
 
     #[test]

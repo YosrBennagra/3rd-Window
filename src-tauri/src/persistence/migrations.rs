@@ -44,7 +44,7 @@ pub fn apply_migrations(mut state: PersistedState) -> Result<PersistedState, Str
         CompatibilityStatus::FullyCompatible => {
             // Already handled above, but explicit case for clarity
             return Ok(state);
-        }
+        },
         CompatibilityStatus::FutureVersion => {
             // State from future version - we can't migrate backward
             log::warn!(
@@ -54,7 +54,7 @@ pub fn apply_migrations(mut state: PersistedState) -> Result<PersistedState, Str
             );
             // Don't error - let validation/sanitization handle incompatibilities
             return Ok(state);
-        }
+        },
         CompatibilityStatus::Incompatible => {
             // Too old to migrate safely
             return Err(format!(
@@ -62,7 +62,7 @@ pub fn apply_migrations(mut state: PersistedState) -> Result<PersistedState, Str
                 start_version,
                 super::compatibility::MIN_SUPPORTED_VERSION
             ));
-        }
+        },
         CompatibilityStatus::MigrationRisky => {
             log::warn!(
                 "Migration from v{} to v{} may be lossy. Proceeding with caution.",
@@ -70,22 +70,14 @@ pub fn apply_migrations(mut state: PersistedState) -> Result<PersistedState, Str
                 CURRENT_VERSION
             );
             // Continue but with extra logging
-        }
+        },
         CompatibilityStatus::MigrationAvailable => {
             // Safe to migrate - this is the happy path
-            log::info!(
-                "Safe migration available from v{} to v{}",
-                start_version,
-                CURRENT_VERSION
-            );
-        }
+            log::info!("Safe migration available from v{} to v{}", start_version, CURRENT_VERSION);
+        },
     }
 
-    log::info!(
-        "Migrating state from v{} to v{}",
-        start_version,
-        CURRENT_VERSION
-    );
+    log::info!("Migrating state from v{} to v{}", start_version, CURRENT_VERSION);
 
     // Apply migrations in sequence
     // When adding new versions, add migration steps here

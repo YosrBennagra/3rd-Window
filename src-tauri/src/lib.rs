@@ -157,10 +157,10 @@ fn open_widget_picker_desktop_mode<R: Runtime>(app: &AppHandle<R>) {
     match WINDOW_MANAGER.create_window(app, config) {
         Ok(_window) => {
             println!("[PICKER] ✓ Widget picker window created successfully");
-        }
+        },
         Err(e) => {
             eprintln!("[PICKER] ✗ Failed to create widget picker window: {}", e);
-        }
+        },
     }
 }
 
@@ -181,10 +181,10 @@ fn open_settings_window<R: Runtime>(app: &AppHandle<R>) {
     match WINDOW_MANAGER.create_window(app, config) {
         Ok(_window) => {
             println!("[SETTINGS] ✓ Settings window created successfully");
-        }
+        },
         Err(e) => {
             eprintln!("[SETTINGS] ✗ Failed to create settings window: {}", e);
-        }
+        },
     }
 }
 

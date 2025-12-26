@@ -64,7 +64,7 @@ impl WindowPlacer {
                 let primary_idx = self.find_primary_index();
                 let primary = &self.monitors[primary_idx];
                 (primary, true)
-            }
+            },
         }
     }
 
@@ -143,10 +143,7 @@ impl WindowPlacer {
             position.y.max(mon_top)
         };
 
-        PhysicalPosition {
-            x: clamped_x,
-            y: clamped_y,
-        }
+        PhysicalPosition { x: clamped_x, y: clamped_y }
     }
 
     /// Place window on target monitor with safe fallback
@@ -187,11 +184,7 @@ impl WindowPlacer {
             None
         };
 
-        Ok(PlacementResult {
-            monitor_index: placement.monitor_index,
-            fallback_used,
-            reason,
-        })
+        Ok(PlacementResult { monitor_index: placement.monitor_index, fallback_used, reason })
     }
 
     /// Move window between monitors preserving relative position
@@ -269,14 +262,8 @@ mod tests {
         Monitor {
             identifier: Some(format!("DISPLAY{}", index + 1)),
             name: format!("Monitor {}", index + 1),
-            size: MonitorSize {
-                width: 1920,
-                height: 1080,
-            },
-            position: MonitorPosition {
-                x: (index as i32) * 1920,
-                y: 0,
-            },
+            size: MonitorSize { width: 1920, height: 1080 },
+            position: MonitorPosition { x: (index as i32) * 1920, y: 0 },
             is_primary,
             scale_factor: 1.0,
             refresh_rate: Some(60),
