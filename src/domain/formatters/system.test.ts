@@ -1,3 +1,44 @@
+import { describe, it, expect } from 'vitest'
+import { formatBytes, formatPercent, formatRelative, formatTemperature, formatNetworkSpeed } from './system'
+
+describe('system formatters', () => {
+  it('formats bytes correctly', () => {
+    expect(formatBytes(0)).toBe('0.0 B')
+    expect(formatBytes(500)).toBe('500.0 B')
+    expect(formatBytes(1024)).toBe('1.0 KB')
+    expect(formatBytes(5 * 1024 * 1024)).toBe('5.0 MB')
+  })
+
+  it('formats percent correctly', () => {
+    expect(formatPercent(12.345)).toBe('12.3%')
+    expect(formatPercent(0)).toBe('0.0%')
+  })
+
+  it('formats relative times', () => {
+    const now = 1000000
+    // less than a minute
+    expect(formatRelative(now - 30 * 1000, now)).toBe('just now')
+    // minutes
+    expect(formatRelative(now - 5 * 60 * 1000, now)).toBe('5m ago')
+    // hours
+    expect(formatRelative(now - 2 * 60 * 60 * 1000, now)).toBe('2h ago')
+    // days
+    expect(formatRelative(now - 3 * 24 * 60 * 60 * 1000, now)).toBe('3d ago')
+  })
+
+  it('formats temperature in C and F', () => {
+    expect(formatTemperature(0)).toBe('0.0°C')
+    expect(formatTemperature(0, 'F')).toBe('32.0°F')
+    expect(formatTemperature(25.1234)).toBe('25.1°C')
+  })
+
+  it('formats network speed', () => {
+    expect(formatNetworkSpeed(0)).toBe('0.0 B/s')
+    expect(formatNetworkSpeed(500)).toBe('500.0 B/s')
+    expect(formatNetworkSpeed(2048)).toBe('2.0 KB/s')
+    expect(formatNetworkSpeed(5 * 1024 * 1024)).toBe('5.0 MB/s')
+  })
+})
 /**
  * Unit Tests: System Formatters
  * 
