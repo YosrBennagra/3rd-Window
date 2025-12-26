@@ -2,7 +2,7 @@ import { memo, ComponentType } from 'react';
 import type { WidgetLayout } from '../../../domain/models/layout';
 import type { ResizeHandle } from './useWidgetResize';
 import type { WidgetComponentProps } from '../../../domain/contracts/WidgetContract';
-import { WidgetErrorBoundary } from '../widgets/WidgetErrorBoundary';
+import { WidgetErrorBoundary } from '../widgets/shared/WidgetErrorBoundary';
 
 // Type for widget components - supports both legacy and contract-compliant widgets
 type WidgetComponent = ComponentType<WidgetComponentProps> | ComponentType<{ widget: WidgetLayout }>;

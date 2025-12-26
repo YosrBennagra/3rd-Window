@@ -1,6 +1,6 @@
-import { useNetworkStats } from '../../../hooks/useSystemMetrics';
-import type { WidgetLayout } from '../../../domain/models/layout';
-import { ensureNetworkMonitorWidgetSettings } from '../../../domain/models/widgets';
+import { useNetworkStats } from '../../../../hooks/useSystemMetrics';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import { ensureNetworkMonitorWidgetSettings } from '../../../../domain/models/widgets';
 
 interface NetworkStats {
   interfaceName: string;
@@ -15,7 +15,7 @@ interface Props {
   widget: WidgetLayout;
 }
 
-export default function NetworkMonitorWidget({ widget }: Props) {
+export function NetworkMonitorWidget({ widget }: Props) {
   const settings = ensureNetworkMonitorWidgetSettings(widget.settings);
 
   // Use optimized hook with visibility detection

@@ -1,11 +1,11 @@
-import { useSystemMetrics } from '../../../hooks/useSystemMetrics';
-import type { WidgetLayout } from '../../../domain/models/layout';
+import { useSystemMetrics } from '../../../../hooks/useSystemMetrics';
+import type { WidgetLayout } from '../../../../domain/models/layout';
 
 interface Props {
   widget: WidgetLayout;
 }
 
-export default function RamUsageWidget({ widget: _widget }: Props) {
+export function RamUsageWidget({ widget: _widget }: Props) {
   // Use optimized hook with 3s refresh (RAM changes slowly)
   const { metrics } = useSystemMetrics({
     refreshInterval: 3000,

@@ -21,6 +21,6 @@
 @import '../theme/components/notifications-widget.css';
 
 /* PDF Widget */
-@import './components/widgets/PDFWidget.css';
+@import './components/widgets/desktop/PDFWidget.css';
 
 

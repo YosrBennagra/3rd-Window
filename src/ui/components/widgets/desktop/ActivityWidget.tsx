@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { IpcService } from '../../../services/ipc';
-import type { WidgetLayout } from '../../../domain/models/layout';
+import { IpcService } from '../../../../services/ipc';
+import type { WidgetLayout } from '../../../../domain/models/layout';
 
 interface ActivityData {
   systemUptime: number; // seconds
@@ -12,7 +12,7 @@ interface Props {
   widget: WidgetLayout;
 }
 
-export default function ActivityWidget({ widget: _widget }: Props) {
+export function ActivityWidget({ widget: _widget }: Props) {
   const [activityData, setActivityData] = useState<ActivityData>({
     systemUptime: 0,
     activeApp: 'Unknown',

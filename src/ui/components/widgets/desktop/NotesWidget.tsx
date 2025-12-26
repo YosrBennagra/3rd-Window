@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useGridStore } from '../../../application/stores/gridStore';
-import type { WidgetLayout } from '../../../domain/models/layout';
-import { ensureNotesWidgetSettings } from '../../../domain/models/widgets';
+import { useGridStore } from '../../../../application/stores/gridStore';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import { ensureNotesWidgetSettings } from '../../../../domain/models/widgets';
 
 interface NotesWidgetProps {
   widget: WidgetLayout;

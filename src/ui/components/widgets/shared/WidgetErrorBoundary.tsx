@@ -16,9 +16,9 @@
  */
 
 import React from 'react';
-import type { WidgetLayout } from '../../../domain/models/layout';
-import type { WidgetErrorContext } from '../../../domain/models/plugin';
-import { widgetPluginRegistry } from '../../../domain/services/widgetPluginRegistry';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import type { WidgetErrorContext } from '../../../../domain/models/plugin';
+import { widgetPluginRegistry } from '../../../../domain/services/widgetPluginRegistry';
 
 interface Props {
   /** Widget to render */

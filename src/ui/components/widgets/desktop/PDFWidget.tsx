@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { WidgetLayout } from '../../../domain/models/layout';
-import { ensurePDFWidgetSettings } from '../../../domain/models/widgets';
-import { useGridStore } from '../../../application/stores/gridStore';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import { ensurePDFWidgetSettings } from '../../../../domain/models/widgets';
+import { useGridStore } from '../../../../application/stores/gridStore';
 
 interface Props {
   widget: WidgetLayout;
 }
 
-function PDFWidget({ widget }: Props) {
+export function PDFWidget({ widget }: Props) {
   const settings = ensurePDFWidgetSettings(widget?.settings);
   const updateWidgetSettings = useGridStore((state) => state.updateWidgetSettings);
   const [pdfPath, setPdfPath] = useState<string | null>(settings.pdfPath || null);
@@ -207,5 +207,3 @@ function PDFWidget({ widget }: Props) {
     </div>
   );
 }
-
-export default PDFWidget;

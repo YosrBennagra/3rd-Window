@@ -1,17 +1,17 @@
 import WidgetFrame from './WidgetFrame';
 import { widgetDefinitions } from '../../config/widgets';
-import Notifications from './widgets/Notifications';
-import Temperature from './widgets/Temperature';
-import RamUsage from './widgets/RamUsage';
-import DiskUsage from './widgets/DiskUsage';
-import NetworkSpeed from './widgets/NetworkSpeed';
-import ClockCalendar from './widgets/ClockCalendar';
-import Notes from './widgets/Notes';
-import Alerts from './widgets/Alerts';
-import Shortcuts from './widgets/Shortcuts';
-import Integrations from './widgets/Integrations';
-import Pipelines from './widgets/Pipelines';
-import PowerMode from './widgets/PowerMode';
+import Notifications from './widgets/panel/Notifications';
+import Temperature from './widgets/panel/Temperature';
+import RamUsage from './widgets/panel/RamUsage';
+import DiskUsage from './widgets/panel/DiskUsage';
+import NetworkSpeed from './widgets/panel/NetworkSpeed';
+import ClockCalendar from './widgets/panel/ClockCalendar';
+import Notes from './widgets/panel/Notes';
+import Alerts from './widgets/panel/Alerts';
+import Shortcuts from './widgets/panel/Shortcuts';
+import Integrations from './widgets/panel/Integrations';
+import Pipelines from './widgets/panel/Pipelines';
+import PowerMode from './widgets/panel/PowerMode';
 import { useAppStore } from '../../application/store';
 
 const widgetMap: Record<string, React.ComponentType> = {

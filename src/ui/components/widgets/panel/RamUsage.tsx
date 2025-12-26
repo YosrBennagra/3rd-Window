@@ -1,6 +1,6 @@
 
-import { useMetrics } from '../../../application/selectors';
-import { formatBytes } from '../../../utils/system';
+import { useMetrics } from '../../../../application/selectors';
+import { formatBytes } from '../../../../utils/system';
 
 export default function RamUsage() {
   const metrics = useMetrics();

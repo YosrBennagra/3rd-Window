@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useRenderTracking } from '../../../utils/performanceMonitoring';
+import { useRenderTracking } from '../../../../utils/performanceMonitoring';
 
 /**
  * Performance-optimized clock using requestAnimationFrame.

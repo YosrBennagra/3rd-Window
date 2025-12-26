@@ -1,6 +1,6 @@
-import type { WidgetLayout } from '../../../domain/models/layout';
-import { useSystemMetrics } from '../../../application/hooks/useSystemMetrics';
-import { useTemperatureColor, getTemperaturePercentage } from '../../../application/hooks/useTemperatureColor';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import { useSystemMetrics } from '../../../../application/hooks/useSystemMetrics';
+import { useTemperatureColor, getTemperaturePercentage } from '../../../../application/hooks/useTemperatureColor';
 
 /**
  * TemperatureWidget Component (React 18 Best Practice)
@@ -17,7 +17,7 @@ interface Props {
   widget: WidgetLayout;
 }
 
-export default function TemperatureWidget({ widget: _widget }: Props) {
+export function TemperatureWidget({ widget: _widget }: Props) {
   const { metrics } = useSystemMetrics({ interval: 2000 });
   
   const cpuTemp = metrics?.cpuTemp ?? 0;

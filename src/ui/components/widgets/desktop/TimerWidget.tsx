@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
-import type { WidgetLayout } from '../../../domain/models/layout';
-import { ensureTimerWidgetSettings } from '../../../domain/models/widgets';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import { ensureTimerWidgetSettings } from '../../../../domain/models/widgets';
 
 interface Props {
   widget?: WidgetLayout;

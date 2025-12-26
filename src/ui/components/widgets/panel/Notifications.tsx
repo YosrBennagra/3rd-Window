@@ -1,6 +1,6 @@
 
-import { useNotifications } from '../../../application/selectors';
-import { formatRelative } from '../../../utils/system';
+import { useNotifications } from '../../../../application/selectors';
+import { formatRelative } from '../../../../utils/system';
 
 export default function Notifications() {
   const notifications = useNotifications();

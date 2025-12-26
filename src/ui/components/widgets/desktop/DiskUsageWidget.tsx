@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { IpcService } from '../../../services/ipc';
-import type { WidgetLayout } from '../../../domain/models/layout';
+import { IpcService } from '../../../../services/ipc';
+import type { WidgetLayout } from '../../../../domain/models/layout';
 
 /**
  * Extended metrics specific to DiskUsageWidget
@@ -22,7 +22,7 @@ interface Props {
   widget: WidgetLayout;
 }
 
-export default function DiskUsageWidget({ widget: _widget }: Props) {
+export function DiskUsageWidget({ widget: _widget }: Props) {
   const [metrics, setMetrics] = useState<ExtendedSystemMetrics | null>(null);
 
   useEffect(() => {

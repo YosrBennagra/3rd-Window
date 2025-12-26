@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import type { MouseEvent } from 'react';
-import type { WidgetLayout } from '../../../domain/models/layout';
-import { ensureClockWidgetSettings } from '../../../domain/models/widgets';
-import { IpcService } from '../../../services/ipc';
-import { useClock } from '../../../application/hooks/useClock';
-import { useFormattedTime } from '../../../application/hooks/useFormattedTime';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import { ensureClockWidgetSettings } from '../../../../domain/models/widgets';
+import { IpcService } from '../../../../services/ipc';
+import { useClock } from '../../../../application/hooks/useClock';
+import { useFormattedTime } from '../../../../application/hooks/useFormattedTime';
 
 /**
  * ClockWidget Component (React 18 Best Practice)

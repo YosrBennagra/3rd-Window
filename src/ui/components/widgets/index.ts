@@ -1,12 +1,17 @@
-export { ClockWidget } from './ClockWidget';
-export { TimerWidget } from './TimerWidget';
-export { default as ActivityWidget } from './ActivityWidget';
-export { ImageWidget } from './ImageWidget';
-export { VideoWidget } from './VideoWidget';
-export { NotesWidget } from './NotesWidget';
-export { QuickLinksWidget } from './QuickLinksWidget';
-export { default as NetworkMonitorWidget } from './NetworkMonitorWidget';
-export { default as TemperatureWidget } from './TemperatureWidget';
-export { default as RamUsageWidget } from './RamUsageWidget';
-export { default as DiskUsageWidget } from './DiskUsageWidget';
-export { default as PDFWidget } from './PDFWidget';
+/**
+ * Widget Components Barrel Export
+ * 
+ * This file re-exports widgets from their categorized folders:
+ * - desktop/ - Standalone floating widgets for the desktop widget system
+ * - panel/ - Panel widgets for the WidgetHost system
+ * - shared/ - Shared components used by both systems
+ */
+
+// Desktop widgets (for widgetRegistry)
+export * from './desktop';
+
+// Panel widgets (for WidgetHost)
+export * from './panel';
+
+// Shared components
+export * from './shared';

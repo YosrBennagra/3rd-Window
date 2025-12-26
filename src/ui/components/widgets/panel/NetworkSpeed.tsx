@@ -1,5 +1,5 @@
 
-import { useMetrics } from '../../../application/selectors';
+import { useMetrics } from '../../../../application/selectors';
 
 export default function NetworkSpeed() {
   const metrics = useMetrics();

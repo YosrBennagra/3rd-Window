@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { useGridStore } from '../../../application/stores/gridStore';
-import type { WidgetLayout } from '../../../domain/models/layout';
-import { ensureQuickLinksWidgetSettings, type QuickLink } from '../../../domain/models/widgets';
-import { IpcService } from '../../../services/ipc';
+import { useGridStore } from '../../../../application/stores/gridStore';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import { ensureQuickLinksWidgetSettings, type QuickLink } from '../../../../domain/models/widgets';
+import { IpcService } from '../../../../services/ipc';
 
 interface QuickLinksWidgetProps {
   widget: WidgetLayout;

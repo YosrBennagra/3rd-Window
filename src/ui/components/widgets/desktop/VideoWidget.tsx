@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { WidgetLayout } from '../../../domain/models/layout';
-import { ensureVideoWidgetSettings } from '../../../domain/models/widgets';
-import { useGridStore } from '../../../application/stores/gridStore';
+import type { WidgetLayout } from '../../../../domain/models/layout';
+import { ensureVideoWidgetSettings } from '../../../../domain/models/widgets';
+import { useGridStore } from '../../../../application/stores/gridStore';
 
 interface Props {
   widget: WidgetLayout;

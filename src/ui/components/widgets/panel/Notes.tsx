@@ -1,5 +1,5 @@
 
-import { useNotes } from '../../../application/selectors';
+import { useNotes } from '../../../../application/selectors';
 
 export default function Notes() {
   const notes = useNotes();

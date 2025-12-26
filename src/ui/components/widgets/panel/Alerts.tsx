@@ -1,6 +1,6 @@
 
-import { useAlerts } from '../../../application/selectors';
-import { formatRelative } from '../../../utils/system';
+import { useAlerts } from '../../../../application/selectors';
+import { formatRelative } from '../../../../utils/system';
 
 const severityLabel: Record<string, string> = {
   info: 'Info',

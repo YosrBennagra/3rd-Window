@@ -14,7 +14,7 @@ import {
   RamUsageWidget, 
   DiskUsageWidget, 
   PDFWidget 
-} from '../ui/components/widgets';
+} from '../ui/components/widgets/desktop';
 
 /**
  * Widget Component Registry (SOLID: Open/Closed Principle)
