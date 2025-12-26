@@ -235,6 +235,7 @@ function WidgetErrorFallback({ widget, error, retryCount, onRetry, onRemove, onD
         {!isPluginDisabled && (
           <button
             onClick={onRetry}
+            aria-label="Retry loading widget"
             style={{
               padding: '0.375rem 0.75rem',
               fontSize: '0.75rem',
@@ -258,6 +259,7 @@ function WidgetErrorFallback({ widget, error, retryCount, onRetry, onRemove, onD
         
         <button
           onClick={onRemove}
+          aria-label="Remove this widget"
           style={{
             padding: '0.375rem 0.75rem',
             fontSize: '0.75rem',
@@ -281,6 +283,7 @@ function WidgetErrorFallback({ widget, error, retryCount, onRetry, onRemove, onD
         {!isPluginDisabled && pluginRegistration && pluginRegistration.errorCount >= 3 && (
           <button
             onClick={onDisablePlugin}
+            aria-label="Disable this widget plugin"
             style={{
               padding: '0.375rem 0.75rem',
               fontSize: '0.75rem',

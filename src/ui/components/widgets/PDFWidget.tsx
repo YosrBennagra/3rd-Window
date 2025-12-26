@@ -44,8 +44,8 @@ function PDFWidget({ widget }: Props) {
         }
       };
       reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Failed to load PDF:', error);
+    } catch {
+      // Silent error - user can try again
     }
   }, [widget?.id, settings, updateWidgetSettings]);
 

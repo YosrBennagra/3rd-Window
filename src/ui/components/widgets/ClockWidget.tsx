@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { MouseEvent } from 'react';
 import type { WidgetLayout } from '../../../domain/models/layout';
 import { ensureClockWidgetSettings } from '../../../domain/models/widgets';
-import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../../../services/ipc';
 import { useClock } from '../../../application/hooks/useClock';
 import { useFormattedTime } from '../../../application/hooks/useFormattedTime';
 
@@ -30,7 +30,7 @@ export function ClockWidget({ widget }: Props) {
     (event: MouseEvent<HTMLDivElement>) => {
       event.stopPropagation();
       if (settings.clickBehavior !== 'open-system-clock') return;
-      void invoke('open_system_clock').catch(() => {
+      void IpcService.window.openSystemClock().catch(() => {
         if (typeof window !== 'undefined') {
           window.open('ms-clock:', '_blank');
         }

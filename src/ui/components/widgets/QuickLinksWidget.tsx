@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useGridStore } from '../../../application/stores/gridStore';
 import type { WidgetLayout } from '../../../domain/models/layout';
 import { ensureQuickLinksWidgetSettings, type QuickLink } from '../../../domain/models/widgets';
-import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../../../services/ipc';
 
 interface QuickLinksWidgetProps {
   widget: WidgetLayout;
@@ -89,11 +89,9 @@ export function QuickLinksWidget({ widget }: QuickLinksWidgetProps) {
   const handleLinkClick = async (link: QuickLink, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      // Try to use Tauri's shell command if available
-      await invoke('plugin:shell|open', { path: link.url });
+      await IpcService.shell.open(link.url);
     } catch (error) {
       // Fallback to window.open for development/browser mode
-      console.log('Opening link in browser:', link.url);
       window.open(link.url, '_blank', 'noopener,noreferrer');
     }
   };

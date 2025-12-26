@@ -42,8 +42,8 @@ export function ImageWidget({ widget }: Props) {
         }
       };
       reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Failed to load image:', error);
+    } catch {
+      // Silent error - user can try again
     }
   }, [widget?.id, settings, updateWidgetSettings]);
 
@@ -111,6 +111,7 @@ export function ImageWidget({ widget }: Props) {
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
+                aria-label="Select image file"
               >
                 Select Image
               </button>

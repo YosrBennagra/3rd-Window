@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { emit } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../services/ipc';
 import AddWidgetPanel from './components/panels/AddWidgetPanel';
 import { widgetDefinitions } from '../config/widgets';
 import './App.css';
@@ -56,16 +56,14 @@ export default function WidgetPickerWindow() {
       
       const size = widgetSizes[type] || { width: 250, height: 150 };
       
-      await invoke('spawn_desktop_widget', {
-        config: {
-          widgetId,
-          widgetType: type,
-          x: 100,
-          y: 100,
-          width: size.width,
-          height: size.height,
-          monitorIndex: null,
-        },
+      await IpcService.widget.spawn({
+        widgetId,
+        widgetType: type,
+        x: 100,
+        y: 100,
+        width: size.width,
+        height: size.height,
+        monitorIndex: undefined,
       });
       
       handleClose();

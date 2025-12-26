@@ -1,3 +1,24 @@
+/**
+ * App Store (Legacy - Being Phased Out)
+ * 
+ * @deprecated This store is being replaced by modular stores in /stores directory:
+ * - Use stores/store.ts for app settings and monitors
+ * - Use stores/gridStore.ts for grid layout and widgets
+ * - Use stores/desktopWidgetStore.ts for desktop widgets
+ * 
+ * This file remains for backward compatibility with WidgetHost.tsx
+ * and will be removed in v2.0 after full migration.
+ * 
+ * Current status:
+ * - Store has been refactored to use windowService (no direct Tauri calls)
+ * - New code should use the modular stores instead
+ * 
+ * Migration path:
+ * 1. Update WidgetHost.tsx to use gridStore
+ * 2. Remove this file
+ * 3. Update any remaining imports
+ */
+
 import { create } from 'zustand';
 import {
   AlertItem,
@@ -14,6 +35,7 @@ import { getShortcuts } from '../infrastructure/system/shortcuts';
 import { getIntegrations } from '../infrastructure/system/integrations';
 import { getPipelines } from '../infrastructure/system/pipelines';
 import { loadSettings, saveSettings, defaultSettings } from '../infrastructure/persistence/storage';
+import * as windowService from './services/windowService';
 
 export interface AlertRule {
   id: string;
@@ -110,8 +132,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ alwaysOnTop: newValue });
     
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('set_always_on_top', { enabled: newValue });
+      await windowService.setAlwaysOnTop(newValue);
       get().persistSettings();
     } catch (err) {
       console.error('Failed to set always-on-top:', err);
@@ -123,8 +144,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ fullscreen: newValue });
     
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('set_fullscreen', { fullscreen: newValue });
+      await windowService.setFullscreen(newValue);
       get().persistSettings();
     } catch (err) {
       console.error('Failed to toggle fullscreen:', err);
@@ -137,9 +157,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   saveWindowPosition: async () => {
     try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      const window = getCurrentWindow();
-      const position = await window.outerPosition();
+      const position = await windowService.getWindowPosition();
       set({ windowPosition: { x: position.x, y: position.y } });
       get().persistSettings();
     } catch (err) {
@@ -244,18 +262,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       // Apply window settings
       try {
-        const { invoke } = await import('@tauri-apps/api/core');
         if (settings.alwaysOnTop) {
-          await invoke('set_always_on_top', { enabled: true });
+          await windowService.setAlwaysOnTop(true);
         }
         if (settings.fullscreen) {
-          await invoke('set_fullscreen', { fullscreen: true });
+          await windowService.setFullscreen(true);
         }
         if (settings.windowPosition) {
-          // TODO: Fix WindowPosition type to match Tauri Position interface
-          // const { getCurrentWindow } = await import('@tauri-apps/api/window');
-          // const window = getCurrentWindow();
-          // await window.setPosition(settings.windowPosition);
+          await windowService.setWindowPosition(
+            settings.windowPosition.x,
+            settings.windowPosition.y
+          );
         }
       } catch (err) {
         console.error('Failed to apply window settings:', err);

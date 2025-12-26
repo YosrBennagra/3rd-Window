@@ -43,8 +43,8 @@ export function VideoWidget({ widget }: Props) {
         }
       };
       reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Failed to load video:', error);
+    } catch {
+      // Silent error - user can try again
     }
   }, [widget?.id, settings, updateWidgetSettings]);
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { updateWidgetPosition } from '../../infrastructure/ipc/desktop-widgets';
-import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../../services/ipc';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { WidgetContextMenu } from './WidgetContextMenu';
 import './DesktopWidget.css';
@@ -45,7 +45,7 @@ export function DesktopWidget({ widgetId, widgetType, children }: DesktopWidgetP
     e.preventDefault();
     e.stopPropagation();
     try {
-      await invoke('close_desktop_widget', { widgetId });
+      await IpcService.widget.close({ widgetId });
     } catch (error) {
       console.error('Failed to close widget:', error);
     }
@@ -55,7 +55,7 @@ export function DesktopWidget({ widgetId, widgetType, children }: DesktopWidgetP
     e.preventDefault();
     e.stopPropagation();
     try {
-      await invoke('minimize_desktop_widget', { widgetId });
+      await IpcService.widget.minimize(widgetId);
     } catch (error) {
       console.error('Failed to minimize widget:', error);
     }

@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../../../services/ipc';
 import type { WidgetLayout } from '../../../domain/models/layout';
 
-interface SystemMetrics {
+/**
+ * Extended metrics specific to DiskUsageWidget
+ * Note: This widget uses mock/extended data not available in standard SystemMetrics
+ */
+interface ExtendedSystemMetrics {
   cpuUsage: number;
   cpuTemp: number;
   gpuTemp: number;
@@ -19,15 +23,17 @@ interface Props {
 }
 
 export default function DiskUsageWidget({ widget: _widget }: Props) {
-  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [metrics, setMetrics] = useState<ExtendedSystemMetrics | null>(null);
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const data = await invoke<SystemMetrics>('get_system_metrics');
-        setMetrics(data);
-      } catch (error) {
-        console.error('Failed to fetch system metrics:', error);
+        const data = await IpcService.metrics.getSystemMetrics();
+        // TODO: This widget expects disk metrics that aren't in SystemMetrics yet
+        // For now, cast to ExtendedSystemMetrics (will show 0 for disk values)
+        setMetrics(data as unknown as ExtendedSystemMetrics);
+      } catch {
+        // Silent error - widget will show 0 values
       }
     };
 

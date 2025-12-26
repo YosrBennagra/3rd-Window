@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../services/ipc';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface WidgetOption {
@@ -63,16 +63,14 @@ export default function DesktopWidgetPicker() {
     try {
       const widgetId = `widget-${Date.now()}`;
       
-      await invoke('spawn_desktop_widget', {
-        config: {
-          widgetId,
-          widgetType: widget.type,
-          x: 100,
-          y: 100,
-          width: widget.defaultWidth,
-          height: widget.defaultHeight,
-          monitorIndex: null,
-        },
+      await IpcService.widget.spawn({
+        widgetId,
+        widgetType: widget.type,
+        x: 100,
+        y: 100,
+        width: widget.defaultWidth,
+        height: widget.defaultHeight,
+        monitorIndex: undefined,
       });
       
       // Close picker after spawning

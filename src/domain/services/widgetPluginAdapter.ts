@@ -1,17 +1,17 @@
 /**
- * Widget Plugin Adapters (SOLID: Adapter Pattern)
+ * @deprecated This file has been moved to src/application/services/widgetPluginAdapter.ts
  * 
- * Utilities to convert existing widgets to the plugin system.
- * This allows gradual migration without breaking existing code.
+ * Domain layer should not import React types (ComponentType).
+ * Please update your imports to use the application layer version:
  * 
- * Design Principles:
- * - Backward Compatibility: Existing widgets work without changes
- * - Gradual Migration: Convert widgets one at a time
- * - Zero Breaking Changes: Old code continues to work
- * - Type Safety: Preserve TypeScript types throughout
+ * Old: import { ... } from '../domain/services/widgetPluginAdapter'
+ * New: import { ... } from '../application/services/widgetPluginAdapter'
+ * 
+ * This file is kept for backward compatibility and will be removed in v2.0
  */
 
-import type { ComponentType } from 'react';
+export * from '../../application/services/widgetPluginAdapter';
+
 import type { WidgetLayout, WidgetConstraints } from '../../domain/models/layout';
 import type {
   WidgetPlugin,

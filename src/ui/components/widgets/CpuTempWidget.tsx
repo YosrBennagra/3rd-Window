@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useContextMenu } from '../../../application/hooks/useContextMenu';
 import { useSystemTemps } from '../../../application/hooks/useSystemTemps';
 import { ContextMenu } from '../ui';
@@ -6,13 +5,6 @@ import { ContextMenu } from '../ui';
 export function CpuTempWidget() {
   const { data } = useSystemTemps(1000);
   const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
-
-  useEffect(() => {
-    if (data) {
-      console.log('[CPU Widget] Available sensors:', data.available_sensors);
-      console.log('[CPU Widget] CPU temp:', data.cpu_temp);
-    }
-  }, [data]);
 
   const getTempColor = (temp: number) => {
     if (temp < 50) return '#10b981';
@@ -39,13 +31,7 @@ export function CpuTempWidget() {
         </div>
       </div>
       
-      <ContextMenu
-        position={contextMenu}
-        title="CPU Temperature"
-        onClose={closeContextMenu}
-        onProperties={() => console.log('Open properties')}
-        onRemove={() => console.log('Remove widget')}
-      />
+      {/* Context menu functionality removed - to be implemented with proper event handlers */}
     </>
   );
 }

@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../../services/ipc';
 import './WidgetContextMenu.css';
 
 interface ContextMenuProps {
@@ -87,7 +87,7 @@ export function WidgetContextMenu({ widgetId, widgetType, position, onClose }: C
 
   const handleOpacityChange = async (newOpacity: number) => {
     try {
-      await invoke('set_widget_opacity', { widgetId, opacity: newOpacity });
+      await IpcService.widget.setOpacity(widgetId, newOpacity);
       setOpacity(newOpacity);
     } catch (error) {
       console.error('Failed to set opacity:', error);
@@ -96,7 +96,7 @@ export function WidgetContextMenu({ widgetId, widgetType, position, onClose }: C
 
   const handleMinimize = async () => {
     try {
-      await invoke('minimize_desktop_widget', { widgetId });
+      await IpcService.widget.minimize(widgetId);
       onClose();
     } catch (error) {
       console.error('Failed to minimize widget:', error);
@@ -105,7 +105,7 @@ export function WidgetContextMenu({ widgetId, widgetType, position, onClose }: C
 
   const handleClose = async () => {
     try {
-      await invoke('close_desktop_widget', { widgetId });
+      await IpcService.widget.close({ widgetId });
       onClose();
     } catch (error) {
       console.error('Failed to close widget:', error);

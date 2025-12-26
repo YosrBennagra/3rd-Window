@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { DesktopWidgetConfig } from '../../domain/models/desktop-widget';
 import { spawnDesktopWidget, closeDesktopWidget, getDesktopWidgets } from '../../infrastructure/ipc/desktop-widgets';
+import { restoreDesktopWidgets } from '../services/widgetRestoration';
 
 /**
  * Desktop Widget Store (Zustand Architecture Best Practice)
@@ -9,12 +10,12 @@ import { spawnDesktopWidget, closeDesktopWidget, getDesktopWidgets } from '../..
  * Follows Zustand principles:
  * - One store per concern (desktop widgets)
  * - Delegates side effects to IPC abstraction layer
+ * - Delegates restoration to dedicated service
  * - Explicit state ownership
  * - Actions named by intent
  * - State is minimal and intentional
  * 
- * Note: This store delegates to IPC abstractions (infrastructure layer),
- * which is acceptable as it's not calling Tauri directly.
+ * Restoration logic moved to widgetRestoration service for separation of concerns.
  */
 
 interface DesktopWidgetState {
@@ -23,6 +24,7 @@ interface DesktopWidgetState {
   
   // Actions
   loadDesktopWidgets: () => Promise<void>;
+  loadAndRestoreDesktopWidgets: () => Promise<void>;
   addDesktopWidget: (config: DesktopWidgetConfig) => Promise<void>;
   removeDesktopWidget: (widgetId: string) => Promise<void>;
   updateDesktopWidgetPosition: (widgetId: string, x: number, y: number) => void;
@@ -36,15 +38,26 @@ export const useDesktopWidgetStore = create<DesktopWidgetState>((set) => ({
     try {
       const widgets = await getDesktopWidgets();
       set({ desktopWidgets: widgets, isLoaded: true });
+    } catch (error) {
+      console.error('Failed to load desktop widgets:', error);
+      set({ desktopWidgets: [], isLoaded: true });
+    }
+  },
 
-      // Restore all desktop widgets on app startup
-      for (const widget of widgets) {
-        try {
-          await spawnDesktopWidget(widget);
-        } catch (error) {
-          console.error(`Failed to restore desktop widget ${widget.widgetId}:`, error);
-        }
-      }
+  /**
+   * Load and restore desktop widgets
+   * 
+   * Separated from loadDesktopWidgets for clarity:
+   * - loadDesktopWidgets: loads state only
+   * - loadAndRestoreDesktopWidgets: loads state AND spawns windows
+   */
+  loadAndRestoreDesktopWidgets: async () => {
+    try {
+      const widgets = await getDesktopWidgets();
+      set({ desktopWidgets: widgets, isLoaded: true });
+
+      // Delegate restoration to service (separation of concerns)
+      await restoreDesktopWidgets(widgets);
     } catch (error) {
       console.error('Failed to load desktop widgets:', error);
       set({ desktopWidgets: [], isLoaded: true });

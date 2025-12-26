@@ -60,10 +60,22 @@ impl MonitorTracker {
             }
         };
 
-        let previous_count = *self.last_count.lock().unwrap();
+        let previous_count = match self.last_count.lock() {
+            Ok(guard) => *guard,
+            Err(poisoned) => {
+                warn!("[MonitorTracker] Mutex poisoned, recovering: last_count");
+                *poisoned.into_inner()
+            }
+        };
         let current_count = current_monitors.len();
 
-        let last_config = self.last_config.lock().unwrap().clone();
+        let last_config = match self.last_config.lock() {
+            Ok(guard) => guard.clone(),
+            Err(poisoned) => {
+                warn!("[MonitorTracker] Mutex poisoned, recovering: last_config");
+                poisoned.into_inner().clone()
+            }
+        };
 
         // Detect what changed
         let event = if current_count != previous_count {
@@ -111,8 +123,17 @@ impl MonitorTracker {
         };
 
         // Update tracking
-        *self.last_count.lock().unwrap() = current_count;
-        *self.last_config.lock().unwrap() = current_monitors;
+        if let Ok(mut guard) = self.last_count.lock() {
+            *guard = current_count;
+        } else {
+            warn!("[MonitorTracker] Failed to update last_count (mutex poisoned)");
+        }
+        
+        if let Ok(mut guard) = self.last_config.lock() {
+            *guard = current_monitors;
+        } else {
+            warn!("[MonitorTracker] Failed to update last_config (mutex poisoned)");
+        }
 
         event
     }

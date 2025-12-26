@@ -1,11 +1,15 @@
-import { memo } from 'react';
+import { memo, ComponentType } from 'react';
 import type { WidgetLayout } from '../../../domain/models/layout';
 import type { ResizeHandle } from './useWidgetResize';
+import type { WidgetComponentProps } from '../../../domain/contracts/WidgetContract';
 import { WidgetErrorBoundary } from '../widgets/WidgetErrorBoundary';
+
+// Type for widget components - supports both legacy and contract-compliant widgets
+type WidgetComponent = ComponentType<WidgetComponentProps> | ComponentType<{ widget: WidgetLayout }>;
 
 interface Props {
   widget: WidgetLayout;
-  WidgetComponent: React.ComponentType<any>; // Union type makes this complex, keep as any for now
+  WidgetComponent: WidgetComponent;
   handleWidgetPointerDown: (e: React.PointerEvent, widget: WidgetLayout) => void;
   handleResizePointerDown: (e: React.PointerEvent, widget: WidgetLayout, handle: ResizeHandle) => void;
   handleContextMenu: (e: React.MouseEvent, widget: WidgetLayout) => void;

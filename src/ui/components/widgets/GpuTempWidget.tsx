@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useContextMenu } from '../../../application/hooks/useContextMenu';
 import { useSystemTemps } from '../../../application/hooks/useSystemTemps';
 import { ContextMenu } from '../ui';
@@ -6,13 +5,6 @@ import { ContextMenu } from '../ui';
 export function GpuTempWidget() {
   const { data } = useSystemTemps(1000);
   const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
-
-  useEffect(() => {
-    if (data) {
-      console.log('[GPU Widget] Available sensors:', data.available_sensors);
-      console.log('[GPU Widget] GPU temp:', data.gpu_temp);
-    }
-  }, [data]);
 
   const getTempColor = (temp: number) => {
     if (temp < 60) return '#10b981';
@@ -39,13 +31,7 @@ export function GpuTempWidget() {
         </div>
       </div>
       
-      <ContextMenu
-        position={contextMenu}
-        title="GPU Temperature"
-        onClose={closeContextMenu}
-        onProperties={() => console.log('Open properties')}
-        onRemove={() => console.log('Remove widget')}
-      />
+      {/* Context menu functionality removed - to be implemented with proper event handlers */}
     </>
   );
 }

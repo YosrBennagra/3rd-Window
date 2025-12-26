@@ -20,7 +20,10 @@ fn current_timestamp() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
-        .unwrap_or(0)  // Fallback to 0 if time is before epoch
+        .unwrap_or_else(|_| {
+            // System time is before UNIX epoch - extremely rare, use 0 as safe fallback
+            0
+        })
 }
 
 #[tauri::command]
@@ -30,6 +33,8 @@ pub fn get_active_window_info() -> Result<ActiveWindowInfo, String> {
         use windows::Win32::Foundation::{HWND, MAX_PATH};
         use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW};
 
+        // SAFETY: Windows API calls require unsafe. GetForegroundWindow is always safe to call.
+        // GetWindowTextW is safe when passed a valid buffer with correct size.
         unsafe {
             let hwnd: HWND = GetForegroundWindow();
             if hwnd.0.is_null() {

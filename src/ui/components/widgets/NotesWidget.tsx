@@ -189,6 +189,7 @@ export function NotesWidget({ widget }: NotesWidgetProps) {
             placeholder="Type your notes here..."
             spellCheck={true}
             autoComplete="off"
+            aria-label="Notes text area"
           />
         </div>
       ) : (

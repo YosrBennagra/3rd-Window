@@ -233,6 +233,28 @@ export const WidgetCommands = {
   },
 
   /**
+   * Minimize an existing desktop widget window
+   */
+  async minimize(widgetId: string): Promise<VoidResponse> {
+    validateWidgetId(widgetId);
+    
+    return await trackedInvoke('minimize_desktop_widget', { widgetId });
+  },
+
+  /**
+   * Set opacity for a desktop widget window
+   */
+  async setOpacity(widgetId: string, opacity: number): Promise<VoidResponse> {
+    validateWidgetId(widgetId);
+    
+    if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
+      throw new Error('Invalid opacity: must be a number between 0 and 1');
+    }
+    
+    return await trackedInvoke('set_widget_opacity', { widgetId, opacity });
+  },
+
+  /**
    * Update desktop widget position
    */
   async updatePosition(request: UpdateWidgetPositionRequest): Promise<VoidResponse> {
@@ -337,6 +359,19 @@ export const ContextMenuCommands = {
 };
 
 // ============================================================================
+// SHELL COMMANDS
+// ============================================================================
+
+const ShellCommands = {
+  /**
+   * Open URL or file path in default application
+   */
+  async open(path: string): Promise<void> {
+    return await trackedInvoke('plugin:shell|open', { path });
+  },
+};
+
+// ============================================================================
 // UNIFIED IPC SERVICE
 // ============================================================================
 
@@ -350,6 +385,7 @@ export const IpcService = {
   widget: WidgetCommands,
   metrics: MetricsCommands,
   contextMenu: ContextMenuCommands,
+  shell: ShellCommands,
 } as const;
 
 /**

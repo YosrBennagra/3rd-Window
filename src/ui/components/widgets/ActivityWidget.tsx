@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../../../services/ipc';
 import type { WidgetLayout } from '../../../domain/models/layout';
 
 interface ActivityData {
@@ -22,16 +22,16 @@ export default function ActivityWidget({ widget: _widget }: Props) {
   useEffect(() => {
     const fetchActivity = async () => {
       try {
-        const uptime = await invoke<number>('get_system_uptime');
-        const activeWindow = await invoke<{ name: string; duration: number }>('get_active_window_info');
+        const uptime = await IpcService.metrics.getSystemUptime();
+        const activeWindow = await IpcService.metrics.getActiveWindow();
         
         setActivityData({
           systemUptime: uptime,
           activeApp: activeWindow.name,
           activeAppDuration: activeWindow.duration,
         });
-      } catch (error) {
-        console.error('Failed to fetch activity data:', error);
+      } catch {
+        // Silent error - widget will show no activity
       }
     };
 
