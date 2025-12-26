@@ -22,7 +22,7 @@ fn get_wmi_temps() -> (Option<f32>, Vec<String>) {
         Ok(com_con) => {
             // Try OpenHardwareMonitor namespace first
             if let Ok(wmi_con) =
-                WMIConnection::with_namespace_path("root\\OpenHardwareMonitor", com_con.clone())
+                WMIConnection::with_namespace_path("root\\OpenHardwareMonitor", com_con)
             {
                 if let Ok(results) = wmi_con
                     .raw_query::<std::collections::HashMap<String, Variant>>(
@@ -80,7 +80,7 @@ fn get_wmi_temps() -> (Option<f32>, Vec<String>) {
                     }
                 }
             }
-        }
+        },
         Err(e) => log::info!("[sensors] COM library error: {}", e),
     }
 
@@ -109,23 +109,14 @@ pub async fn get_system_temps() -> Result<SystemTemps, String> {
         Some(base_temp + (rand::random::<f32>() * 5.0))
     });
 
-    let gpu_temp = Some(45.0 + (rand::random::<f32>() * 15.0));
+    let gpu_temp = 45.0 + (rand::random::<f32>() * 15.0);
 
     if available_sensors.is_empty() {
         available_sensors.push(format!("Simulated CPU: {:.1}°C", cpu_temp.unwrap_or(0.0)));
-        available_sensors.push(format!("Simulated GPU: {:.1}°C", gpu_temp.unwrap_or(0.0)));
+        available_sensors.push(format!("Simulated GPU: {:.1}°C", gpu_temp));
     }
 
-    log::info!(
-        "[sensors] CPU={:.1}°C, GPU={:.1}°C",
-        cpu_temp.unwrap_or(0.0),
-        gpu_temp.unwrap_or(0.0)
-    );
+    log::info!("[sensors] CPU={:.1}°C, GPU={:.1}°C", cpu_temp.unwrap_or(0.0), gpu_temp);
 
-    Ok(SystemTemps {
-        cpu_temp,
-        gpu_temp,
-        cpu_usage,
-        available_sensors,
-    })
+    Ok(SystemTemps { cpu_temp, gpu_temp: Some(gpu_temp), cpu_usage, available_sensors })
 }

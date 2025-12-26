@@ -31,7 +31,7 @@ const MODERN_HANDLER_CLSID: &str = "{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}";
  * Uses protocol handler for security (no direct shell execution).
  *
  * Registry Structure:
- * ```
+ * ```text
  * HKCU:\Software\Classes\DesktopBackground\Shell\ThirdScreen
  *   @              = "ThirdScreen - Add Widget"
  *   Icon           = "<exe path>"
@@ -79,7 +79,7 @@ pub fn uninstall() -> Result<(), io::Error> {
             Ok(_) => println!("[ContextMenu] ✓ Removed classic menu"),
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
                 println!("[ContextMenu] ℹ Classic menu not found (already removed)")
-            }
+            },
             Err(e) => eprintln!("[ContextMenu] ✗ Failed to remove classic menu: {}", e),
         }
     }
@@ -90,7 +90,7 @@ pub fn uninstall() -> Result<(), io::Error> {
         Ok(_) => println!("[ContextMenu] ✓ Removed modern handler"),
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
             println!("[ContextMenu] ℹ Modern handler not found (already removed)")
-        }
+        },
         Err(e) => eprintln!("[ContextMenu] ✗ Failed to remove modern handler: {}", e),
     }
 

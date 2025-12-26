@@ -157,10 +157,10 @@ fn open_widget_picker_desktop_mode<R: Runtime>(app: &AppHandle<R>) {
     match WINDOW_MANAGER.create_window(app, config) {
         Ok(_window) => {
             println!("[PICKER] ✓ Widget picker window created successfully");
-        }
+        },
         Err(e) => {
             eprintln!("[PICKER] ✗ Failed to create widget picker window: {}", e);
-        }
+        },
     }
 }
 
@@ -181,10 +181,10 @@ fn open_settings_window<R: Runtime>(app: &AppHandle<R>) {
     match WINDOW_MANAGER.create_window(app, config) {
         Ok(_window) => {
             println!("[SETTINGS] ✓ Settings window created successfully");
-        }
+        },
         Err(e) => {
             eprintln!("[SETTINGS] ✗ Failed to create settings window: {}", e);
-        }
+        },
     }
 }
 
@@ -214,7 +214,7 @@ pub fn run() {
             }
 
             // Initialize system tray
-            system::create_tray(&app.handle())?;
+            system::create_tray(app.handle())?;
 
             // Register deep link protocol handler
             #[cfg(desktop)]
@@ -245,7 +245,7 @@ pub fn run() {
                 println!("[SETUP] ✓ Deep link listener registered");
                 // Initialize monitor hot-plug tracking
                 println!("[SETUP] Initializing monitor tracking");
-                init_monitor_tracking(&app.handle());
+                init_monitor_tracking(app.handle());
                 println!("[SETUP] ✓ Monitor tracking started");
             }
 

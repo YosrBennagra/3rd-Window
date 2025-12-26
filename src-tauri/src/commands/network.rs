@@ -64,29 +64,22 @@ pub fn get_network_stats() -> Result<NetworkStats, String> {
     let mut download_speed = 0u64;
     let mut upload_speed = 0u64;
 
-    let current_sample = NetworkSample {
-        timestamp: Instant::now(),
-        total_received,
-        total_transmitted,
-    };
+    let current_sample =
+        NetworkSample { timestamp: Instant::now(), total_received, total_transmitted };
 
     let mut last_sample_lock = LAST_SAMPLE
         .lock()
         .map_err(|e| format!("Failed to acquire network sample lock: {}", e))?;
 
     if let Some(ref last_sample) = *last_sample_lock {
-        let elapsed = current_sample
-            .timestamp
-            .duration_since(last_sample.timestamp);
+        let elapsed = current_sample.timestamp.duration_since(last_sample.timestamp);
         let elapsed_secs = elapsed.as_secs_f64();
 
         if elapsed_secs > 0.0 {
-            let received_diff = current_sample
-                .total_received
-                .saturating_sub(last_sample.total_received);
-            let transmitted_diff = current_sample
-                .total_transmitted
-                .saturating_sub(last_sample.total_transmitted);
+            let received_diff =
+                current_sample.total_received.saturating_sub(last_sample.total_received);
+            let transmitted_diff =
+                current_sample.total_transmitted.saturating_sub(last_sample.total_transmitted);
 
             download_speed = (received_diff as f64 / elapsed_secs) as u64;
             upload_speed = (transmitted_diff as f64 / elapsed_secs) as u64;
@@ -94,7 +87,6 @@ pub fn get_network_stats() -> Result<NetworkStats, String> {
     }
 
     *last_sample_lock = Some(current_sample);
-    drop(last_sample_lock);
 
     Ok(NetworkStats {
         interface_name: most_active_interface,

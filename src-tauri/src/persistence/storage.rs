@@ -76,19 +76,19 @@ pub fn load_state(app: &AppHandle) -> Result<Option<PersistedState>, String> {
                 Ok(state) => {
                     log::info!("Loaded persisted state v{}", state.version);
                     Ok(Some(state))
-                }
+                },
                 Err(e) => {
                     // JSON is corrupted - try backup
                     log::error!("Failed to parse state file: {}", e);
                     load_backup(app)
-                }
+                },
             }
-        }
+        },
         Err(e) => {
             // File exists but can't be read - try backup
             log::error!("Failed to read state file: {}", e);
             load_backup(app)
-        }
+        },
     }
 }
 
@@ -107,16 +107,16 @@ fn load_backup(app: &AppHandle) -> Result<Option<PersistedState>, String> {
             Ok(state) => {
                 log::info!("Successfully loaded from backup (v{})", state.version);
                 Ok(Some(state))
-            }
+            },
             Err(e) => {
                 log::error!("Backup is also corrupted: {}", e);
                 Err("Both state file and backup are corrupted".to_string())
-            }
+            },
         },
         Err(e) => {
             log::error!("Failed to read backup file: {}", e);
             Err(format!("Failed to read backup: {}", e))
-        }
+        },
     }
 }
 

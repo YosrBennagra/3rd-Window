@@ -28,10 +28,7 @@ pub async fn apply_fullscreen<R: Runtime>(
     // Determine which window to apply fullscreen to
     let window_label = target_window.unwrap_or_else(|| "main".to_string());
 
-    info!(
-        "[window] apply_fullscreen: {} on window '{}'",
-        fullscreen, window_label
-    );
+    info!("[window] apply_fullscreen: {} on window '{}'", fullscreen, window_label);
 
     let window = app
         .get_webview_window(&window_label)
@@ -94,14 +91,8 @@ pub async fn move_to_monitor<R: Runtime>(
                     .name()
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| format!("Monitor {}", idx + 1)),
-                size: crate::ipc_types::MonitorSize {
-                    width: size.width,
-                    height: size.height,
-                },
-                position: crate::ipc_types::MonitorPosition {
-                    x: position.x,
-                    y: position.y,
-                },
+                size: crate::ipc_types::MonitorSize { width: size.width, height: size.height },
+                position: crate::ipc_types::MonitorPosition { x: position.x, y: position.y },
                 is_primary: idx == 0,
                 scale_factor,
                 refresh_rate: None,
@@ -118,10 +109,7 @@ pub async fn move_to_monitor<R: Runtime>(
         .map_err(|e| e.to_string())?;
 
     if result.fallback_used {
-        info!(
-            "[window] move_to_monitor -> fallback used: {:?}",
-            result.reason
-        );
+        info!("[window] move_to_monitor -> fallback used: {:?}", result.reason);
     }
 
     std::thread::sleep(std::time::Duration::from_millis(30));
@@ -171,11 +159,11 @@ pub async fn open_settings_window<R: Runtime>(app: AppHandle<R>) -> Result<(), S
         Ok(_window) => {
             info!("[window] Settings window created successfully");
             Ok(())
-        }
+        },
         Err(e) => {
             let err = format!("Failed to create settings window: {}", e);
             log::error!("[window] {}", err);
             Err(err)
-        }
+        },
     }
 }

@@ -72,13 +72,13 @@ pub fn get_compatibility_message(state_version: u32) -> String {
     match check_compatibility(state_version) {
         CompatibilityStatus::FullyCompatible => {
             format!("State version {} matches current version", state_version)
-        }
+        },
         CompatibilityStatus::MigrationAvailable => {
             format!(
                 "State version {} can be safely migrated to v{}",
                 state_version, CURRENT_VERSION
             )
-        }
+        },
         CompatibilityStatus::MigrationRisky => {
             format!(
                 "State version {} is {} versions old. Migration may lose some data. Current: v{}",
@@ -86,19 +86,19 @@ pub fn get_compatibility_message(state_version: u32) -> String {
                 CURRENT_VERSION - state_version,
                 CURRENT_VERSION
             )
-        }
+        },
         CompatibilityStatus::FutureVersion => {
             format!(
                 "State is from newer version (v{}) than current (v{}). Using compatibility mode.",
                 state_version, CURRENT_VERSION
             )
-        }
+        },
         CompatibilityStatus::Incompatible => {
             format!(
                 "State version {} is too old to migrate safely (current: v{}). Reset recommended.",
                 state_version, CURRENT_VERSION
             )
-        }
+        },
     }
 }
 
@@ -113,7 +113,7 @@ pub const MIN_SUPPORTED_VERSION: u32 = 1;
 /// Check if version is supported
 #[allow(dead_code)]
 pub fn is_version_supported(state_version: u32) -> bool {
-    state_version >= MIN_SUPPORTED_VERSION && state_version <= CURRENT_VERSION + 5
+    (MIN_SUPPORTED_VERSION..=CURRENT_VERSION + 5).contains(&state_version)
 }
 
 #[cfg(test)]
@@ -122,10 +122,7 @@ mod tests {
 
     #[test]
     fn test_same_version_is_compatible() {
-        assert_eq!(
-            check_compatibility(CURRENT_VERSION),
-            CompatibilityStatus::FullyCompatible
-        );
+        assert_eq!(check_compatibility(CURRENT_VERSION), CompatibilityStatus::FullyCompatible);
     }
 
     #[test]
@@ -140,10 +137,7 @@ mod tests {
 
     #[test]
     fn test_future_version_detected() {
-        assert_eq!(
-            check_compatibility(CURRENT_VERSION + 1),
-            CompatibilityStatus::FutureVersion
-        );
+        assert_eq!(check_compatibility(CURRENT_VERSION + 1), CompatibilityStatus::FutureVersion);
     }
 
     #[test]

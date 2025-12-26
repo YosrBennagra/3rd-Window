@@ -88,8 +88,7 @@ fn collect_edid_names() -> HashMap<String, String> {
                                     continue;
                                 }
 
-                                map.entry(normalized.clone())
-                                    .or_insert_with(|| name.clone());
+                                map.entry(normalized.clone()).or_insert_with(|| name.clone());
                             }
                         }
                     }
@@ -187,8 +186,10 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
     let mut adapter_index = 0;
 
     loop {
-        let mut adapter = DISPLAY_DEVICEW::default();
-        adapter.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
+        let mut adapter = DISPLAY_DEVICEW {
+            cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
+            ..Default::default()
+        };
 
         // SAFETY: EnumDisplayDevicesW is safe when passed a properly initialized DISPLAY_DEVICEW
         // struct with correct cb size. PCWSTR::null() is a valid parameter for enumerating adapters.
@@ -209,8 +210,10 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
 
         let mut monitor_index = 0;
         loop {
-            let mut monitor = DISPLAY_DEVICEW::default();
-            monitor.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
+            let mut monitor = DISPLAY_DEVICEW {
+                cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
+                ..Default::default()
+            };
 
             // SAFETY: EnumDisplayDevicesW is safe when passed a valid adapter PCWSTR and properly
             // initialized DISPLAY_DEVICEW struct. adapter_ptr is derived from adapter.DeviceName.
@@ -232,10 +235,7 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
             let device_id = utf16_buffer_to_string(&monitor.DeviceID);
             let candidate_ids = hardware_id_candidates(&device_id);
 
-            let edid_label = candidate_ids
-                .iter()
-                .find_map(|key| edid_names.get(key))
-                .cloned();
+            let edid_label = candidate_ids.iter().find_map(|key| edid_names.get(key)).cloned();
 
             let friendly_name = normalize_monitor_name(&device_string);
             let is_mirror = (monitor.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) != 0;
@@ -250,10 +250,9 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
                 friendly_name
             };
 
-            if let (Some(identifier), Some(name)) = (
-                extract_display_identifier(&monitor_identifier),
-                resolved_name,
-            ) {
+            if let (Some(identifier), Some(name)) =
+                (extract_display_identifier(&monitor_identifier), resolved_name)
+            {
                 friendly_names.entry(identifier).or_insert(name);
             }
 
@@ -304,9 +303,7 @@ fn resolve_monitor_display_name(
 
 #[tauri::command]
 pub async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String> {
-    let monitors = app
-        .primary_monitor()
-        .map_err(|e| format!("Failed to get monitors: {}", e))?;
+    let monitors = app.primary_monitor().map_err(|e| format!("Failed to get monitors: {}", e))?;
 
     let available_monitors = app
         .available_monitors()
@@ -333,14 +330,8 @@ pub async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String>
         result.push(Monitor {
             identifier: raw_identifier,
             name,
-            size: MonitorSize {
-                width: size.width,
-                height: size.height,
-            },
-            position: MonitorPosition {
-                x: position.x,
-                y: position.y,
-            },
+            size: MonitorSize { width: size.width, height: size.height },
+            position: MonitorPosition { x: position.x, y: position.y },
             is_primary,
             scale_factor,
             refresh_rate: None, // Tauri doesn't expose this yet
@@ -351,10 +342,7 @@ pub async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String>
         result.push(Monitor {
             identifier: None,
             name: "Primary Monitor".to_string(),
-            size: MonitorSize {
-                width: 1920,
-                height: 1080,
-            },
+            size: MonitorSize { width: 1920, height: 1080 },
             position: MonitorPosition { x: 0, y: 0 },
             is_primary: true,
             scale_factor: 1.0,

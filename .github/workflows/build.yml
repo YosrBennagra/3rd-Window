@@ -52,7 +52,7 @@ jobs:
   # Lint and format checks
   lint:
     name: Lint and Format
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Windows-only app
     steps:
       - uses: actions/checkout@v4
       
@@ -107,7 +107,7 @@ jobs:
         run: npm ci
       
       - name: Run tests with coverage
-        run: npm run test -- --coverage --coverageReporters=lcov
+        run: npm run test:coverage
         continue-on-error: true
       
       - name: SonarCloud Scan
@@ -123,7 +123,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest] # Can expand to [macos-latest, ubuntu-latest]
+        platform: [windows-latest] # Windows-only (Linux/macOS not supported)
     runs-on: ${{ matrix.platform }}
     
     steps:
@@ -148,20 +148,6 @@ jobs:
       
       - name: Build frontend
         run: npm run build
-      
-      - name: Install Tauri dependencies (Ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libssl-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
       
       - name: Build Tauri app (Development)
         run: npm run tauri build -- --debug

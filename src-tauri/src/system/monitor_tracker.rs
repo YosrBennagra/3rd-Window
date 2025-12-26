@@ -18,21 +18,11 @@ use tauri::{AppHandle, Emitter, Manager};
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum MonitorEvent {
     /// Monitor layout changed (connect, disconnect, reorder)
-    ConfigurationChanged {
-        monitors: Vec<Monitor>,
-        previous_count: usize,
-        current_count: usize,
-    },
+    ConfigurationChanged { monitors: Vec<Monitor>, previous_count: usize, current_count: usize },
     /// Monitor was disconnected
-    MonitorDisconnected {
-        monitor_index: usize,
-        monitor_name: String,
-    },
+    MonitorDisconnected { monitor_index: usize, monitor_name: String },
     /// Monitor was connected
-    MonitorConnected {
-        monitor_index: usize,
-        monitor_name: String,
-    },
+    MonitorConnected { monitor_index: usize, monitor_name: String },
 }
 
 /// Monitor state tracker
@@ -56,7 +46,7 @@ impl MonitorTracker {
             Err(e) => {
                 warn!("[MonitorTracker] Failed to get monitors: {}", e);
                 return None;
-            }
+            },
         };
 
         let previous_count = match self.last_count.lock() {
@@ -64,7 +54,7 @@ impl MonitorTracker {
             Err(poisoned) => {
                 warn!("[MonitorTracker] Mutex poisoned, recovering: last_count");
                 *poisoned.into_inner()
-            }
+            },
         };
         let current_count = current_monitors.len();
 
@@ -73,7 +63,7 @@ impl MonitorTracker {
             Err(poisoned) => {
                 warn!("[MonitorTracker] Mutex poisoned, recovering: last_config");
                 poisoned.into_inner().clone()
-            }
+            },
         };
 
         // Detect what changed
@@ -109,10 +99,7 @@ impl MonitorTracker {
             }
         } else if !last_config.is_empty() && self.monitors_differ(&last_config, &current_monitors) {
             // Configuration changed (position, resolution, etc.)
-            info!(
-                "[MonitorTracker] Monitor configuration changed (count: {})",
-                current_count
-            );
+            info!("[MonitorTracker] Monitor configuration changed (count: {})", current_count);
             Some(MonitorEvent::ConfigurationChanged {
                 monitors: current_monitors.clone(),
                 previous_count,
@@ -140,13 +127,10 @@ impl MonitorTracker {
 
     /// Get current monitor configuration
     async fn get_current_monitors(&self, app: &AppHandle) -> Result<Vec<Monitor>, String> {
-        let monitors = app
-            .available_monitors()
-            .map_err(|e| format!("Failed to get monitors: {}", e))?;
+        let monitors =
+            app.available_monitors().map_err(|e| format!("Failed to get monitors: {}", e))?;
 
-        let primary = app
-            .primary_monitor()
-            .map_err(|e| format!("Failed to get primary: {}", e))?;
+        let primary = app.primary_monitor().map_err(|e| format!("Failed to get primary: {}", e))?;
 
         let primary_id = primary.and_then(|m| m.name().map(|s| s.to_string()));
 
@@ -167,14 +151,8 @@ impl MonitorTracker {
                 Monitor {
                     identifier: identifier.clone(),
                     name: identifier.unwrap_or_else(|| format!("Monitor {}", idx + 1)),
-                    size: crate::ipc_types::MonitorSize {
-                        width: size.width,
-                        height: size.height,
-                    },
-                    position: crate::ipc_types::MonitorPosition {
-                        x: position.x,
-                        y: position.y,
-                    },
+                    size: crate::ipc_types::MonitorSize { width: size.width, height: size.height },
+                    position: crate::ipc_types::MonitorPosition { x: position.x, y: position.y },
                     is_primary,
                     scale_factor,
                     refresh_rate: None,
@@ -254,10 +232,7 @@ mod tests {
         Monitor {
             identifier: Some(format!("DISPLAY{}", index + 1)),
             name: format!("Monitor {}", index + 1),
-            size: crate::ipc_types::MonitorSize {
-                width,
-                height: 1080,
-            },
+            size: crate::ipc_types::MonitorSize { width, height: 1080 },
             position: crate::ipc_types::MonitorPosition { x, y: 0 },
             is_primary: index == 0,
             scale_factor: 1.0,

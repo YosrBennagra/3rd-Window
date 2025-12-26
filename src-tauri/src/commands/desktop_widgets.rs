@@ -16,10 +16,7 @@ fn get_widget_windows() -> Result<HashMap<String, WidgetWindowConfig>, String> {
     if guard.is_none() {
         *guard = Some(HashMap::new());
     }
-    Ok(guard
-        .as_ref()
-        .ok_or("Widget map unexpectedly None")?
-        .clone())
+    Ok(guard.as_ref().ok_or("Widget map unexpectedly None")?.clone())
 }
 
 fn add_widget_window(widget_id: String, config: WidgetWindowConfig) -> Result<(), String> {
@@ -29,10 +26,7 @@ fn add_widget_window(widget_id: String, config: WidgetWindowConfig) -> Result<()
     if guard.is_none() {
         *guard = Some(HashMap::new());
     }
-    guard
-        .as_mut()
-        .ok_or("Widget map unexpectedly None")?
-        .insert(widget_id, config);
+    guard.as_mut().ok_or("Widget map unexpectedly None")?.insert(widget_id, config);
     Ok(())
 }
 

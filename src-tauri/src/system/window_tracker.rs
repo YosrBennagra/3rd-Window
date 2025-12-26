@@ -38,10 +38,7 @@ pub fn get_active_window_info() -> Result<ActiveWindowInfo, String> {
         unsafe {
             let hwnd: HWND = GetForegroundWindow();
             if hwnd.0.is_null() {
-                return Ok(ActiveWindowInfo {
-                    name: "No active window".to_string(),
-                    duration: 0,
-                });
+                return Ok(ActiveWindowInfo { name: "No active window".to_string(), duration: 0 });
             }
 
             let mut buffer = [0u16; MAX_PATH as usize];
@@ -69,18 +66,12 @@ pub fn get_active_window_info() -> Result<ActiveWindowInfo, String> {
                 0
             };
 
-            Ok(ActiveWindowInfo {
-                name: window_title,
-                duration,
-            })
+            Ok(ActiveWindowInfo { name: window_title, duration })
         }
     }
 
     #[cfg(not(windows))]
     {
-        Ok(ActiveWindowInfo {
-            name: "Not supported on this platform".to_string(),
-            duration: 0,
-        })
+        Ok(ActiveWindowInfo { name: "Not supported on this platform".to_string(), duration: 0 })
     }
 }

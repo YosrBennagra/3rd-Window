@@ -51,7 +51,7 @@ impl Default for PersistedState {
 ///
 /// This controls window behavior, monitor selection, and fullscreen state.
 /// Changes here require careful validation to avoid invalid window states.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettingsV1 {
     /// Whether the app is in fullscreen mode
@@ -65,17 +65,6 @@ pub struct AppSettingsV1 {
 
     /// Last known window position (for non-fullscreen restoration)
     pub window_position: Option<WindowPosition>,
-}
-
-impl Default for AppSettingsV1 {
-    fn default() -> Self {
-        Self {
-            is_fullscreen: false,
-            selected_monitor: 0,
-            always_on_top: false,
-            window_position: None,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -106,13 +95,7 @@ pub struct LayoutStateV1 {
 
 impl Default for LayoutStateV1 {
     fn default() -> Self {
-        Self {
-            grid: GridConfig {
-                columns: 24,
-                rows: 12,
-            },
-            widgets: vec![],
-        }
+        Self { grid: GridConfig { columns: 24, rows: 12 }, widgets: vec![] }
     }
 }
 
@@ -274,10 +257,8 @@ impl PersistedState {
             }
 
             if widget.width == 0 || widget.height == 0 {
-                warnings.push(format!(
-                    "Widget '{}' ({}) has zero size",
-                    widget.id, widget.widget_type
-                ));
+                warnings
+                    .push(format!("Widget '{}' ({}) has zero size", widget.id, widget.widget_type));
             }
         }
 
@@ -320,9 +301,7 @@ impl PersistedState {
 
         // Deduplicate widget IDs (keep first occurrence)
         let mut seen_ids = std::collections::HashSet::new();
-        self.layout
-            .widgets
-            .retain(|w| seen_ids.insert(w.id.clone()));
+        self.layout.widgets.retain(|w| seen_ids.insert(w.id.clone()));
 
         // Clamp refresh interval to reasonable range (1s - 60s)
         self.preferences.refresh_interval = self.preferences.refresh_interval.clamp(1000, 60000);
@@ -478,6 +457,7 @@ mod tests {
         let sanitized = state.sanitize();
         assert_eq!(sanitized.preferences.refresh_interval, 1000);
 
+        let mut state = PersistedState::default();
         state.preferences.refresh_interval = 100000; // Too slow
         let sanitized = state.sanitize();
         assert_eq!(sanitized.preferences.refresh_interval, 60000);
@@ -486,22 +466,18 @@ mod tests {
     #[test]
     fn test_round_trip_serialization() {
         let original = PersistedState::default();
-        let json = serde_json::to_string(&original).expect("Failed to serialize");
-        let deserialized: PersistedState =
-            serde_json::from_str(&json).expect("Failed to deserialize");
+        let json_result = serde_json::to_string(&original);
+        assert!(json_result.is_ok(), "Serialization should succeed");
+
+        let json = json_result.expect("Checked in previous assertion");
+        let deserialize_result = serde_json::from_str::<PersistedState>(&json);
+        assert!(deserialize_result.is_ok(), "Deserialization should succeed");
+
+        let deserialized = deserialize_result.expect("Checked in previous assertion");
 
         assert_eq!(original.version, deserialized.version);
-        assert_eq!(
-            original.app_settings.is_fullscreen,
-            deserialized.app_settings.is_fullscreen
-        );
-        assert_eq!(
-            original.layout.grid.columns,
-            deserialized.layout.grid.columns
-        );
-        assert_eq!(
-            original.preferences.theme as u8,
-            deserialized.preferences.theme as u8
-        );
+        assert_eq!(original.app_settings.is_fullscreen, deserialized.app_settings.is_fullscreen);
+        assert_eq!(original.layout.grid.columns, deserialized.layout.grid.columns);
+        assert_eq!(original.preferences.theme as u8, deserialized.preferences.theme as u8);
     }
 }
