@@ -15,7 +15,7 @@
  */
 
 import type { ComponentType } from 'react';
-import type { WidgetLayout, WidgetConstraints } from '../../domain/models/layout';
+import type { WidgetLayout, WidgetConstraints } from '@domain/models/layout';
 import type {
   WidgetPlugin,
   WidgetPluginMetadata,
@@ -23,7 +23,7 @@ import type {
   WidgetPluginSettingsValidator,
   WidgetPluginLifecycle,
   WidgetPluginErrorHandler,
-} from '../../domain/models/plugin';
+} from '@domain/models/plugin';
 
 /**
  * Simple Widget Descriptor
@@ -141,3 +141,46 @@ export function adaptLegacyWidget(
     constraints,
   });
 }
+
+/**
+ * Create a settings validator from an ensure function
+ * 
+ * Many widgets have ensureXxxSettings functions that validate and sanitize settings.
+ * This adapter wraps them into the WidgetPluginSettingsValidator interface.
+ * 
+ * @template T - The settings type
+ * @param ensureFn - Function that validates/sanitizes settings
+ * @returns Settings validator compatible with plugin system
+ * 
+ * @example
+ * ```typescript
+ * const validator = createSettingsValidator(ensureClockWidgetSettings);
+ * 
+ * // Use in plugin descriptor
+ * const clockPlugin = createWidgetPluginFromSimpleDescriptor({
+ *   id: 'clock',
+ *   name: 'Clock',
+ *   settingsValidator: validator,
+ *   // ...
+ * });
+ * ```
+ */
+export function createSettingsValidator<T extends Record<string, unknown>>(
+  ensureFn: (settings: unknown) => T
+): WidgetPluginSettingsValidator {
+  return {
+    validate: (settings: unknown) => {
+      try {
+        // Attempt to validate/sanitize
+        const validatedSettings = ensureFn(settings);
+        return { valid: true, settings: validatedSettings };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Validation failed';
+        console.warn('[createSettingsValidator]', errorMessage);
+        return { valid: false, error: errorMessage };
+      }
+    },
+    getDefaults: () => ensureFn({}),
+  };
+}
+

@@ -10,8 +10,6 @@
  * - Testable: Can be mocked for tests
  */
 
-import IpcService from '../../services/ipc';
-
 /**
  * Set always-on-top for main window
  */

@@ -1,4 +1,4 @@
-import { MetricSnapshot } from '../../domain/models/widgets';
+import { MetricSnapshot } from '@domain/models/widgets';
 import { invoke } from '@tauri-apps/api/core';
 
 export async function getSystemMetrics(): Promise<MetricSnapshot> {

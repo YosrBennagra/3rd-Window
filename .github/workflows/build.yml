@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [main, develop]
+    # Run on all pushes to any branch
   pull_request:
-    branches: [main, develop]
+    # Run on all pull requests
   workflow_dispatch:
 
 env:
@@ -78,11 +78,52 @@ jobs:
       - name: TypeScript type check
         run: npm run build
       
+      - name: Run tests with coverage
+        run: npm run test -- --coverage
+        continue-on-error: true
+      
       - name: Rust format check
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
       
       - name: Rust clippy
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+
+  # SonarCloud code quality analysis
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for better analysis
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests with coverage
+        run: npm run test -- --coverage --coverageReporters=lcov
+        continue-on-error: true
+      
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=thirdscreen
+            -Dsonar.organization=your-org
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.sources=src,src-tauri/src
+            -Dsonar.tests=src/test
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/target/**,**/*.test.ts,**/*.test.tsx
+            -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx
 
   # Build on multiple platforms
   build:

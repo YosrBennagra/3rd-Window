@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import type { SystemTemperatures } from '../../domain/models/system';
+import type { SystemTemperatures } from '@domain/models/system';
 
 export function useSystemTemps(refreshInterval = 1000) {
   const [data, setData] = useState<SystemTemperatures | null>(null);

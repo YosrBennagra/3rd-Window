@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { listen } from '@tauri-apps/api/event';
-import { useGridStore } from '../../../application/stores/gridStore';
-import { useStore } from '../../../application/stores/store';
+import { useGridStore } from '@application/stores';
+import { useStore } from '@application/stores';
 import { spawnDesktopWidget } from '../../../infrastructure/ipc/desktop-widgets';
-import { useRenderTracking } from '../../../utils/performanceMonitoring';
+import { useRenderTracking } from '@utils/performanceMonitoring';
 import { GridGhost } from './GridGhost';
 import { GridCells } from './GridCells';
-import useGridDrag from './useGridDrag';
+import { useGridDrag } from './useGridDrag';
 import { useWidgetResize } from './useWidgetResize';
 import type { ResizeHandle } from './useWidgetResize';
 import './DraggableGrid.css';

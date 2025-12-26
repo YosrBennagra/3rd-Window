@@ -13,7 +13,10 @@
  */
 
 import { widgetPluginRegistry } from '../domain/services/widgetPluginRegistry';
-import { createWidgetPlugin, createSettingsValidator } from '../domain/services/widgetPluginAdapter';
+import { 
+  createWidgetPluginFromSimpleDescriptor,
+  createSettingsValidator,
+} from '../application/services/widgetPluginAdapter';
 
 // Import all existing widget components
 import {
@@ -79,14 +82,14 @@ export function registerCoreWidgets(): void {
   try {
     // Clock Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'clock',
         name: 'Clock',
         description: 'Display current time and date',
         component: ClockWidget,
         constraints: CLOCK_CONSTRAINTS,
         defaultSettings: CLOCK_WIDGET_DEFAULT_SETTINGS,
-        settingsValidator: createSettingsValidator(ensureClockWidgetSettings, CLOCK_WIDGET_DEFAULT_SETTINGS),
+        settingsValidator: createSettingsValidator(ensureClockWidgetSettings),
         tags: ['time', 'utility'],
         icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="24" cy="24" r="20"/>
@@ -97,14 +100,14 @@ export function registerCoreWidgets(): void {
     
     // Timer Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'timer',
         name: 'Timer',
         description: 'Countdown timer with controls',
         component: TimerWidget,
         constraints: TIMER_CONSTRAINTS,
         defaultSettings: TIMER_WIDGET_DEFAULT_SETTINGS,
-        settingsValidator: createSettingsValidator(ensureTimerWidgetSettings, TIMER_WIDGET_DEFAULT_SETTINGS),
+        settingsValidator: createSettingsValidator(ensureTimerWidgetSettings),
         tags: ['time', 'utility', 'productivity'],
         icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 4h12"/>
@@ -116,7 +119,7 @@ export function registerCoreWidgets(): void {
     
     // Activity Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'activity',
         name: 'Activity Monitor',
         description: 'System activity and performance metrics',
@@ -131,14 +134,14 @@ export function registerCoreWidgets(): void {
     
     // Image Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'image',
         name: 'Image',
         description: 'Display images with zoom and pan',
         component: ImageWidget,
         constraints: IMAGE_CONSTRAINTS,
         defaultSettings: IMAGE_WIDGET_DEFAULT_SETTINGS,
-        settingsValidator: createSettingsValidator(ensureImageWidgetSettings, IMAGE_WIDGET_DEFAULT_SETTINGS),
+        settingsValidator: createSettingsValidator(ensureImageWidgetSettings),
         tags: ['media', 'content'],
         icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="6" y="6" width="36" height="36" rx="2"/>
@@ -150,14 +153,14 @@ export function registerCoreWidgets(): void {
     
     // Video Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'video',
         name: 'Video',
         description: 'Video player with controls',
         component: VideoWidget,
         constraints: VIDEO_CONSTRAINTS,
         defaultSettings: VIDEO_WIDGET_DEFAULT_SETTINGS,
-        settingsValidator: createSettingsValidator(ensureVideoWidgetSettings, VIDEO_WIDGET_DEFAULT_SETTINGS),
+        settingsValidator: createSettingsValidator(ensureVideoWidgetSettings),
         tags: ['media', 'content'],
         icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="6" y="10" width="36" height="28" rx="2"/>
@@ -168,14 +171,14 @@ export function registerCoreWidgets(): void {
     
     // Notes Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'notes',
         name: 'Notes',
         description: 'Quick notes and todos',
         component: NotesWidget,
         constraints: NOTES_CONSTRAINTS,
         defaultSettings: NOTES_WIDGET_DEFAULT_SETTINGS,
-        settingsValidator: createSettingsValidator(ensureNotesWidgetSettings, NOTES_WIDGET_DEFAULT_SETTINGS),
+        settingsValidator: createSettingsValidator(ensureNotesWidgetSettings),
         tags: ['productivity', 'content'],
         icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="8" y="6" width="32" height="36" rx="2"/>
@@ -186,14 +189,14 @@ export function registerCoreWidgets(): void {
     
     // Quick Links Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'quicklinks',
         name: 'Quick Links',
         description: 'Favorite bookmarks and shortcuts',
         component: QuickLinksWidget,
         constraints: QUICKLINKS_CONSTRAINTS,
         defaultSettings: QUICKLINKS_WIDGET_DEFAULT_SETTINGS,
-        settingsValidator: createSettingsValidator(ensureQuickLinksWidgetSettings, QUICKLINKS_WIDGET_DEFAULT_SETTINGS),
+        settingsValidator: createSettingsValidator(ensureQuickLinksWidgetSettings),
         tags: ['productivity', 'navigation'],
         icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M10 24h28M24 10v28"/>
@@ -207,14 +210,14 @@ export function registerCoreWidgets(): void {
     
     // Network Monitor Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'network-monitor',
         name: 'Network Monitor',
         description: 'Real-time network speed and statistics',
         component: NetworkMonitorWidget,
         constraints: NETWORK_MONITOR_CONSTRAINTS,
         defaultSettings: NETWORK_MONITOR_WIDGET_DEFAULT_SETTINGS,
-        settingsValidator: createSettingsValidator(ensureNetworkMonitorWidgetSettings, NETWORK_MONITOR_WIDGET_DEFAULT_SETTINGS),
+        settingsValidator: createSettingsValidator(ensureNetworkMonitorWidgetSettings),
         tags: ['system', 'monitoring', 'network'],
         icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M24 8v8M24 32v8M8 24h8M32 24h8"/>
@@ -229,7 +232,7 @@ export function registerCoreWidgets(): void {
     
     // Temperature Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'temperature',
         name: 'Temperature Monitor',
         description: 'CPU and GPU temperature monitoring',
@@ -245,7 +248,7 @@ export function registerCoreWidgets(): void {
     
     // RAM Usage Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'ram',
         name: 'RAM Usage',
         description: 'Memory usage statistics',
@@ -262,7 +265,7 @@ export function registerCoreWidgets(): void {
     
     // Disk Usage Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'disk',
         name: 'Disk Usage',
         description: 'Storage space monitoring',
@@ -279,14 +282,14 @@ export function registerCoreWidgets(): void {
     
     // PDF Widget
     widgetPluginRegistry.register(
-      createWidgetPlugin({
+      createWidgetPluginFromSimpleDescriptor({
         id: 'pdf',
         name: 'PDF Viewer',
         description: 'View PDF documents',
         component: PDFWidget,
         constraints: PDF_CONSTRAINTS,
         defaultSettings: PDF_WIDGET_DEFAULT_SETTINGS,
-        settingsValidator: createSettingsValidator(ensurePDFWidgetSettings, PDF_WIDGET_DEFAULT_SETTINGS),
+        settingsValidator: createSettingsValidator(ensurePDFWidgetSettings),
         tags: ['content', 'documents'],
         icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M28 6H12a2 2 0 0 0-2 2v32a2 2 0 0 0 2 2h24a2 2 0 0 0 2-2V16l-10-10z"/>

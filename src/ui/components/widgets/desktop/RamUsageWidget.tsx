@@ -1,4 +1,4 @@
-import { useSystemMetrics } from '../../../../hooks/useSystemMetrics';
+import { useSystemMetrics } from '../../../../application/hooks/useSystemMetrics';
 import type { WidgetLayout } from '../../../../domain/models/layout';
 
 interface Props {

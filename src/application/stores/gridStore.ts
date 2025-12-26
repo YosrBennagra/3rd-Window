@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GridConfig, LayoutOperation, WidgetConstraints, WidgetLayout } from '../../domain/models/layout';
+import type { GridConfig, LayoutOperation, WidgetConstraints, WidgetLayout } from '@domain/models/layout';
 import { 
   CLOCK_WIDGET_DEFAULT_SETTINGS, 
   ensureClockWidgetSettings,

@@ -1,4 +1,4 @@
-import IpcService from '../../services/ipc';
+import { IpcService } from './ipc';
 import type { AppSettings } from '../../types/ipc';
 
 /**

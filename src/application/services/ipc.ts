@@ -13,7 +13,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import { trackIpcCall } from '../utils/performanceMonitoring';
+import { trackIpcCall } from '@utils/performanceMonitoring';
 import type {
   AppSettings,
   Monitor,
@@ -29,7 +29,7 @@ import type {
   MonitorsResponse,
   WidgetsResponse,
   VoidResponse,
-} from '../types/ipc';
+} from '../../types/ipc';
 
 // ============================================================================
 // PERFORMANCE-TRACKED INVOKE WRAPPER
@@ -387,8 +387,3 @@ export const IpcService = {
   contextMenu: ContextMenuCommands,
   shell: ShellCommands,
 } as const;
-
-/**
- * Default export for convenient importing
- */
-export default IpcService;

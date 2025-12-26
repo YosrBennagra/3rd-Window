@@ -68,7 +68,13 @@ function GridWidgetItemComponent({
           widget={widget}
           onRemove={() => onRemoveWidget?.(widget.id)}
         >
-          <WidgetComponent widget={widget} />
+          <WidgetComponent 
+            widget={widget}
+            widgetId={widget.id}
+            size={{ width: widget.width, height: widget.height }}
+            settings={widget.settings || {}}
+            mode="dashboard"
+          />
         </WidgetErrorBoundary>
       </div>
       {isResizing && (

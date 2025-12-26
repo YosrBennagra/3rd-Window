@@ -3,9 +3,13 @@
 This file now contains only the essential commands, critical operational notes, and prioritized future enhancements for CI/CD.
 
 Critical notes
-- **Secrets:** never commit code-signing certificates or secrets. Required GitHub Actions secrets: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- **Secrets:** never commit code-signing certificates or secrets. Required GitHub Actions secrets:
+  - `TAURI_SIGNING_PRIVATE_KEY`
+  - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+  - `SONAR_TOKEN` (SonarCloud authentication token)
 - **Version single source:** keep `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` in sync.
 - **CI env:** ensure `CI=true` and `NODE_ENV=production` in CI jobs.
+- **Pipeline triggers:** CI runs on all pushes and pull requests (not limited to main/develop).
 
 Key commands
 - Version check / sync
@@ -67,6 +71,23 @@ git tag v1.0.1
 git push origin main --tags
 ```
 
+SonarCloud setup
+1. Configure SonarCloud project:
+   - Go to https://sonarcloud.io
+   - Import your GitHub repository
+   - Copy your project key and organization
+   - Update `sonar-project.properties` with correct values
+   
+2. Add SONAR_TOKEN to GitHub:
+   - Generate token in SonarCloud (My Account > Security)
+   - Add to GitHub repository Settings > Secrets and variables > Actions
+   - Name it `SONAR_TOKEN`
+
+3. Update workflow (already done):
+   - SonarCloud analysis runs on every push
+   - Includes code coverage and quality gates
+   - Results appear in PR comments and SonarCloud dashboard
+
 Essential validation & troubleshooting
 - Run pre-build validation before CI or local release:
 ```bash
@@ -76,6 +97,7 @@ npm run build:validate
   - If Rust toolchain error: `rustup update stable` then `rustc --version`.
   - If version mismatch: `node scripts/sync-version.js <version>` then commit.
   - If CI fails due to signing: ensure code-signing secrets exist in repository Secrets.
+  - If SonarCloud fails: verify `SONAR_TOKEN` secret and update project key in `sonar-project.properties`.
 
 Prioritized future improvements
 1. Auto-update: integrate Tauri updater, delta updates, and a rollback mechanism.
@@ -86,5 +108,6 @@ Prioritized future improvements
 Optional / low-effort enhancements
 - Add a lint rule blocking new `@ts-ignore` or `any` in PRs.
 - Add a small CI job that validates a representative set of IPC payloads against backend types.
+- Expand SonarCloud to analyze Rust code (requires additional setup).
 
-Last updated: 2025-01-01
+Last updated: 2025-12-26

@@ -1,4 +1,4 @@
-import { AlertItem, MetricSnapshot } from '../../domain/models/widgets';
+import { AlertItem, MetricSnapshot } from '@domain/models/widgets';
 import type { AlertRule } from '../../application/store';
 
 export function evaluateAlerts(

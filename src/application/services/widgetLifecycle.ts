@@ -15,7 +15,7 @@ import type {
   WidgetContract,
   WidgetLifecycleContext,
   WidgetMode,
-} from '../../domain/contracts/WidgetContract';
+} from '@domain/contracts/WidgetContract';
 
 /**
  * Widget instance state tracked by lifecycle manager

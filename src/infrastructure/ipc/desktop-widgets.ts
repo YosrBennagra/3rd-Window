@@ -1,4 +1,4 @@
-import IpcService from '../../services/ipc';
+import { IpcService } from '@application/services';
 import type { WidgetWindowConfig } from '../../types/ipc';
 
 export async function spawnDesktopWidget(config: WidgetWindowConfig): Promise<string> {

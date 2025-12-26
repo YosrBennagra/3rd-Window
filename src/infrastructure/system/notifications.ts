@@ -1,4 +1,4 @@
-import { NotificationItem } from '../../domain/models/widgets';
+import { NotificationItem } from '@domain/models/widgets';
 
 const sources = ['System', 'Discord', 'Slack', 'WhatsApp', 'Facebook', 'Messenger'];
 const messages = [

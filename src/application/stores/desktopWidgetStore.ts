@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DesktopWidgetConfig } from '../../domain/models/desktop-widget';
+import { DesktopWidgetConfig } from '@domain/models/desktop-widget';
 import { spawnDesktopWidget, closeDesktopWidget, getDesktopWidgets } from '../../infrastructure/ipc/desktop-widgets';
 import { restoreDesktopWidgets } from '../services/widgetRestoration';
 

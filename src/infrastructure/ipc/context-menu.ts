@@ -1,4 +1,4 @@
-import IpcService from '../../services/ipc';
+import { IpcService } from '@application/services';
 
 export async function enableContextMenu(): Promise<void> {
   await IpcService.contextMenu.enable();

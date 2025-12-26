@@ -1,8 +1,42 @@
 /**
- * IPC Module Exports
+ * IPC Module - Infrastructure Layer
  * 
- * Centralized exports for IPC contracts and services.
- * Import from this file for clean, consistent access.
+ * Centralized exports for IPC contracts and Tauri backend communication.
+ * Provides type-safe access to all backend commands and system APIs.
+ * 
+ * @module @infrastructure/ipc
+ * 
+ * @example Type Contracts
+ * ```typescript
+ * import type { SystemMetrics, Monitor, AppSettings } from '@infrastructure/ipc';
+ * 
+ * const metrics: SystemMetrics = await IpcService.getSystemMetrics();
+ * const monitors: Monitor[] = await IpcService.getMonitors();
+ * ```
+ * 
+ * @example IPC Service
+ * ```typescript
+ * import { IpcService } from '@infrastructure/ipc';
+ * 
+ * // Fetch system metrics
+ * const metrics = await IpcService.getSystemMetrics();
+ * 
+ * // Save settings
+ * await IpcService.saveSettings(newSettings);
+ * ```
+ * 
+ * @example Error Handling
+ * ```typescript
+ * import { IpcService, isIpcError, formatIpcError } from '@infrastructure/ipc';
+ * 
+ * try {
+ *   await IpcService.someCommand();
+ * } catch (error) {
+ *   if (isIpcError(error)) {
+ *     console.error(formatIpcError(error));
+ *   }
+ * }
+ * ```
  */
 
 // Type contracts
@@ -30,7 +64,7 @@ export type {
 export { isIpcError, formatIpcError } from '../../types/ipc';
 
 // IPC service (default export)
-export { default as IpcService } from '../../services/ipc';
+export { IpcService } from '@application/services';
 
 // Named command exports for convenience
 export {
@@ -40,4 +74,4 @@ export {
   WidgetCommands,
   MetricsCommands,
   ContextMenuCommands,
-} from '../../services/ipc';
+} from '../../application/services/ipc';

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { updateWidgetPosition } from '../../infrastructure/ipc/desktop-widgets';
-import { IpcService } from '../../services/ipc';
+import { IpcService } from '@application/services';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { WidgetContextMenu } from './widgets/desktop/WidgetContextMenu';
 import './DesktopWidget.css';

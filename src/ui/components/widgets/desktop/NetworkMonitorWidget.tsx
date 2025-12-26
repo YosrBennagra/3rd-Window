@@ -1,4 +1,4 @@
-import { useNetworkStats } from '../../../../hooks/useSystemMetrics';
+import { useNetworkStats } from '../../../../application/hooks/useSystemMetrics';
 import type { WidgetLayout } from '../../../../domain/models/layout';
 import { ensureNetworkMonitorWidgetSettings } from '../../../../domain/models/widgets';
 

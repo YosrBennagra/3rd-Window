@@ -1,4 +1,4 @@
-import type { ContextMenuProps } from '../../../domain/models/widget';
+import type { ContextMenuProps } from '@domain/models/widget';
 
 export function ContextMenu({ position, title, onClose, onProperties, onRemove }: ContextMenuProps) {
   if (!position) return null;

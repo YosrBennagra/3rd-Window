@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { MouseEvent } from 'react';
 import type { WidgetLayout } from '../../../../domain/models/layout';
 import { ensureClockWidgetSettings } from '../../../../domain/models/widgets';
-import { IpcService } from '../../../../services/ipc';
+import { IpcService } from '../../../../application/services/ipc';
 import { useClock } from '../../../../application/hooks/useClock';
 import { useFormattedTime } from '../../../../application/hooks/useFormattedTime';
 

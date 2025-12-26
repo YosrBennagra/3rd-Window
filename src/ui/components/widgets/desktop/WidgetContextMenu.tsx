@@ -10,7 +10,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { IpcService } from '../../../../services/ipc';
+import { invoke } from '@tauri-apps/api/core';
+import { IpcService } from '../../../../application/services/ipc';
 import './WidgetContextMenu.css';
 
 interface ContextMenuProps {

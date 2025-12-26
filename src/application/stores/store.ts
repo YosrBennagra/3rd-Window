@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Monitor, AppSettings } from '../../domain/models/system';
+import type { Monitor, AppSettings } from '@domain/models/system';
 import * as settingsService from '../services/settingsService';
 import * as monitorService from '../services/monitorService';
 

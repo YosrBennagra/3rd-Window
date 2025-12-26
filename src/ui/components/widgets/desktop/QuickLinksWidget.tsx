@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useGridStore } from '../../../../application/stores/gridStore';
 import type { WidgetLayout } from '../../../../domain/models/layout';
 import { ensureQuickLinksWidgetSettings, type QuickLink } from '../../../../domain/models/widgets';
-import { IpcService } from '../../../../services/ipc';
+import { IpcService } from '../../../../application/services/ipc';
 
 interface QuickLinksWidgetProps {
   widget: WidgetLayout;

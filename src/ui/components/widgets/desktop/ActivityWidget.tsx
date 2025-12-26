@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IpcService } from '../../../../services/ipc';
+import { IpcService } from '../../../../application/services/ipc';
 import type { WidgetLayout } from '../../../../domain/models/layout';
 
 interface ActivityData {

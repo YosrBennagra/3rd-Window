@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function TemperatureWidget({ widget: _widget }: Props) {
-  const { metrics } = useSystemMetrics({ interval: 2000 });
+  const { metrics } = useSystemMetrics({ refreshInterval: 2000 });
   
   const cpuTemp = metrics?.cpuTemp ?? 0;
   const gpuTemp = metrics?.gpuTemp ?? 0;

@@ -1,4 +1,4 @@
-import type { GridConfig } from '../../../domain/models/layout';
+import type { GridConfig } from '@domain/models/layout';
 
 interface Props {
   grid: GridConfig;

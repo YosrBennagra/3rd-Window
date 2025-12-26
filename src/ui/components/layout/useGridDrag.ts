@@ -20,7 +20,7 @@ export interface GridDragState {
   cancelDrag: () => void;
 }
 
-export default function useGridDrag({ widgets, moveWidget, getCellFromPointer }: DragParams): GridDragState {
+export function useGridDrag({ widgets, moveWidget, getCellFromPointer }: DragParams): GridDragState {
   const [dragInfo, setDragInfo] = useState<DragInfo | null>(null);
   const [ghostStyle, setGhostStyle] = useState<React.CSSProperties | null>(null);
   const [dragStyle, setDragStyle] = useState<React.CSSProperties | null>(null);

@@ -1,5 +1,5 @@
 import { WidgetFrame } from './WidgetFrame';
-import { widgetDefinitions } from '../../config/widgets';
+import { widgetDefinitions } from '@config/widgets';
 import {
   Notifications,
   Temperature,

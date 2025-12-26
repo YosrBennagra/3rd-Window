@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ClockWidgetSettings } from '../../domain/models/widgets';
+import type { ClockWidgetSettings } from '@domain/models/widgets';
 
 /**
  * Custom Hook: useFormattedTime (React 18 Best Practice)

@@ -1,5 +1,5 @@
-import { useGridStore } from '../../../application/stores/gridStore';
-import { widgetDefinitions } from '../../../config/widgets';
+import { useGridStore } from '@application/stores';
+import { widgetDefinitions } from '@config/widgets';
 
 export function WidgetPalette() {
   const { addWidget, widgets } = useGridStore();

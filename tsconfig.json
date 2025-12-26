@@ -18,10 +18,14 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@domain/*": ["./src/domain/*"],
       "@application/*": ["./src/application/*"],
+      "@domain/*": ["./src/domain/*"],
       "@infrastructure/*": ["./src/infrastructure/*"],
-      "@ui/*": ["./src/ui/*"]
+      "@ui/*": ["./src/ui/*"],
+      "@config/*": ["./src/config/*"],
+      "@types/*": ["./src/types/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@theme/*": ["./src/theme/*"]
     },
 
     /* Linting */

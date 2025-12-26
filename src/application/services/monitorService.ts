@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { Monitor } from '../../domain/models/system';
+import type { Monitor } from '@domain/models/system';
 
 /**
  * Monitor Service (Zustand Architecture Best Practice)

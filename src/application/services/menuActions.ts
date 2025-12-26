@@ -1,4 +1,4 @@
-import type { WidgetLayout } from '../../domain/models/layout';
+import type { WidgetLayout } from '@domain/models/layout';
 
 /**
  * Menu Action Handlers (SOLID: Open/Closed + Single Responsibility)

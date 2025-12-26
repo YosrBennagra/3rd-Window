@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IpcService } from '../services/ipc';
+import { IpcService } from '../application/services/ipc';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface WidgetOption {
