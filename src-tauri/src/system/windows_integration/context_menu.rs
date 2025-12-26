@@ -31,7 +31,7 @@ const MODERN_HANDLER_CLSID: &str = "{6CB8AB7D-0E2F-416D-884E-2AD2BB7140A7}";
  * Uses protocol handler for security (no direct shell execution).
  *
  * Registry Structure:
- * ```
+ * ```text
  * HKCU:\Software\Classes\DesktopBackground\Shell\ThirdScreen
  *   @              = "ThirdScreen - Add Widget"
  *   Icon           = "<exe path>"

@@ -57,7 +57,7 @@ pub fn validate_protocol_registration() -> bool {
 /// Called during installation or first run.
 ///
 /// Registry Structure:
-/// ```
+/// ```text
 /// HKCU:\Software\Classes\thirdscreen
 ///   @                = "URL:ThirdScreen Protocol"
 ///   URL Protocol     = ""
