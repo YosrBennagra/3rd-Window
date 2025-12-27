@@ -275,7 +275,8 @@ impl PersistedState {
             }
 
             if widget.width == 0 || widget.height == 0 {
-                warnings.push(format!("Widget '{}' ({}) has zero size", widget.id, widget.widget_type));
+                warnings
+                    .push(format!("Widget '{}' ({}) has zero size", widget.id, widget.widget_type));
             }
         }
         warnings

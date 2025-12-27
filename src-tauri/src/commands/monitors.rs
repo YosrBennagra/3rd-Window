@@ -17,14 +17,14 @@ fn parse_edid_display_name(edid: &[u8]) -> Option<String> {
         }
 
         let block = &edid[start..end];
-        if block[0..3] != [0x00, 0x00, 0x00] || block[3] != 0xFC {
+        if block[0..3] != [0x00, 0x00, 0x00] || block[3] != 0xfc {
             continue;
         }
 
         let raw_text = &block[5..18];
         let mut name = String::new();
         for &byte in raw_text {
-            if byte == 0x00 || byte == 0x0A || byte == 0x0D {
+            if byte == 0x00 || byte == 0x0a || byte == 0x0d {
                 break;
             }
             name.push(byte as char);
@@ -49,12 +49,13 @@ fn collect_edid_names() -> HashMap<String, String> {
     let mut map = HashMap::new();
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
 
-    let display_root = match hklm
-        .open_subkey_with_flags("SYSTEM\\CurrentControlSet\\Enum\\DISPLAY", KEY_READ)
-    {
-        Ok(root) => root,
-        Err(_) => return map,
-    };
+    let display_root =
+        match hklm.open_subkey_with_flags("SYSTEM\\CurrentControlSet\\Enum\\DISPLAY", KEY_READ) {
+            Ok(root) => root,
+            Err(_) => {
+                return map;
+            },
+        };
 
     // Helper: return hardware ids and a valid EDID name (not the generic PnP placeholder).
     fn parse_model_entry(manufacturer: &str, model_key: &RegKey) -> Option<(Vec<String>, String)> {
@@ -80,13 +81,17 @@ fn collect_edid_names() -> HashMap<String, String> {
     for manufacturer in display_root.enum_keys().flatten() {
         let manufacturer_key = match display_root.open_subkey_with_flags(&manufacturer, KEY_READ) {
             Ok(k) => k,
-            Err(_) => continue,
+            Err(_) => {
+                continue;
+            },
         };
 
         for model in manufacturer_key.enum_keys().flatten() {
             let model_key = match manufacturer_key.open_subkey_with_flags(&model, KEY_READ) {
                 Ok(k) => k,
-                Err(_) => continue,
+                Err(_) => {
+                    continue;
+                },
             };
 
             if let Some((hardware_ids, name)) = parse_model_entry(&manufacturer, &model_key) {
@@ -193,7 +198,7 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
         monitor: &DISPLAY_DEVICEW,
         edid_names: &HashMap<String, String>,
     ) -> Option<(String, String)> {
-        if monitor.StateFlags & DISPLAY_DEVICE_ACTIVE == 0 {
+        if (monitor.StateFlags & DISPLAY_DEVICE_ACTIVE) == 0 {
             return None;
         }
 
@@ -224,19 +229,36 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
 
     let mut adapter_index = 0;
     loop {
-        let mut adapter = DISPLAY_DEVICEW { cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32, ..Default::default() };
-        let adapter_found = unsafe { EnumDisplayDevicesW(PCWSTR::null(), adapter_index, &mut adapter, 0).as_bool() };
-        if !adapter_found { break; }
+        let mut adapter = DISPLAY_DEVICEW {
+            cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
+            ..Default::default()
+        };
+        let adapter_found = unsafe {
+            EnumDisplayDevicesW(PCWSTR::null(), adapter_index, &mut adapter, 0).as_bool()
+        };
+        if !adapter_found {
+            break;
+        }
 
         let adapter_name = utf16_buffer_to_string(&adapter.DeviceName);
-        if adapter_name.is_empty() { adapter_index += 1; continue; }
+        if adapter_name.is_empty() {
+            adapter_index += 1;
+            continue;
+        }
 
         let adapter_ptr = PCWSTR(adapter.DeviceName.as_ptr());
         let mut monitor_index = 0;
         loop {
-            let mut monitor = DISPLAY_DEVICEW { cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32, ..Default::default() };
-            let monitor_found = unsafe { EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool() };
-            if !monitor_found { break; }
+            let mut monitor = DISPLAY_DEVICEW {
+                cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
+                ..Default::default()
+            };
+            let monitor_found = unsafe {
+                EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool()
+            };
+            if !monitor_found {
+                break;
+            }
 
             if let Some((identifier, name)) = resolve_device_name(&monitor, &edid_names) {
                 friendly_names.entry(identifier).or_insert(name);
@@ -246,7 +268,7 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
         }
 
         adapter_index += 1;
-    } 
+    }
 
     friendly_names
 }
