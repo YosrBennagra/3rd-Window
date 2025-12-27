@@ -48,6 +48,9 @@ const clampValue = (value: number, min: number, max: number) => Math.min(Math.ma
 // 2) `crypto.getRandomValues()` -> base36 string
 // 3) fallback to `Math.random()` for older environments
 const generateWidgetId = (widgetType: string) => {
+  const formatBytes = (bytes: ArrayLike<number>) =>
+    Array.from(bytes, (b) => b.toString(36).padStart(2, '0')).join('').slice(0, 8);
+
   try {
     const webCrypto = (globalThis as any).crypto;
     if (webCrypto) {
@@ -57,12 +60,7 @@ const generateWidgetId = (widgetType: string) => {
       if (typeof webCrypto.getRandomValues === 'function') {
         const arr = new Uint8Array(8);
         webCrypto.getRandomValues(arr);
-        // Convert bytes to compact base36 string
-        const s = Array.from(arr)
-          .map((b: number) => b.toString(36).padStart(2, '0'))
-          .join('')
-          .slice(0, 8);
-        return `${widgetType}-${s}`;
+        return `${widgetType}-${formatBytes(arr)}`;
       }
     }
 
@@ -74,12 +72,8 @@ const generateWidgetId = (widgetType: string) => {
         // @ts-ignore
         const nodeCrypto = require('crypto');
         if (nodeCrypto && typeof nodeCrypto.randomBytes === 'function') {
-          const buf = nodeCrypto.randomBytes(8);
-          const s = Array.from(buf)
-            .map((b: number) => b.toString(36).padStart(2, '0'))
-            .join('')
-            .slice(0, 8);
-          return `${widgetType}-${s}`;
+          const buf = nodeCrypto.randomBytes(8) as ArrayLike<number>;
+          return `${widgetType}-${formatBytes(buf)}`;
         }
       } catch {
         // ignore
