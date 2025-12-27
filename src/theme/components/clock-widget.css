@@ -1,41 +1,192 @@
-/* Clock Widget */
-.clock__time {
-  font-size: clamp(28px, 5vw, 56px);
-  font-weight: 300;
-  color: var(--os-text-primary);
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
+/* Clock Widget — Modern, accessible, responsive design
+   - Supports digital and analog modes via modifier classes
+   - Uses CSS variables for theming and high-contrast
+   - Prefers-reduced-motion respected for animations
+*/
 
-.clock__date {
-  font-size: var(--font-md);
-  color: var(--os-text-secondary);
-  font-weight: 400;
-}
+/* Clock Widget — aligned with notes-widget / widget visual language
+   - Uses glass/bg variables and header/content structure like other widgets
+   - Provides two modes: digital and analog via modifier classes
+*/
 
-.clock-widget--static .clock-static {
+.clock-widget {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
   width: 100%;
   height: 100%;
-  text-align: center;
-  padding: var(--spacing-sm);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.clock-static__time {
-  font-size: clamp(20px, 2.6vw, 32px);
-  font-weight: 300;
-  letter-spacing: 0.015em;
-  line-height: 1.05;
+.clock-widget__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
 }
 
-.clock-static__date {
-  font-size: clamp(9px, 0.75vw, 13px);
+.clock-widget__title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--os-text-primary);
+}
+
+.clock-widget__controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.clock-widget__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 0.5rem;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+/* DIGITAL */
+.clock-widget--digital .clock-display {
+  width: 100%;
+  max-width: 420px;
+  padding: 1rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.clock-display__time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--os-text-primary);
+  font-size: clamp(24px, 5vw, 56px);
+  line-height: 1;
+  text-align: left;
+}
+
+.clock-display__meta {
+  display: flex;
+  justify-content: space-between;
   color: var(--os-text-secondary);
-  letter-spacing: 0.1em;
+  font-size: 0.85rem;
   text-transform: uppercase;
-  line-height: 1.1;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+/* ANALOG */
+.clock-widget--analog .clock-analog {
+  width: min(320px, 78%);
+  aspect-ratio: 1/1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.02), transparent 20%), var(--glass-bg);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.clock-face {
+  width: 86%;
+  height: 86%;
+  border-radius: 50%;
+  position: relative;
+}
+
+.clock-hand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: 0 0;
+  border-radius: 2px;
+  background: var(--os-text-primary);
+}
+
+.clock-hand.hour {
+  width: 4px;
+  height: 28%;
+  transform: translate(-50%, -100%) rotate(var(--hour-rot));
+}
+
+.clock-hand.minute {
+  width: 3px;
+  height: 40%;
+  transform: translate(-50%, -100%) rotate(var(--minute-rot));
+}
+
+.clock-hand.second {
+  width: 2px;
+  height: 44%;
+  background: var(--color-accent);
+  transform: translate(-50%, -100%) rotate(var(--second-rot));
+}
+
+.clock-analog__label {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--os-text-secondary);
+}
+
+/* Simple focus styles consistent with other widgets */
+.clock-widget:focus-within,
+.clock-widget:focus {
+  outline: 3px solid rgba(86, 182, 249, 0.12);
+  outline-offset: 3px;
+}
+
+@media (max-width: 420px) {
+  .clock-display__time {
+    font-size: clamp(20px, 10vw, 44px);
+  }
+
+  .clock-widget--analog .clock-analog {
+    width: 72%;
+  }
+}
+
+
+/* High contrast override */
+@media (forced-colors: active),
+(prefers-contrast: more) {
+  .clock-widget {
+    color: WindowText;
+  }
+
+  .clock-digital__time,
+  .clock-hand {
+    color: WindowText;
+    background: WindowText;
+  }
+}
+
+/* Reduced motion: stop the second hand animation */
+@media (prefers-reduced-motion: reduce) {
+  .clock-hand.second {
+    transition: none;
+  }
+}
+
+/* Utility: small screens adapt */
+@media (max-width: 420px) {
+  .clock-digital__time {
+    font-size: clamp(22px, 10vw, 48px);
+  }
+
+  .clock-widget--analog .clock-analog {
+    width: 72%;
+  }
 }
