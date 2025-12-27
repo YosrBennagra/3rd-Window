@@ -43,10 +43,7 @@ pub fn validate_widget_id(widget_id: &str) -> Result<(), ValidationError> {
     }
 
     // Only allow alphanumeric, hyphens, and underscores
-    if !widget_id
-        .chars()
-        .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
-    {
+    if !widget_id.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
         return Err(ValidationError {
             field: "widgetId".to_string(),
             message: "Must contain only alphanumeric characters, hyphens, and underscores"

@@ -1,5 +1,6 @@
 import { IpcService } from './ipc';
 import type { AppSettings } from '../../types/ipc';
+import { isTauriRuntime } from './runtime';
 
 /**
  * Settings Service (Zustand Architecture Best Practice)
@@ -14,29 +15,6 @@ import type { AppSettings } from '../../types/ipc';
  * 
  * Updated to use centralized IPC service with validation and type safety.
  */
-
-const isTauriRuntime = (() => {
-  let cached: boolean | null = null;
-  return () => {
-    if (cached !== null) return cached;
-    if (typeof window === 'undefined') {
-      cached = false;
-      return cached;
-    }
-    const candidate = window as unknown as {
-      __TAURI__?: { invoke?: unknown; core?: { invoke?: unknown } };
-      __TAURI_IPC__?: unknown;
-      __TAURI_INTERNALS__?: { invoke?: unknown; invokeHandler?: unknown };
-    };
-    cached =
-      typeof candidate.__TAURI_IPC__ === 'function' ||
-      typeof candidate.__TAURI__?.invoke === 'function' ||
-      typeof candidate.__TAURI__?.core?.invoke === 'function' ||
-      typeof candidate.__TAURI_INTERNALS__?.invoke === 'function' ||
-      typeof candidate.__TAURI_INTERNALS__?.invokeHandler === 'function';
-    return cached;
-  };
-})();
 
 /**
  * Apply fullscreen mode to window

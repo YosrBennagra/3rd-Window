@@ -42,12 +42,11 @@ pub fn validate_protocol_registration() -> bool {
         Ok(key) => {
             // Verify it has required keys
             let has_url_protocol = key.get_value::<String, _>("URL Protocol").is_ok();
-            let has_command = hkcu
-                .open_subkey(format!("{}\\shell\\open\\command", protocol_path))
-                .is_ok();
+            let has_command =
+                hkcu.open_subkey(format!("{}\\shell\\open\\command", protocol_path)).is_ok();
 
             has_url_protocol && has_command
-        }
+        },
         Err(_) => false,
     }
 }
@@ -58,7 +57,7 @@ pub fn validate_protocol_registration() -> bool {
 /// Called during installation or first run.
 ///
 /// Registry Structure:
-/// ```
+/// ```text
 /// HKCU:\Software\Classes\thirdscreen
 ///   @                = "URL:ThirdScreen Protocol"
 ///   URL Protocol     = ""
@@ -113,15 +112,15 @@ pub fn unregister_protocol() -> Result<(), io::Error> {
         Ok(_) => {
             println!("[Protocol] ✓ Protocol unregistered successfully");
             Ok(())
-        }
+        },
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
             println!("[Protocol] ℹ Protocol not found (already unregistered)");
             Ok(())
-        }
+        },
         Err(e) => {
             eprintln!("[Protocol] ✗ Failed to unregister protocol: {}", e);
             Err(e)
-        }
+        },
     }
 }
 
@@ -157,11 +156,11 @@ pub fn validate_protocol_url(url: &str) -> Option<ProtocolAction> {
         "open-picker" => {
             println!("[Protocol] ✓ Valid action: open-picker");
             Some(ProtocolAction::OpenPicker)
-        }
+        },
         "show-dashboard" => {
             println!("[Protocol] ✓ Valid action: show-dashboard");
             Some(ProtocolAction::ShowDashboard)
-        }
+        },
         _ if action.starts_with("add-widget/") => {
             let widget_type = action.strip_prefix("add-widget/").unwrap_or("");
 
@@ -173,11 +172,11 @@ pub fn validate_protocol_url(url: &str) -> Option<ProtocolAction> {
                 eprintln!("[Protocol] ✗ Invalid widget type: {}", widget_type);
                 None
             }
-        }
+        },
         _ => {
             eprintln!("[Protocol] ✗ Unsupported action: {}", action);
             None
-        }
+        },
     }
 }
 
@@ -195,9 +194,7 @@ fn is_valid_widget_type(widget_type: &str) -> bool {
         return false;
     }
 
-    widget_type
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '-')
+    widget_type.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
 }
 
 /// Get executable path
@@ -273,18 +270,9 @@ mod tests {
         assert_eq!(validate_protocol_url("thirdscreen://shell/evil"), None);
 
         // Invalid widget types
-        assert_eq!(
-            validate_protocol_url("thirdscreen://add-widget/../../etc/passwd"),
-            None
-        );
-        assert_eq!(
-            validate_protocol_url("thirdscreen://add-widget/cmd.exe"),
-            None
-        );
-        assert_eq!(
-            validate_protocol_url("thirdscreen://add-widget/widget;rm -rf /"),
-            None
-        );
+        assert_eq!(validate_protocol_url("thirdscreen://add-widget/../../etc/passwd"), None);
+        assert_eq!(validate_protocol_url("thirdscreen://add-widget/cmd.exe"), None);
+        assert_eq!(validate_protocol_url("thirdscreen://add-widget/widget;rm -rf /"), None);
     }
 
     #[test]

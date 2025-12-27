@@ -21,7 +21,6 @@
  *
  * Users can manually delete AppData if they want complete removal.
  */
-
 #[cfg(target_os = "windows")]
 use crate::system::windows_integration::registry_utils;
 

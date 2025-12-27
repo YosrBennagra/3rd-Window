@@ -22,16 +22,29 @@ interface Props {
   widget: WidgetLayout;
 }
 
-export default function DiskUsageWidget({ widget: _widget }: Props) {
+export function DiskUsageWidget({ widget: _widget }: Props) {
   const [metrics, setMetrics] = useState<ExtendedSystemMetrics | null>(null);
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
         const data = await IpcService.metrics.getSystemMetrics();
-        // TODO: This widget expects disk metrics that aren't in SystemMetrics yet
-        // For now, cast to ExtendedSystemMetrics (will show 0 for disk values)
-        setMetrics(data as unknown as ExtendedSystemMetrics);
+        const candidate = data as Partial<ExtendedSystemMetrics> & {
+          memoryUsed?: number;
+          memoryTotal?: number;
+        };
+        const normalized: ExtendedSystemMetrics = {
+          cpuUsage: candidate.cpuUsage ?? 0,
+          cpuTemp: candidate.cpuTemp ?? 0,
+          gpuTemp: candidate.gpuTemp ?? 0,
+          ramUsedBytes: candidate.ramUsedBytes ?? candidate.memoryUsed ?? 0,
+          ramTotalBytes: candidate.ramTotalBytes ?? candidate.memoryTotal ?? 1,
+          diskUsedBytes: candidate.diskUsedBytes ?? 0,
+          diskTotalBytes: candidate.diskTotalBytes ?? 1,
+          netUpMbps: candidate.netUpMbps ?? 0,
+          netDownMbps: candidate.netDownMbps ?? 0,
+        };
+        setMetrics(normalized);
       } catch {
         // Silent error - widget will show 0 values
       }
@@ -173,3 +186,5 @@ export default function DiskUsageWidget({ widget: _widget }: Props) {
     </div>
   );
 }
+
+export default DiskUsageWidget;

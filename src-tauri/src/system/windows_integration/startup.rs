@@ -65,15 +65,15 @@ pub fn disable() -> Result<(), io::Error> {
             Ok(_) => {
                 println!("[Startup] ✓ Startup disabled");
                 Ok(())
-            }
+            },
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
                 println!("[Startup] ℹ Startup not found (already disabled)");
                 Ok(())
-            }
+            },
             Err(e) => {
                 eprintln!("[Startup] ✗ Failed to disable startup: {}", e);
                 Err(e)
-            }
+            },
         }
     } else {
         println!("[Startup] ℹ Run key not found");

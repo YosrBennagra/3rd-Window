@@ -23,13 +23,7 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         app,
         "Add Widget to Desktop",
         true,
-        &[
-            &clock_widget,
-            &temp_widget,
-            &ram_widget,
-            &disk_widget,
-            &network_widget,
-        ],
+        &[&clock_widget, &temp_widget, &ram_widget, &disk_widget, &network_widget],
     )?;
 
     let separator2 = PredefinedMenuItem::separator(app)?;
@@ -38,22 +32,12 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     // Build menu
     let menu = Menu::with_items(
         app,
-        &[
-            &show_dashboard,
-            &settings_item,
-            &separator1,
-            &widgets_menu,
-            &separator2,
-            &quit,
-        ],
+        &[&show_dashboard, &settings_item, &separator1, &widgets_menu, &separator2, &quit],
     )?;
 
     // Create tray icon
     let icon = app.default_window_icon().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "No default window icon available",
-        )
+        std::io::Error::new(std::io::ErrorKind::NotFound, "No default window icon available")
     })?;
 
     let _tray = TrayIconBuilder::new()
@@ -68,18 +52,18 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                     let _ = WINDOW_MANAGER.show(app, &window_type);
                     let _ = WINDOW_MANAGER.focus(app, &window_type);
                 }
-            }
+            },
             "open_settings" => {
                 use crate::system::{WindowConfig, WINDOW_MANAGER};
                 let config = WindowConfig::settings();
                 let _ = WINDOW_MANAGER.create_window(app, config);
-            }
+            },
             "add_clock" => spawn_widget_from_tray(app, "clock"),
             "add_temperature" => spawn_widget_from_tray(app, "temperature"),
             "add_ram" => spawn_widget_from_tray(app, "ram"),
             "add_disk" => spawn_widget_from_tray(app, "disk"),
             "add_network" => spawn_widget_from_tray(app, "network-monitor"),
-            _ => {}
+            _ => {},
         })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {

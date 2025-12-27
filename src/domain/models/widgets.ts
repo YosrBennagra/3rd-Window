@@ -65,57 +65,42 @@ export function ensureClockWidgetSettings(settings?: unknown): ClockWidgetSettin
     ...(candidate as Record<string, unknown>),
   };
 
-  merged.timeFormat = candidate.timeFormat === '24h' ? '24h' : '12h';
-  merged.showSeconds = typeof candidate.showSeconds === 'boolean' ? candidate.showSeconds : CLOCK_WIDGET_DEFAULT_SETTINGS.showSeconds;
-  merged.dateFormat = CLOCK_DATE_FORMATS.includes(candidate.dateFormat as ClockDateFormat)
-    ? (candidate.dateFormat as ClockDateFormat)
-    : CLOCK_WIDGET_DEFAULT_SETTINGS.dateFormat;
-  merged.layoutStyle = CLOCK_LAYOUT_STYLES.includes(candidate.layoutStyle as ClockLayoutStyle)
-    ? (candidate.layoutStyle as ClockLayoutStyle)
-    : CLOCK_WIDGET_DEFAULT_SETTINGS.layoutStyle;
-  merged.alignment = CLOCK_ALIGNMENTS.includes(candidate.alignment as ClockAlignment)
-    ? (candidate.alignment as ClockAlignment)
-    : CLOCK_WIDGET_DEFAULT_SETTINGS.alignment;
-  merged.fontSizeMode = CLOCK_FONT_SIZE_MODES.includes(candidate.fontSizeMode as ClockFontSizeMode)
-    ? (candidate.fontSizeMode as ClockFontSizeMode)
-    : CLOCK_WIDGET_DEFAULT_SETTINGS.fontSizeMode;
-  merged.accentColor =
-    typeof candidate.accentColor === 'string' && candidate.accentColor.trim().length > 0
-      ? candidate.accentColor
-      : CLOCK_WIDGET_DEFAULT_SETTINGS.accentColor;
-  merged.backgroundStyle = CLOCK_BACKGROUND_STYLES.includes(candidate.backgroundStyle as ClockBackgroundStyle)
-    ? (candidate.backgroundStyle as ClockBackgroundStyle)
-    : CLOCK_WIDGET_DEFAULT_SETTINGS.backgroundStyle;
+  // Helper pickers to centralize validation and reduce branching
+  const pickEnum = <T>(allowed: T[], value: unknown, fallback: T) => (allowed.includes(value as T) ? (value as T) : fallback);
+  const pickBoolean = (value: unknown, fallback: boolean) => (typeof value === 'boolean' ? value : fallback);
+  const pickStringNonEmpty = (value: unknown, fallback: string) => (typeof value === 'string' && value.trim().length > 0 ? value : fallback);
+
+  merged.timeFormat = (candidate.timeFormat === '24h' ? '24h' : '12h');
+  merged.showSeconds = pickBoolean(candidate.showSeconds, CLOCK_WIDGET_DEFAULT_SETTINGS.showSeconds);
+  merged.dateFormat = pickEnum(CLOCK_DATE_FORMATS, candidate.dateFormat, CLOCK_WIDGET_DEFAULT_SETTINGS.dateFormat);
+  merged.layoutStyle = pickEnum(CLOCK_LAYOUT_STYLES, candidate.layoutStyle, CLOCK_WIDGET_DEFAULT_SETTINGS.layoutStyle);
+  merged.alignment = pickEnum(CLOCK_ALIGNMENTS, candidate.alignment, CLOCK_WIDGET_DEFAULT_SETTINGS.alignment);
+  merged.fontSizeMode = pickEnum(CLOCK_FONT_SIZE_MODES, candidate.fontSizeMode, CLOCK_WIDGET_DEFAULT_SETTINGS.fontSizeMode);
+  merged.accentColor = pickStringNonEmpty(candidate.accentColor, CLOCK_WIDGET_DEFAULT_SETTINGS.accentColor);
+  merged.backgroundStyle = pickEnum(CLOCK_BACKGROUND_STYLES, candidate.backgroundStyle, CLOCK_WIDGET_DEFAULT_SETTINGS.backgroundStyle);
+
+  const candidateEffects = typeof candidate.effects === 'object' && candidate.effects !== null ? (candidate.effects as Partial<ClockWidgetEffects>) : {};
   merged.effects = {
-    glow:
-      typeof candidate.effects === 'object' && candidate.effects !== null && typeof candidate.effects.glow === 'boolean'
-        ? candidate.effects.glow
-        : CLOCK_WIDGET_DEFAULT_SETTINGS.effects.glow,
-    shadow:
-      typeof candidate.effects === 'object' && candidate.effects !== null && typeof candidate.effects.shadow === 'boolean'
-        ? candidate.effects.shadow
-        : CLOCK_WIDGET_DEFAULT_SETTINGS.effects.shadow,
+    glow: pickBoolean(candidateEffects.glow, CLOCK_WIDGET_DEFAULT_SETTINGS.effects.glow),
+    shadow: pickBoolean(candidateEffects.shadow, CLOCK_WIDGET_DEFAULT_SETTINGS.effects.shadow),
   };
-  merged.timezone =
-    typeof candidate.timezone === 'string' && candidate.timezone.trim().length > 0
-      ? candidate.timezone
-      : CLOCK_WIDGET_DEFAULT_SETTINGS.timezone;
-  merged.updateFrequency = CLOCK_UPDATE_FREQUENCIES.includes(candidate.updateFrequency as ClockUpdateFrequency)
-    ? (candidate.updateFrequency as ClockUpdateFrequency)
-    : CLOCK_WIDGET_DEFAULT_SETTINGS.updateFrequency;
-  merged.clickBehavior = CLOCK_CLICK_BEHAVIORS.includes(candidate.clickBehavior as ClockClickBehavior)
-    ? (candidate.clickBehavior as ClockClickBehavior)
-    : CLOCK_WIDGET_DEFAULT_SETTINGS.clickBehavior;
-  merged.minGridSize =
-    candidate.minGridSize &&
-    typeof candidate.minGridSize === 'object' &&
-    typeof (candidate.minGridSize as { width?: number }).width === 'number' &&
-    typeof (candidate.minGridSize as { height?: number }).height === 'number'
-      ? {
-          width: Math.max(3, Math.floor((candidate.minGridSize as { width: number }).width)),
-          height: Math.max(2, Math.floor((candidate.minGridSize as { height: number }).height)),
-        }
-      : { ...CLOCK_WIDGET_DEFAULT_SETTINGS.minGridSize };
+
+  merged.timezone = pickStringNonEmpty(candidate.timezone, CLOCK_WIDGET_DEFAULT_SETTINGS.timezone);
+  merged.updateFrequency = pickEnum(CLOCK_UPDATE_FREQUENCIES, candidate.updateFrequency, CLOCK_WIDGET_DEFAULT_SETTINGS.updateFrequency);
+  merged.clickBehavior = pickEnum(CLOCK_CLICK_BEHAVIORS, candidate.clickBehavior, CLOCK_WIDGET_DEFAULT_SETTINGS.clickBehavior);
+
+  const computeMinGridSize = () => {
+    const mg = candidate.minGridSize;
+    if (mg && typeof mg === 'object' && typeof (mg as any).width === 'number' && typeof (mg as any).height === 'number') {
+      return {
+        width: Math.max(3, Math.floor((mg as any).width)),
+        height: Math.max(2, Math.floor((mg as any).height)),
+      };
+    }
+    return { ...CLOCK_WIDGET_DEFAULT_SETTINGS.minGridSize };
+  };
+
+  merged.minGridSize = computeMinGridSize();
 
   return merged as ClockWidgetSettings;
 }

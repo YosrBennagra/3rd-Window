@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { Monitor } from '@domain/models/system';
+import { isTauriRuntime } from './runtime';
 
 /**
  * Monitor Service (Zustand Architecture Best Practice)
@@ -10,29 +11,6 @@ import type { Monitor } from '@domain/models/system';
  * - Side effects are isolated in services
  * - Service methods are explicit and testable
  */
-
-const isTauriRuntime = (() => {
-  let cached: boolean | null = null;
-  return () => {
-    if (cached !== null) return cached;
-    if (typeof window === 'undefined') {
-      cached = false;
-      return cached;
-    }
-    const candidate = window as unknown as {
-      __TAURI__?: { invoke?: unknown; core?: { invoke?: unknown } };
-      __TAURI_IPC__?: unknown;
-      __TAURI_INTERNALS__?: { invoke?: unknown; invokeHandler?: unknown };
-    };
-    cached =
-      typeof candidate.__TAURI_IPC__ === 'function' ||
-      typeof candidate.__TAURI__?.invoke === 'function' ||
-      typeof candidate.__TAURI__?.core?.invoke === 'function' ||
-      typeof candidate.__TAURI_INTERNALS__?.invoke === 'function' ||
-      typeof candidate.__TAURI_INTERNALS__?.invokeHandler === 'function';
-    return cached;
-  };
-})();
 
 /**
  * Get list of available monitors

@@ -52,8 +52,12 @@ interface RegistryStats {
  * Widgets cannot be registered without a valid contract.
  */
 class ContractBasedWidgetRegistry {
-  private contracts = new Map<WidgetId, WidgetContract>();
-  private validations = new Map<WidgetId, WidgetContractValidation>();
+  // Locale-aware alphabetical compare used across the registry
+  private static compareAlpha(a: string, b: string): number {
+    return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
+  }
+  private readonly contracts = new Map<WidgetId, WidgetContract>();
+  private readonly validations = new Map<WidgetId, WidgetContractValidation>();
   private registrationOrder: WidgetId[] = [];
 
   /**
@@ -243,7 +247,7 @@ class ContractBasedWidgetRegistry {
     for (const contract of this.contracts.values()) {
       categories.add(contract.category);
     }
-    return Array.from(categories).sort();
+    return Array.from(categories).sort(ContractBasedWidgetRegistry.compareAlpha);
   }
 
   /**

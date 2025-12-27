@@ -34,7 +34,7 @@ pub fn uninstall_context_menu() -> Result<(), io::Error> {
     let _ = hkcu.delete_subkey_all(MODERN_HANDLER_KEY);
 
     // Remove protocol registration
-    let _ = hkcu.delete_subkey_all(&format!("Software\\Classes\\{}", PROTOCOL));
+    let _ = hkcu.delete_subkey_all(format!("Software\\Classes\\{}", PROTOCOL));
 
     Ok(())
 }

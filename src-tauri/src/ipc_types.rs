@@ -9,20 +9,11 @@ use serde::{Deserialize, Serialize};
 // SETTINGS TYPES
 // ============================================================================
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub is_fullscreen: bool,
     pub selected_monitor: usize,
-}
-
-impl Default for AppSettings {
-    fn default() -> Self {
-        Self {
-            is_fullscreen: false,
-            selected_monitor: 0,
-        }
-    }
 }
 
 // ============================================================================

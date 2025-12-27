@@ -64,7 +64,7 @@ impl WindowPlacer {
                 let primary_idx = self.find_primary_index();
                 let primary = &self.monitors[primary_idx];
                 (primary, true)
-            }
+            },
         }
     }
 
@@ -84,8 +84,8 @@ impl WindowPlacer {
         let rel_y = relative_y.unwrap_or(0.05); // Default: 5% from top
 
         // Clamp to 0.0-1.0 range
-        let clamped_x = rel_x.max(0.0).min(1.0);
-        let clamped_y = rel_y.max(0.0).min(1.0);
+        let clamped_x = rel_x.clamp(0.0, 1.0);
+        let clamped_y = rel_y.clamp(0.0, 1.0);
 
         PhysicalPosition {
             x: monitor.position.x + (monitor.size.width as f64 * clamped_x) as i32,
@@ -143,10 +143,7 @@ impl WindowPlacer {
             position.y.max(mon_top)
         };
 
-        PhysicalPosition {
-            x: clamped_x,
-            y: clamped_y,
-        }
+        PhysicalPosition { x: clamped_x, y: clamped_y }
     }
 
     /// Place window on target monitor with safe fallback
@@ -187,11 +184,7 @@ impl WindowPlacer {
             None
         };
 
-        Ok(PlacementResult {
-            monitor_index: placement.monitor_index,
-            fallback_used,
-            reason,
-        })
+        Ok(PlacementResult { monitor_index: placement.monitor_index, fallback_used, reason })
     }
 
     /// Move window between monitors preserving relative position
@@ -264,19 +257,14 @@ impl WindowPlacer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{MonitorPosition, MonitorSize};
 
     fn create_test_monitor(index: usize, is_primary: bool) -> Monitor {
         Monitor {
             identifier: Some(format!("DISPLAY{}", index + 1)),
             name: format!("Monitor {}", index + 1),
-            size: MonitorSize {
-                width: 1920,
-                height: 1080,
-            },
-            position: MonitorPosition {
-                x: (index as i32) * 1920,
-                y: 0,
-            },
+            size: MonitorSize { width: 1920, height: 1080 },
+            position: MonitorPosition { x: (index as i32) * 1920, y: 0 },
             is_primary,
             scale_factor: 1.0,
             refresh_rate: Some(60),

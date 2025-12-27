@@ -15,8 +15,8 @@
  *   node scripts/sync-version.js        # display current versions
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const PACKAGE_JSON = path.join(ROOT_DIR, 'package.json');
@@ -27,18 +27,43 @@ const TAURI_CONF = path.join(ROOT_DIR, 'src-tauri', 'tauri.conf.json');
  * Read current versions from all config files
  */
 function readVersions() {
-  const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
-  const tauriConf = JSON.parse(fs.readFileSync(TAURI_CONF, 'utf8'));
-  
-  const cargoToml = fs.readFileSync(CARGO_TOML, 'utf8');
-  const cargoVersionMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
-  const cargoVersion = cargoVersionMatch ? cargoVersionMatch[1] : 'unknown';
-  
-  return {
-    package: packageJson.version,
-    cargo: cargoVersion,
-    tauri: tauriConf.version
-  };
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
+    const tauriConf = JSON.parse(fs.readFileSync(TAURI_CONF, 'utf8'));
+    
+    if (!packageJson.version) {
+      throw new Error('package.json missing version field');
+    }
+    if (!tauriConf.version) {
+      throw new Error('tauri.conf.json missing version field');
+    }
+    
+    const cargoToml = fs.readFileSync(CARGO_TOML, 'utf8');
+    const cargoVersionMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
+    const cargoVersion = cargoVersionMatch ? cargoVersionMatch[1] : 'unknown';
+    
+    return {
+      package: packageJson.version,
+      cargo: cargoVersion,
+      tauri: tauriConf.version
+    };
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error(`Configuration file not found: ${error.path}`);
+    }
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid JSON in configuration file: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Validate semantic version format
+ */
+function validateSemver(version) {
+  const semverRegex = /^(\d+)\.(\d+)\.(\d+)$/;
+  return semverRegex.test(version);
 }
 
 /**
@@ -50,9 +75,9 @@ function parseSemver(version) {
     throw new Error(`Invalid semver: ${version}`);
   }
   return {
-    major: parseInt(match[1], 10),
-    minor: parseInt(match[2], 10),
-    patch: parseInt(match[3], 10)
+    major: Number.parseInt(match[1], 10),
+    minor: Number.parseInt(match[2], 10),
+    patch: Number.parseInt(match[3], 10)
   };
 }
 
@@ -86,33 +111,80 @@ function incrementVersion(version, type) {
  * Update version in package.json
  */
 function updatePackageJson(version) {
-  const data = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
-  data.version = version;
-  fs.writeFileSync(PACKAGE_JSON, JSON.stringify(data, null, 2) + '\n', 'utf8');
-  console.log(`✓ Updated package.json to ${version}`);
+  try {
+    const data = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
+    data.version = version;
+    fs.writeFileSync(PACKAGE_JSON, JSON.stringify(data, null, 2) + '\n', 'utf8');
+    console.log(`[OK] Updated package.json to ${version}`);
+  } catch (error) {
+    throw new Error(`Failed to update package.json: ${error.message}`);
+  }
 }
 
 /**
  * Update version in Cargo.toml
  */
 function updateCargoToml(version) {
-  let data = fs.readFileSync(CARGO_TOML, 'utf8');
-  data = data.replace(
-    /^version\s*=\s*"[^"]+"/m,
-    `version = "${version}"`
-  );
-  fs.writeFileSync(CARGO_TOML, data, 'utf8');
-  console.log(`✓ Updated Cargo.toml to ${version}`);
+  try {
+    let data = fs.readFileSync(CARGO_TOML, 'utf8');
+    const updated = data.replace(
+      /^version\s*=\s*"[^"]+"/m,
+      `version = "${version}"`
+    );
+    
+    if (updated === data) {
+      throw new Error('Version field not found in Cargo.toml');
+    }
+    
+    fs.writeFileSync(CARGO_TOML, updated, 'utf8');
+    console.log(`[OK] Updated Cargo.toml to ${version}`);
+  } catch (error) {
+    throw new Error(`Failed to update Cargo.toml: ${error.message}`);
+  }
 }
 
 /**
  * Update version in tauri.conf.json
  */
 function updateTauriConf(version) {
-  const data = JSON.parse(fs.readFileSync(TAURI_CONF, 'utf8'));
-  data.version = version;
-  fs.writeFileSync(TAURI_CONF, JSON.stringify(data, null, 2) + '\n', 'utf8');
-  console.log(`✓ Updated tauri.conf.json to ${version}`);
+  try {
+    const data = JSON.parse(fs.readFileSync(TAURI_CONF, 'utf8'));
+    data.version = version;
+    fs.writeFileSync(TAURI_CONF, JSON.stringify(data, null, 2) + '\n', 'utf8');
+    console.log(`[OK] Updated tauri.conf.json to ${version}`);
+  } catch (error) {
+    throw new Error(`Failed to update tauri.conf.json: ${error.message}`);
+  }
+}
+
+/**
+ * Check if all versions are synchronized
+ */
+function areVersionsSynchronized(versions) {
+  return versions.package === versions.cargo &&
+         versions.cargo === versions.tauri;
+}
+
+/**
+ * Determine new version from command line argument
+ */
+function determineNewVersion(arg, currentVersion) {
+  if (['major', 'minor', 'patch'].includes(arg)) {
+    return {
+      version: incrementVersion(currentVersion, arg),
+      isIncrement: true,
+      incrementType: arg
+    };
+  }
+  
+  if (!validateSemver(arg)) {
+    throw new Error(`Invalid semver format: ${arg}. Version must be in format X.Y.Z (e.g., 1.2.3)`);
+  }
+  
+  return {
+    version: arg,
+    isIncrement: false
+  };
 }
 
 /**
@@ -120,23 +192,28 @@ function updateTauriConf(version) {
  */
 function main() {
   const args = process.argv.slice(2);
-  const currentVersions = readVersions();
+  
+  let currentVersions;
+  try {
+    currentVersions = readVersions();
+  } catch (error) {
+    console.error(`\n[ERROR] Error reading version files: ${error.message}`);
+    process.exit(1);
+  }
   
   // Display current versions
-  console.log('\n📦 Current Versions:');
+  console.log('\n[INFO] Current Versions:');
   console.log(`   package.json:      ${currentVersions.package}`);
   console.log(`   Cargo.toml:        ${currentVersions.cargo}`);
   console.log(`   tauri.conf.json:   ${currentVersions.tauri}`);
   
   // Check if versions are in sync
-  const allSame = 
-    currentVersions.package === currentVersions.cargo &&
-    currentVersions.cargo === currentVersions.tauri;
+  const allSame = areVersionsSynchronized(currentVersions);
   
-  if (!allSame) {
-    console.log('\n⚠️  Warning: Versions are not synchronized!');
+  if (allSame) {
+    console.log('\n[OK] All versions are synchronized');
   } else {
-    console.log('\n✓ All versions are synchronized');
+    console.log('\n[WARN] Warning: Versions are not synchronized!');
   }
   
   // If no arguments, just display current versions
@@ -150,23 +227,21 @@ function main() {
     return;
   }
   
-  let newVersion = args[0];
+  // Determine new version
+  let versionInfo;
+  try {
+    versionInfo = determineNewVersion(args[0], currentVersions.package);
+  } catch (error) {
+    console.error(`\n[ERROR] Error: ${error.message}`);
+    process.exit(1);
+  }
   
-  // Handle increment shortcuts
-  if (['major', 'minor', 'patch'].includes(newVersion)) {
-    const baseVersion = currentVersions.package;
-    newVersion = incrementVersion(baseVersion, newVersion);
-    console.log(`\n📈 Incrementing ${args[0]} version: ${baseVersion} -> ${newVersion}`);
+  const newVersion = versionInfo.version;
+  
+  if (versionInfo.isIncrement) {
+    console.log(`\n[BUMP] Incrementing ${versionInfo.incrementType} version: ${currentVersions.package} -> ${newVersion}`);
   } else {
-    // Validate semver format
-    try {
-      parseSemver(newVersion);
-      console.log(`\n🔄 Setting version to: ${newVersion}`);
-    } catch (error) {
-      console.error(`\n❌ Error: ${error.message}`);
-      console.error('Version must be in semver format (e.g., 1.2.3)');
-      process.exit(1);
-    }
+    console.log(`\n[SET] Setting version to: ${newVersion}`);
   }
   
   // Update all files
@@ -175,14 +250,14 @@ function main() {
     updateCargoToml(newVersion);
     updateTauriConf(newVersion);
     
-    console.log(`\n✅ Successfully synchronized all versions to ${newVersion}`);
+    console.log(`\n[SUCCESS] Successfully synchronized all versions to ${newVersion}`);
     console.log('\nNext steps:');
     console.log('  1. Review changes: git diff');
     console.log('  2. Commit: git commit -am "chore: bump version to ' + newVersion + '"');
     console.log('  3. Tag: git tag v' + newVersion);
     console.log('  4. Push: git push && git push --tags');
   } catch (error) {
-    console.error(`\n❌ Error updating files: ${error.message}`);
+    console.error(`\n[ERROR] Error updating files: ${error.message}`);
     process.exit(1);
   }
 }
@@ -192,4 +267,11 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { readVersions, incrementVersion };
+module.exports = { 
+  readVersions, 
+  incrementVersion, 
+  validateSemver,
+  areVersionsSynchronized,
+  determineNewVersion,
+  parseSemver
+};

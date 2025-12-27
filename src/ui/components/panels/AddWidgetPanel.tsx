@@ -342,6 +342,7 @@ export function AddWidgetPanel({ onClose, onAddToGrid, onAddToDesktop, widgets, 
           }}
           onMouseDown={(e) => e.stopPropagation()}
           data-tauri-drag-region="false"
+          aria-label="Close widget picker"
         >
           ✕
         </button>
@@ -366,6 +367,7 @@ export function AddWidgetPanel({ onClose, onAddToGrid, onAddToDesktop, widgets, 
               type="button"
               className="explorer-search__clear"
               onClick={() => onSearchChange('')}
+              aria-label="Clear search"
             >
               ✕
             </button>

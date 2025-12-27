@@ -76,6 +76,7 @@ export function buildPersistedState(stores: {
     isFullscreen: boolean;
     selectedMonitor: number;
     alwaysOnTop: boolean;
+    windowPosition?: { x: number; y: number; width: number; height: number } | null;
   };
   layout: {
     grid: { columns: number; rows: number };
@@ -104,7 +105,7 @@ export function buildPersistedState(stores: {
       isFullscreen: stores.appSettings.isFullscreen,
       selectedMonitor: stores.appSettings.selectedMonitor,
       alwaysOnTop: stores.appSettings.alwaysOnTop,
-      windowPosition: null, // TODO: Capture window position
+      windowPosition: stores.appSettings.windowPosition ?? null,
     },
     layout: {
       grid: stores.layout.grid,

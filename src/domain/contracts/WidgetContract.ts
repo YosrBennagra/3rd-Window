@@ -377,61 +377,61 @@ export function validateWidgetContract(contract: Partial<WidgetContract>): Widge
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Identity validation
-  if (!contract.id || typeof contract.id !== 'string') {
-    errors.push('Widget must have a valid string ID');
-  } else if (!/^[a-z0-9-]+$/.test(contract.id)) {
-    errors.push('Widget ID must be kebab-case (lowercase, numbers, hyphens only)');
-  }
+  const validateIdentity = () => {
+    if (!contract.id || typeof contract.id !== 'string') {
+      errors.push('Widget must have a valid string ID');
+    } else if (!/^[a-z0-9-]+$/.test(contract.id)) {
+      errors.push('Widget ID must be kebab-case (lowercase, numbers, hyphens only)');
+    }
 
-  if (!contract.displayName || typeof contract.displayName !== 'string') {
-    errors.push('Widget must have a displayName');
-  }
+    if (!contract.displayName || typeof contract.displayName !== 'string') {
+      errors.push('Widget must have a displayName');
+    }
 
-  if (!contract.category) {
-    errors.push('Widget must have a category');
-  }
+    if (!contract.category) {
+      errors.push('Widget must have a category');
+    }
+  };
 
-  // Metadata validation
-  if (!contract.description) {
-    errors.push('Widget must have a description');
-  }
+  const validateMetadata = () => {
+    if (!contract.description) {
+      errors.push('Widget must have a description');
+    }
 
-  if (!contract.supportedModes || contract.supportedModes.length === 0) {
-    errors.push('Widget must declare at least one supported mode');
-  }
+    if (!contract.supportedModes || contract.supportedModes.length === 0) {
+      errors.push('Widget must declare at least one supported mode');
+    }
 
-  if (!contract.version) {
-    warnings.push('Widget should have a version string');
-  }
+    if (!contract.version) {
+      warnings.push('Widget should have a version string');
+    }
+  };
 
-  // Sizing validation
-  if (!contract.sizeConstraints) {
-    errors.push('Widget must define sizeConstraints');
-  } else {
+  const validateSizing = () => {
+    if (!contract.sizeConstraints) {
+      errors.push('Widget must define sizeConstraints');
+      return;
+    }
     const { minWidth, minHeight, maxWidth, maxHeight, defaultWidth, defaultHeight } = contract.sizeConstraints;
-    
     if (minWidth < 1 || minHeight < 1) {
       errors.push('Widget minWidth and minHeight must be at least 1');
     }
-    
     if (maxWidth < minWidth || maxHeight < minHeight) {
       errors.push('Widget maxWidth/maxHeight must be >= minWidth/minHeight');
     }
-    
     if (defaultWidth < minWidth || defaultWidth > maxWidth) {
       errors.push('Widget defaultWidth must be between minWidth and maxWidth');
     }
-    
     if (defaultHeight < minHeight || defaultHeight > maxHeight) {
       errors.push('Widget defaultHeight must be between minHeight and maxHeight');
     }
-  }
+  };
 
-  // Persistence validation
-  if (!contract.persistence) {
-    errors.push('Widget must define persistence contract');
-  } else {
+  const validatePersistence = () => {
+    if (!contract.persistence) {
+      errors.push('Widget must define persistence contract');
+      return;
+    }
     if (!Array.isArray(contract.persistence.persistedFields)) {
       errors.push('Widget persistence.persistedFields must be an array');
     }
@@ -441,30 +441,32 @@ export function validateWidgetContract(contract: Partial<WidgetContract>): Widge
     if (typeof contract.persistence.version !== 'number') {
       errors.push('Widget persistence.version must be a number');
     }
-  }
-
-  if (!contract.defaultSettings || typeof contract.defaultSettings !== 'object') {
-    errors.push('Widget must provide defaultSettings');
-  }
-
-  // Component validation
-  if (!contract.component || typeof contract.component !== 'function') {
-    errors.push('Widget must provide a component');
-  }
-
-  // Lifecycle validation (optional but validate if present)
-  if (contract.lifecycle) {
-    const hooks = contract.lifecycle;
-    if (hooks.onMount && !hooks.onUnmount) {
-      warnings.push('Widget has onMount but no onUnmount - may leak resources');
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
   };
+
+  const validateComponentAndLifecycle = () => {
+    if (!contract.defaultSettings || typeof contract.defaultSettings !== 'object') {
+      errors.push('Widget must provide defaultSettings');
+    }
+
+    if (!contract.component || typeof contract.component !== 'function') {
+      errors.push('Widget must provide a component');
+    }
+
+    if (contract.lifecycle) {
+      const hooks = contract.lifecycle;
+      if (hooks.onMount && !hooks.onUnmount) {
+        warnings.push('Widget has onMount but no onUnmount - may leak resources');
+      }
+    }
+  };
+
+  validateIdentity();
+  validateMetadata();
+  validateSizing();
+  validatePersistence();
+  validateComponentAndLifecycle();
+
+  return { valid: errors.length === 0, errors, warnings };
 }
 
 // ============================================================================

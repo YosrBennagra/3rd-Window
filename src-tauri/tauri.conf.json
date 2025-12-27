@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "ThirdScreen",
-  "version": "1.0.0",
+  "version": "1.1.4",
   "identifier": "com.thirdscreen.app",
   "build": {
     "frontendDist": "../dist",
@@ -52,7 +52,9 @@
       "pubkey": "PLACEHOLDER_UPDATE_PUBKEY_REPLACE_BEFORE_PRODUCTION"
     },
     "deep-link": {
-      "schemes": ["thirdscreen"]
+      "schemes": [
+        "thirdscreen"
+      ]
     }
   }
 }

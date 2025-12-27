@@ -170,9 +170,7 @@ pub struct WindowManager {
 
 impl WindowManager {
     pub fn new() -> Self {
-        Self {
-            windows: Mutex::new(HashMap::new()),
-        }
+        Self { windows: Mutex::new(HashMap::new()) }
     }
 
     /// Create or reuse a window
@@ -186,9 +184,7 @@ impl WindowManager {
         // Check if window already exists
         if let Some(existing) = app.get_webview_window(&label) {
             // Window exists - show but don't force focus (non-intrusive)
-            existing
-                .show()
-                .map_err(|e| format!("Failed to show existing window: {}", e))?;
+            existing.show().map_err(|e| format!("Failed to show existing window: {}", e))?;
 
             // Only set focus if explicitly requested via config flag
             // Default behavior: window appears but doesn't steal focus
@@ -198,10 +194,10 @@ impl WindowManager {
                     existing
                         .set_focus()
                         .map_err(|e| format!("Failed to focus existing window: {}", e))?;
-                }
+                },
                 _ => {
                     // For widget windows, DON'T steal focus - let them appear passively
-                }
+                },
             }
 
             return Ok(existing);
@@ -215,9 +211,8 @@ impl WindowManager {
         };
         let full_url = format!("{}{}", base_url, config.url);
 
-        let parsed_url = full_url
-            .parse()
-            .map_err(|e| format!("Failed to parse window URL: {}", e))?;
+        let parsed_url =
+            full_url.parse().map_err(|e| format!("Failed to parse window URL: {}", e))?;
 
         // Create new window
         let mut builder = WebviewWindowBuilder::new(app, &label, WebviewUrl::External(parsed_url))
@@ -237,9 +232,7 @@ impl WindowManager {
             builder = builder.position(x as f64, y as f64);
         }
 
-        let window = builder
-            .build()
-            .map_err(|e| format!("Failed to create window: {}", e))?;
+        let window = builder.build().map_err(|e| format!("Failed to create window: {}", e))?;
 
         // Track window
         let mut windows = self
@@ -268,9 +261,7 @@ impl WindowManager {
         let label = window_type.to_label();
 
         if let Some(window) = app.get_webview_window(&label) {
-            window
-                .close()
-                .map_err(|e| format!("Failed to close window: {}", e))?;
+            window.close().map_err(|e| format!("Failed to close window: {}", e))?;
         }
 
         // Remove from tracking
@@ -347,9 +338,7 @@ impl WindowManager {
             .get_window(app, window_type)
             .ok_or_else(|| format!("Window not found: {:?}", window_type))?;
 
-        window
-            .show()
-            .map_err(|e| format!("Failed to show window: {}", e))?;
+        window.show().map_err(|e| format!("Failed to show window: {}", e))?;
 
         Ok(())
     }
@@ -364,9 +353,7 @@ impl WindowManager {
             .get_window(app, window_type)
             .ok_or_else(|| format!("Window not found: {:?}", window_type))?;
 
-        window
-            .hide()
-            .map_err(|e| format!("Failed to hide window: {}", e))?;
+        window.hide().map_err(|e| format!("Failed to hide window: {}", e))?;
 
         Ok(())
     }
@@ -381,9 +368,7 @@ impl WindowManager {
             .get_window(app, window_type)
             .ok_or_else(|| format!("Window not found: {:?}", window_type))?;
 
-        window
-            .set_focus()
-            .map_err(|e| format!("Failed to focus window: {}", e))?;
+        window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
 
         Ok(())
     }
@@ -396,10 +381,7 @@ impl WindowManager {
             .lock()
             .map_err(|e| format!("Failed to acquire window manager lock: {}", e))?;
 
-        Ok(windows
-            .values()
-            .map(|state| state.window_type.clone())
-            .collect())
+        Ok(windows.values().map(|state| state.window_type.clone()).collect())
     }
 }
 
