@@ -46,6 +46,14 @@ use winreg::{
 };
 
 #[cfg(windows)]
+use windows::core::PCWSTR;
+#[cfg(windows)]
+use windows::Win32::Graphics::Gdi::{
+    EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE,
+    DISPLAY_DEVICE_MIRRORING_DRIVER,
+};
+
+#[cfg(windows)]
 fn parse_model_entry(manufacturer: &str, model_key: &RegKey) -> Option<(Vec<String>, String)> {
     let mut hardware_ids: Vec<String> = model_key.get_value("HardwareID").unwrap_or_default();
 
@@ -198,50 +206,71 @@ fn hardware_id_candidates(device_id: &str) -> Vec<String> {
 }
 
 #[cfg(windows)]
-fn collect_monitor_display_names() -> HashMap<String, String> {
-    use windows::core::PCWSTR;
-    use windows::Win32::Graphics::Gdi::{
-        EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE,
-        DISPLAY_DEVICE_MIRRORING_DRIVER,
-    };
-
-    let mut friendly_names = HashMap::new();
-    let edid_names = collect_edid_names();
-
-    // Extracted helper reduces nesting and returns a resolved identifier+name if available.
-    fn resolve_device_name(
-        monitor: &DISPLAY_DEVICEW,
-        edid_names: &HashMap<String, String>,
-    ) -> Option<(String, String)> {
-        if (monitor.StateFlags & DISPLAY_DEVICE_ACTIVE) == 0 {
-            return None;
-        }
-
-        let monitor_identifier = utf16_buffer_to_string(&monitor.DeviceName);
-        let device_string = utf16_buffer_to_string(&monitor.DeviceString);
-        let device_id = utf16_buffer_to_string(&monitor.DeviceID);
-
-        let candidate_ids = hardware_id_candidates(&device_id);
-        let edid_label = candidate_ids.iter().find_map(|key| edid_names.get(key)).cloned();
-
-        let friendly_name = normalize_monitor_name(&device_string);
-        let is_mirror = (monitor.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) != 0;
-
-        let resolved_name = if is_mirror {
-            friendly_name
-                .filter(|name| !name.is_empty())
-                .or_else(|| Some("Mirror Display".to_string()))
-        } else if let Some(edid) = edid_label {
-            Some(edid)
-        } else {
-            friendly_name
-        };
-
-        let identifier = extract_display_identifier(&monitor_identifier)?;
-        let name = resolved_name?;
-        Some((identifier, name))
+fn resolve_device_name(
+    monitor: &DISPLAY_DEVICEW,
+    edid_names: &HashMap<String, String>,
+) -> Option<(String, String)> {
+    if (monitor.StateFlags & DISPLAY_DEVICE_ACTIVE) == 0 {
+        return None;
     }
 
+    let monitor_identifier = utf16_buffer_to_string(&monitor.DeviceName);
+    let device_string = utf16_buffer_to_string(&monitor.DeviceString);
+    let device_id = utf16_buffer_to_string(&monitor.DeviceID);
+
+    let candidate_ids = hardware_id_candidates(&device_id);
+    let edid_label = candidate_ids.iter().find_map(|key| edid_names.get(key)).cloned();
+
+    let friendly_name = normalize_monitor_name(&device_string);
+    let is_mirror = (monitor.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) != 0;
+
+    let resolved_name = if is_mirror {
+        friendly_name
+            .filter(|name| !name.is_empty())
+            .or_else(|| Some("Mirror Display".to_string()))
+    } else if let Some(edid) = edid_label {
+        Some(edid)
+    } else {
+        friendly_name
+    };
+
+    let identifier = extract_display_identifier(&monitor_identifier)?;
+    let name = resolved_name?;
+    Some((identifier, name))
+}
+
+#[cfg(windows)]
+fn enumerate_monitors_for_adapter(
+    adapter_ptr: PCWSTR,
+    edid_names: &HashMap<String, String>,
+    friendly_names: &mut HashMap<String, String>,
+) {
+    let mut monitor_index = 0;
+    loop {
+        let mut monitor = DISPLAY_DEVICEW {
+            cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
+            ..Default::default()
+        };
+        let monitor_found = unsafe {
+            EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool()
+        };
+        if !monitor_found {
+            break;
+        }
+
+        if let Some((identifier, name)) = resolve_device_name(&monitor, edid_names) {
+            friendly_names.entry(identifier).or_insert(name);
+        }
+
+        monitor_index += 1;
+    }
+}
+
+#[cfg(windows)]
+fn enumerate_adapters(
+    edid_names: &HashMap<String, String>,
+    friendly_names: &mut HashMap<String, String>,
+) {
     let mut adapter_index = 0;
     loop {
         let mut adapter = DISPLAY_DEVICEW {
@@ -262,29 +291,17 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
         }
 
         let adapter_ptr = PCWSTR(adapter.DeviceName.as_ptr());
-        let mut monitor_index = 0;
-        loop {
-            let mut monitor = DISPLAY_DEVICEW {
-                cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
-                ..Default::default()
-            };
-            let monitor_found = unsafe {
-                EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool()
-            };
-            if !monitor_found {
-                break;
-            }
-
-            if let Some((identifier, name)) = resolve_device_name(&monitor, &edid_names) {
-                friendly_names.entry(identifier).or_insert(name);
-            }
-
-            monitor_index += 1;
-        }
-
+        enumerate_monitors_for_adapter(adapter_ptr, edid_names, friendly_names);
         adapter_index += 1;
     }
+}
 
+#[cfg(windows)]
+fn collect_monitor_display_names() -> HashMap<String, String> {
+    let edid_names = collect_edid_names();
+    let mut friendly_names = HashMap::new();
+
+    enumerate_adapters(&edid_names, &mut friendly_names);
     friendly_names
 }
 
@@ -346,7 +363,7 @@ pub async fn get_monitors(app: tauri::AppHandle) -> Result<Vec<Monitor>, String>
 
         let is_primary = match (&raw_identifier, &primary_identifier) {
             (Some(current), Some(primary)) => current == primary,
-            (None, None) => index == 0,
+            (None, _none) => index == 0,
             _ => false,
         };
 
