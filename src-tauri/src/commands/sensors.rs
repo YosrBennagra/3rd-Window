@@ -20,7 +20,7 @@ fn get_wmi_temps() -> (Option<f32>, Vec<String>) {
     // Query OpenHardwareMonitor (more detailed sensors). Returns CPU temp if found.
     fn query_openhardwaremonitor(com_con: &COMLibrary, available: &mut Vec<String>) -> Option<f32> {
         if let Ok(wmi_con) =
-            WMIConnection::with_namespace_path("root\\OpenHardwareMonitor", com_con.clone())
+            WMIConnection::with_namespace_path("root\\OpenHardwareMonitor", *com_con)
         {
             if let Ok(results) = wmi_con.raw_query::<std::collections::HashMap<String, Variant>>(
                 "SELECT * FROM Sensor WHERE SensorType='Temperature'",
@@ -52,7 +52,7 @@ fn get_wmi_temps() -> (Option<f32>, Vec<String>) {
 
     // Query ACPI thermal zones as a fallback.
     fn query_msacpi_thermalzone(com_con: &COMLibrary, available: &mut Vec<String>) -> Option<f32> {
-        if let Ok(wmi_con) = WMIConnection::with_namespace_path("root\\WMI", com_con.clone()) {
+        if let Ok(wmi_con) = WMIConnection::with_namespace_path("root\\WMI", *com_con) {
             if let Ok(results) = wmi_con.raw_query::<std::collections::HashMap<String, Variant>>(
                 "SELECT * FROM MSAcpi_ThermalZoneTemperature",
             ) {
