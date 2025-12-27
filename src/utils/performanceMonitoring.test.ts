@@ -49,12 +49,13 @@ describe('performanceMonitoring (utils)', () => {
     console.table = () => {}
     console.groupEnd = () => {}
 
-    // empty
-    logPerformanceSummary()
+    // empty - should not throw
+    expect(() => logPerformanceSummary()).not.toThrow()
 
-    // add some ipc metrics and ensure no throw
+    // add some ipc metrics and ensure no throw and metrics recorded
     trackIpcCall('x', 10)
-    logPerformanceSummary()
+    expect(getIpcMetrics().length).toBeGreaterThan(0)
+    expect(() => logPerformanceSummary()).not.toThrow()
 
     // restore
     console.group = consoleGroup

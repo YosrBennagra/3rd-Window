@@ -5,103 +5,68 @@ export function evaluateAlerts(
   metrics: MetricSnapshot,
   rules: AlertRule[] = []
 ): AlertItem[] {
-  const alerts: AlertItem[] = [];
   const now = new Date();
 
-  // Evaluate custom rules
-  for (const rule of rules) {
-    if (!rule.enabled) continue;
+  const makeAlert = (id: string, severity: AlertItem['severity'], title: string, message: string, ts = now): AlertItem => ({
+    id: `${id}-${ts}`,
+    severity,
+    title,
+    message,
+    timestamp: ts,
+    createdAt: ts,
+  });
 
-    const value = getMetricValue(metrics, rule.metric);
-    if (value === null) continue;
+  const evaluateCustomRules = (): AlertItem[] => {
+    const out: AlertItem[] = [];
+    for (const rule of rules) {
+      if (!rule.enabled) continue;
 
-    let triggered = false;
-    if (rule.operator === 'gt' && value > rule.threshold) triggered = true;
-    if (rule.operator === 'lt' && value < rule.threshold) triggered = true;
-    if (rule.operator === 'eq' && value === rule.threshold) triggered = true;
+      const value = getMetricValue(metrics, rule.metric);
+      if (value === null) continue;
 
-    if (triggered) {
-      alerts.push({
-        id: `${rule.id}-${now}`,
-        severity: rule.severity,
-        title: `${rule.metric} threshold exceeded`,
-        message: `${rule.metric} is ${value.toFixed(1)} (${rule.operator} ${rule.threshold})`,
-        timestamp: new Date(),
-        createdAt: new Date()
-      });
+      const op = rule.operator;
+      const triggered = (op === 'gt' && value > rule.threshold) || (op === 'lt' && value < rule.threshold) || (op === 'eq' && value === rule.threshold);
+      if (!triggered) continue;
+
+      out.push(makeAlert(rule.id, rule.severity, `${rule.metric} threshold exceeded`, `${rule.metric} is ${value.toFixed(1)} (${rule.operator} ${rule.threshold})`));
     }
-  }
+    return out;
+  };
 
-  // Fallback to legacy hardcoded rules if no custom rules
-  if (rules.length === 0) {
+  const evaluateLegacy = (): AlertItem[] => {
+    const out: AlertItem[] = [];
+
     if (metrics.cpuTempC > 80) {
-      alerts.push({
-        id: `cpu-${now}`,
-        severity: 'critical',
-        title: 'CPU temperature high',
-        message: `CPU at ${metrics.cpuTempC.toFixed(1)}°C`,
-        timestamp: now,
-        createdAt: now
-      });
+      out.push(makeAlert('cpu', 'critical', 'CPU temperature high', `CPU at ${metrics.cpuTempC.toFixed(1)}°C`));
     } else if (metrics.cpuTempC > 72) {
-      alerts.push({
-        id: `cpu-${now}`,
-        severity: 'warning',
-        title: 'CPU temperature elevated',
-        message: `CPU at ${metrics.cpuTempC.toFixed(1)}°C`,
-        timestamp: now,
-        createdAt: now
-      });
+      out.push(makeAlert('cpu', 'warning', 'CPU temperature elevated', `CPU at ${metrics.cpuTempC.toFixed(1)}°C`));
     }
 
     if (metrics.gpuTempC > 78) {
-      alerts.push({
-        id: `gpu-${now}`,
-        severity: 'warning',
-        title: 'GPU temperature elevated',
-        message: `GPU at ${metrics.gpuTempC.toFixed(1)}°C`,
-        timestamp: now,
-        createdAt: now
-      });
+      out.push(makeAlert('gpu', 'warning', 'GPU temperature elevated', `GPU at ${metrics.gpuTempC.toFixed(1)}°C`));
     }
 
     const ramPct = (metrics.ramUsedBytes / metrics.ramTotalBytes) * 100;
     if (ramPct > 90) {
-      alerts.push({
-        id: `ram-${now}`,
-        severity: 'warning',
-        title: 'RAM pressure',
-        message: `RAM at ${ramPct.toFixed(0)}%`,
-        timestamp: now,
-        createdAt: now
-      });
+      out.push(makeAlert('ram', 'warning', 'RAM pressure', `RAM at ${ramPct.toFixed(0)}%`));
     }
 
     const diskPct = (metrics.diskUsedBytes / metrics.diskTotalBytes) * 100;
     if (diskPct > 85) {
-      alerts.push({
-        id: `disk-${now}`,
-        severity: 'info',
-        title: 'Disk filling up',
-        message: `Disk at ${diskPct.toFixed(0)}%`,
-        timestamp: now,
-        createdAt: now
-      });
+      out.push(makeAlert('disk', 'info', 'Disk filling up', `Disk at ${diskPct.toFixed(0)}%`));
     }
 
     if (metrics.netDownMbps < 10) {
-      alerts.push({
-        id: `net-${now}`,
-        severity: 'warning',
-        title: 'Slow download',
-        message: `${metrics.netDownMbps.toFixed(1)} Mbps down`,
-        timestamp: now,
-        createdAt: now
-      });
+      out.push(makeAlert('net', 'warning', 'Slow download', `${metrics.netDownMbps.toFixed(1)} Mbps down`));
     }
-  }
 
-  return alerts.slice(0, 4);
+    return out;
+  };
+
+  const custom = evaluateCustomRules();
+  if (custom.length > 0) return custom.slice(0, 4);
+
+  return evaluateLegacy().slice(0, 4);
 }
 
 function getMetricValue(metrics: MetricSnapshot, metricName: string): number | null {

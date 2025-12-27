@@ -182,7 +182,9 @@ export function DraggableGrid() {
       handlePopOutWidget,
     };
     
-    void executeMenuAction(action, context);
+    executeMenuAction(action, context).catch((err) => {
+      console.error('[DraggableGrid] executeMenuAction failed', err);
+    });
   };
 
   const handlePopOutWidget = async (widget: WidgetLayout) => {
