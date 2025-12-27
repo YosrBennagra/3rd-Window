@@ -14,57 +14,69 @@ pub struct SystemTemps {
 }
 
 #[cfg(windows)]
-fn query_openhardwaremonitor(com_con: &COMLibrary, available: &mut Vec<String>) -> Option<f32> {
-    if let Ok(wmi_con) = WMIConnection::with_namespace_path(r"root\OpenHardwareMonitor", *com_con)
-    {
-        if let Ok(results) = wmi_con.raw_query::<std::collections::HashMap<String, Variant>>(
-            "SELECT * FROM Sensor WHERE SensorType='Temperature'",
-        ) {
-            let mut found_cpu: Option<f32> = None;
-            for result in results {
-                if let (Some(Variant::String(name)), Some(Variant::R4(value))) =
-                    (result.get("Name"), result.get("Value"))
-                {
-                    let temp = *value;
-                    let sensor_name = format!("{}: {:.1}?C", name, temp);
-                    available.push(sensor_name.clone());
-                    log::info!("[sensors] OHM: {}", sensor_name);
+fn find_cpu_from_ohm(
+    results: Vec<std::collections::HashMap<String, Variant>>,
+    available: &mut Vec<String>,
+) -> Option<f32> {
+    let mut found_cpu: Option<f32> = None;
+    for result in results {
+        if let (Some(Variant::String(name)), Some(Variant::R4(value))) =
+            (result.get("Name"), result.get("Value"))
+        {
+            let temp = *value;
+            let sensor_name = format!("{}: {:.1}?C", name, temp);
+            available.push(sensor_name.clone());
+            log::info!("[sensors] OHM: {}", sensor_name);
 
-                    let name_l = name.to_lowercase();
-                    if name_l.contains("tctl") || name_l.contains("tdie") {
-                        found_cpu = Some(temp);
-                        log::info!("[sensors] Found Tctl/Tdie: {:.1}?C", temp);
-                    } else if found_cpu.is_none() && name_l.contains("cpu") {
-                        found_cpu = Some(temp);
-                    }
-                }
+            let name_l = name.to_lowercase();
+            if name_l.contains("tctl") || name_l.contains("tdie") {
+                found_cpu = Some(temp);
+                log::info!("[sensors] Found Tctl/Tdie: {:.1}?C", temp);
+            } else if found_cpu.is_none() && name_l.contains("cpu") {
+                found_cpu = Some(temp);
             }
-            return found_cpu;
         }
     }
+    found_cpu
+}
 
+#[cfg(windows)]
+fn query_openhardwaremonitor(com_con: &COMLibrary, available: &mut Vec<String>) -> Option<f32> {
+    let wmi_con = WMIConnection::with_namespace_path(r"root\OpenHardwareMonitor", *com_con).ok()?;
+    let results = wmi_con
+        .raw_query::<std::collections::HashMap<String, Variant>>(
+            "SELECT * FROM Sensor WHERE SensorType='Temperature'",
+        )
+        .ok()?;
+    find_cpu_from_ohm(results, available)
+}
+
+#[cfg(windows)]
+fn find_temp_from_acpi(
+    results: Vec<std::collections::HashMap<String, Variant>>,
+    available: &mut Vec<String>,
+) -> Option<f32> {
+    for result in results {
+        if let Some(Variant::UI4(temp_kelvin)) = result.get("CurrentTemperature") {
+            let temp_celsius = (*temp_kelvin as f32) / 10.0 - 273.15;
+            if temp_celsius > 0.0 && temp_celsius < 150.0 {
+                available.push(format!("Thermal Zone: {:.1}?C", temp_celsius));
+                return Some(temp_celsius);
+            }
+        }
+    }
     None
 }
 
 #[cfg(windows)]
 fn query_msacpi_thermalzone(com_con: &COMLibrary, available: &mut Vec<String>) -> Option<f32> {
-    if let Ok(wmi_con) = WMIConnection::with_namespace_path(r"root\WMI", *com_con) {
-        if let Ok(results) = wmi_con.raw_query::<std::collections::HashMap<String, Variant>>(
+    let wmi_con = WMIConnection::with_namespace_path(r"root\WMI", *com_con).ok()?;
+    let results = wmi_con
+        .raw_query::<std::collections::HashMap<String, Variant>>(
             "SELECT * FROM MSAcpi_ThermalZoneTemperature",
-        ) {
-            for result in results {
-                if let Some(Variant::UI4(temp_kelvin)) = result.get("CurrentTemperature") {
-                    let temp_celsius = (*temp_kelvin as f32) / 10.0 - 273.15;
-                    if temp_celsius > 0.0 && temp_celsius < 150.0 {
-                        available.push(format!("Thermal Zone: {:.1}?C", temp_celsius));
-                        return Some(temp_celsius);
-                    }
-                }
-            }
-        }
-    }
-
-    None
+        )
+        .ok()?;
+    find_temp_from_acpi(results, available)
 }
 
 #[cfg(windows)]

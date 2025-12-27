@@ -9,9 +9,9 @@ const DEFAULT_PIPELINES: PipelineStatus[] = [
 const STORAGE_KEY = 'thirdscreen.pipelines';
 
 const readStoredPipelines = (): PipelineStatus[] | null => {
-  if (typeof window === 'undefined') return null;
+  if (typeof globalThis.window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = globalThis.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
