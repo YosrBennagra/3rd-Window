@@ -245,7 +245,25 @@ impl PersistedState {
             ));
         }
 
-        // Validate widgets are within grid bounds
+        // Validate widgets and IDs
+        warnings.extend(self.widget_warnings());
+        warnings.extend(self.duplicate_id_warnings());
+
+        // Validate refresh interval is reasonable
+        if self.preferences.refresh_interval < 1000 {
+            warnings.push("Refresh interval < 1s may impact performance".to_string());
+        }
+
+        if self.preferences.refresh_interval > 60000 {
+            warnings.push("Refresh interval > 60s may feel unresponsive".to_string());
+        }
+
+        warnings
+    }
+
+    // Collect warnings related to widget bounds and sizes
+    fn widget_warnings(&self) -> Vec<String> {
+        let mut warnings = Vec::new();
         for widget in &self.layout.widgets {
             if widget.x + widget.width > self.layout.grid.columns
                 || widget.y + widget.height > self.layout.grid.rows
@@ -257,28 +275,21 @@ impl PersistedState {
             }
 
             if widget.width == 0 || widget.height == 0 {
-                warnings
-                    .push(format!("Widget '{}' ({}) has zero size", widget.id, widget.widget_type));
+                warnings.push(format!("Widget '{}' ({}) has zero size", widget.id, widget.widget_type));
             }
         }
+        warnings
+    }
 
-        // Validate widget IDs are unique
+    // Detect duplicate widget IDs
+    fn duplicate_id_warnings(&self) -> Vec<String> {
+        let mut warnings = Vec::new();
         let mut seen_ids = std::collections::HashSet::new();
         for widget in &self.layout.widgets {
             if !seen_ids.insert(&widget.id) {
                 warnings.push(format!("Duplicate widget ID: {}", widget.id));
             }
         }
-
-        // Validate refresh interval is reasonable
-        if self.preferences.refresh_interval < 1000 {
-            warnings.push("Refresh interval < 1s may impact performance".to_string());
-        }
-
-        if self.preferences.refresh_interval > 60000 {
-            warnings.push("Refresh interval > 60s may feel unresponsive".to_string());
-        }
-
         warnings
     }
 

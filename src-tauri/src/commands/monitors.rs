@@ -49,49 +49,53 @@ fn collect_edid_names() -> HashMap<String, String> {
     let mut map = HashMap::new();
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
 
-    if let Ok(display_root) =
-        hklm.open_subkey_with_flags("SYSTEM\\CurrentControlSet\\Enum\\DISPLAY", KEY_READ)
+    let display_root = match hklm
+        .open_subkey_with_flags("SYSTEM\\CurrentControlSet\\Enum\\DISPLAY", KEY_READ)
     {
-        for manufacturer in display_root.enum_keys().flatten() {
-            if let Ok(manufacturer_key) =
-                display_root.open_subkey_with_flags(&manufacturer, KEY_READ)
-            {
-                for model in manufacturer_key.enum_keys().flatten() {
-                    if let Ok(model_key) = manufacturer_key.open_subkey_with_flags(&model, KEY_READ)
-                    {
-                        let mut hardware_ids: Vec<String> =
-                            model_key.get_value("HardwareID").unwrap_or_default();
+        Ok(root) => root,
+        Err(_) => return map,
+    };
 
-                        let edid_name = model_key
-                            .open_subkey_with_flags("Device Parameters", KEY_READ)
-                            .ok()
-                            .and_then(|device_params| device_params.get_raw_value("EDID").ok())
-                            .and_then(|edid| parse_edid_display_name(&edid.bytes));
+    // Helper: return hardware ids and a valid EDID name (not the generic PnP placeholder).
+    fn parse_model_entry(manufacturer: &str, model_key: &RegKey) -> Option<(Vec<String>, String)> {
+        let mut hardware_ids: Vec<String> = model_key.get_value("HardwareID").unwrap_or_default();
 
-                        if let Some(name) = edid_name
-                            .filter(|value| !value.eq_ignore_ascii_case(GENERIC_PNP_MONITOR))
-                        {
-                            if hardware_ids.is_empty() {
-                                hardware_ids.push(format!(
-                                    "DISPLAY\\{}",
-                                    manufacturer.to_ascii_uppercase()
-                                ));
-                                hardware_ids.push(format!(
-                                    "MONITOR\\{}",
-                                    manufacturer.to_ascii_uppercase()
-                                ));
-                            }
+        let edid_name = model_key
+            .open_subkey_with_flags("Device Parameters", KEY_READ)
+            .ok()
+            .and_then(|device_params| device_params.get_raw_value("EDID").ok())
+            .and_then(|edid| parse_edid_display_name(&edid.bytes))
+            .filter(|value| !value.eq_ignore_ascii_case(GENERIC_PNP_MONITOR));
 
-                            for id in hardware_ids {
-                                let normalized = id.trim().to_ascii_uppercase();
-                                if normalized.is_empty() {
-                                    continue;
-                                }
+        let name = edid_name?;
 
-                                map.entry(normalized.clone()).or_insert_with(|| name.clone());
-                            }
-                        }
+        if hardware_ids.is_empty() {
+            hardware_ids.push(format!("DISPLAY\\{}", manufacturer.to_ascii_uppercase()));
+            hardware_ids.push(format!("MONITOR\\{}", manufacturer.to_ascii_uppercase()));
+        }
+
+        Some((hardware_ids, name))
+    }
+
+    for manufacturer in display_root.enum_keys().flatten() {
+        let manufacturer_key = match display_root.open_subkey_with_flags(&manufacturer, KEY_READ) {
+            Ok(k) => k,
+            Err(_) => continue,
+        };
+
+        for model in manufacturer_key.enum_keys().flatten() {
+            let model_key = match manufacturer_key.open_subkey_with_flags(&model, KEY_READ) {
+                Ok(k) => k,
+                Err(_) => continue,
+            };
+
+            if let Some((hardware_ids, name)) = parse_model_entry(&manufacturer, &model_key) {
+                for id in hardware_ids {
+                    let normalized = id.trim().to_ascii_uppercase();
+                    if normalized.is_empty() {
+                        continue;
                     }
+                    map.entry(normalized).or_insert_with(|| name.clone());
                 }
             }
         }
@@ -183,76 +187,58 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
 
     let mut friendly_names = HashMap::new();
     let edid_names = collect_edid_names();
-    let mut adapter_index = 0;
 
-    loop {
-        let mut adapter = DISPLAY_DEVICEW {
-            cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
-            ..Default::default()
-        };
-
-        // SAFETY: EnumDisplayDevicesW is safe when passed a properly initialized DISPLAY_DEVICEW
-        // struct with correct cb size. PCWSTR::null() is a valid parameter for enumerating adapters.
-        let adapter_found = unsafe {
-            EnumDisplayDevicesW(PCWSTR::null(), adapter_index, &mut adapter, 0).as_bool()
-        };
-        if !adapter_found {
-            break;
+    // Extracted helper reduces nesting and returns a resolved identifier+name if available.
+    fn resolve_device_name(
+        monitor: &DISPLAY_DEVICEW,
+        edid_names: &HashMap<String, String>,
+    ) -> Option<(String, String)> {
+        if monitor.StateFlags & DISPLAY_DEVICE_ACTIVE == 0 {
+            return None;
         }
+
+        let monitor_identifier = utf16_buffer_to_string(&monitor.DeviceName);
+        let device_string = utf16_buffer_to_string(&monitor.DeviceString);
+        let device_id = utf16_buffer_to_string(&monitor.DeviceID);
+
+        let candidate_ids = hardware_id_candidates(&device_id);
+        let edid_label = candidate_ids.iter().find_map(|key| edid_names.get(key)).cloned();
+
+        let friendly_name = normalize_monitor_name(&device_string);
+        let is_mirror = (monitor.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) != 0;
+
+        let resolved_name = if is_mirror {
+            friendly_name
+                .filter(|name| !name.is_empty())
+                .or_else(|| Some("Mirror Display".to_string()))
+        } else if let Some(edid) = edid_label {
+            Some(edid)
+        } else {
+            friendly_name
+        };
+
+        let identifier = extract_display_identifier(&monitor_identifier)?;
+        let name = resolved_name?;
+        Some((identifier, name))
+    }
+
+    let mut adapter_index = 0;
+    loop {
+        let mut adapter = DISPLAY_DEVICEW { cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32, ..Default::default() };
+        let adapter_found = unsafe { EnumDisplayDevicesW(PCWSTR::null(), adapter_index, &mut adapter, 0).as_bool() };
+        if !adapter_found { break; }
 
         let adapter_name = utf16_buffer_to_string(&adapter.DeviceName);
-        if adapter_name.is_empty() {
-            adapter_index += 1;
-            continue;
-        }
+        if adapter_name.is_empty() { adapter_index += 1; continue; }
 
         let adapter_ptr = PCWSTR(adapter.DeviceName.as_ptr());
-
         let mut monitor_index = 0;
         loop {
-            let mut monitor = DISPLAY_DEVICEW {
-                cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
-                ..Default::default()
-            };
+            let mut monitor = DISPLAY_DEVICEW { cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32, ..Default::default() };
+            let monitor_found = unsafe { EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool() };
+            if !monitor_found { break; }
 
-            // SAFETY: EnumDisplayDevicesW is safe when passed a valid adapter PCWSTR and properly
-            // initialized DISPLAY_DEVICEW struct. adapter_ptr is derived from adapter.DeviceName.
-            let monitor_found = unsafe {
-                EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool()
-            };
-
-            if !monitor_found {
-                break;
-            }
-
-            if monitor.StateFlags & DISPLAY_DEVICE_ACTIVE == 0 {
-                monitor_index += 1;
-                continue;
-            }
-
-            let monitor_identifier = utf16_buffer_to_string(&monitor.DeviceName);
-            let device_string = utf16_buffer_to_string(&monitor.DeviceString);
-            let device_id = utf16_buffer_to_string(&monitor.DeviceID);
-            let candidate_ids = hardware_id_candidates(&device_id);
-
-            let edid_label = candidate_ids.iter().find_map(|key| edid_names.get(key)).cloned();
-
-            let friendly_name = normalize_monitor_name(&device_string);
-            let is_mirror = (monitor.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) != 0;
-
-            let resolved_name = if is_mirror {
-                friendly_name
-                    .filter(|name| !name.is_empty())
-                    .or_else(|| Some("Mirror Display".to_string()))
-            } else if let Some(edid) = edid_label {
-                Some(edid)
-            } else {
-                friendly_name
-            };
-
-            if let (Some(identifier), Some(name)) =
-                (extract_display_identifier(&monitor_identifier), resolved_name)
-            {
+            if let Some((identifier, name)) = resolve_device_name(&monitor, &edid_names) {
                 friendly_names.entry(identifier).or_insert(name);
             }
 
@@ -260,7 +246,7 @@ fn collect_monitor_display_names() -> HashMap<String, String> {
         }
 
         adapter_index += 1;
-    }
+    } 
 
     friendly_names
 }
