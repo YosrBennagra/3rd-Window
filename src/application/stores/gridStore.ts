@@ -206,85 +206,94 @@ const tryApplyLocalOperation = (
   // Helper: find widget by id
   const findWidget = (id: string) => widgets.find((w) => w.id === id);
 
-  const handleAdd = () => {
+  type AddOperation = Extract<LayoutOperation, { type: 'addWidget' }>;
+  type MoveOperation = Extract<LayoutOperation, { type: 'moveWidget' }>;
+  type ResizeOperation = Extract<LayoutOperation, { type: 'resizeWidget' }>;
+  type RemoveOperation = Extract<LayoutOperation, { type: 'removeWidget' }>;
+  type SetLockOperation = Extract<LayoutOperation, { type: 'setWidgetLock' }>;
+  type SetSettingsOperation = Extract<LayoutOperation, { type: 'setWidgetSettings' }>;
+
+  const handleAdd = (op: AddOperation) => {
     const size = clampSizeToConstraints(
-      operation.widgetType,
-      { width: operation.layout.width, height: operation.layout.height },
+      op.widgetType,
+      { width: op.layout.width, height: op.layout.height },
       grid,
     );
-    const x = clampValue(operation.layout.x, 0, Math.max(0, grid.columns - size.width));
-    const y = clampValue(operation.layout.y, 0, Math.max(0, grid.rows - size.height));
+    const x = clampValue(op.layout.x, 0, Math.max(0, grid.columns - size.width));
+    const y = clampValue(op.layout.y, 0, Math.max(0, grid.rows - size.height));
     const newWidget: WidgetLayout = {
-      id: operation.layout.id ?? generateWidgetId(operation.widgetType),
-      widgetType: operation.widgetType,
+      id: op.layout.id ?? generateWidgetId(op.widgetType),
+      widgetType: op.widgetType,
       x,
       y,
       width: size.width,
       height: size.height,
-      locked: operation.layout.locked ?? false,
+      locked: op.layout.locked ?? false,
       settings:
-        operation.layout.settings && operation.widgetType === 'clock'
-          ? (ensureClockWidgetSettings(operation.layout.settings) as unknown as Record<string, unknown>)
-          : operation.layout.settings ?? getDefaultWidgetSettings(operation.widgetType),
+        op.layout.settings && op.widgetType === 'clock'
+          ? (ensureClockWidgetSettings(op.layout.settings) as unknown as Record<string, unknown>)
+          : op.layout.settings ?? getDefaultWidgetSettings(op.widgetType),
     };
     if (!isWithinBounds(grid, newWidget)) return null;
     if (collides(newWidget)) return null;
     return [...widgets, newWidget];
   };
 
-  const handleMove = () => {
-    const widget = findWidget(operation.id);
+  const handleMove = (op: MoveOperation) => {
+    const widget = findWidget(op.id);
     if (!widget || widget.locked) return null;
-    const x = clampValue(operation.x, 0, Math.max(0, grid.columns - widget.width));
-    const y = clampValue(operation.y, 0, Math.max(0, grid.rows - widget.height));
+    const x = clampValue(op.x, 0, Math.max(0, grid.columns - widget.width));
+    const y = clampValue(op.y, 0, Math.max(0, grid.rows - widget.height));
     const moved: WidgetLayout = { ...widget, x, y };
     if (!isWithinBounds(grid, moved)) return null;
     if (collides(moved, widget.id)) return null;
     return widgets.map((w) => (w.id === widget.id ? moved : w));
   };
 
-  const handleResize = () => {
-    const widget = findWidget(operation.id);
+  const handleResize = (op: ResizeOperation) => {
+    const widget = findWidget(op.id);
     if (!widget || widget.locked) return null;
-    const size = clampSizeToConstraints(widget.widgetType, { width: operation.width, height: operation.height }, grid);
-    const x = typeof operation.x === 'number' ? clampValue(operation.x, 0, Math.max(0, grid.columns - size.width)) : widget.x;
-    const y = typeof operation.y === 'number' ? clampValue(operation.y, 0, Math.max(0, grid.rows - size.height)) : widget.y;
+    const size = clampSizeToConstraints(widget.widgetType, { width: op.width, height: op.height }, grid);
+    const x = typeof op.x === 'number' ? clampValue(op.x, 0, Math.max(0, grid.columns - size.width)) : widget.x;
+    const y = typeof op.y === 'number' ? clampValue(op.y, 0, Math.max(0, grid.rows - size.height)) : widget.y;
     const resized: WidgetLayout = { ...widget, x, y, width: size.width, height: size.height };
     if (!isWithinBounds(grid, resized)) return null;
     if (collides(resized, widget.id)) return null;
     return widgets.map((w) => (w.id === widget.id ? resized : w));
   };
 
-  const handleRemove = () => {
-    if (!findWidget(operation.id)) return null;
-    return widgets.filter((w) => w.id !== operation.id);
+  const handleRemove = (op: RemoveOperation) => {
+    if (!findWidget(op.id)) return null;
+    return widgets.filter((w) => w.id !== op.id);
   };
 
-  const handleSetLock = () => {
-    if (!findWidget(operation.id)) return null;
-    return widgets.map((w) => (w.id === operation.id ? { ...w, locked: operation.locked } : w));
+  const handleSetLock = (op: SetLockOperation) => {
+    if (!findWidget(op.id)) return null;
+    return widgets.map((w) => (w.id === op.id ? { ...w, locked: op.locked } : w));
   };
 
-  const handleSetSettings = () => {
-    const widget = findWidget(operation.id);
+  const handleSetSettings = (op: SetSettingsOperation) => {
+    const widget = findWidget(op.id);
     if (!widget) return null;
-    const nextSettings = widget.widgetType === 'clock' ? (ensureClockWidgetSettings(operation.settings) as unknown as Record<string, unknown>) : operation.settings;
-    return widgets.map((w) => (w.id === operation.id ? { ...w, settings: nextSettings } : w));
+    const nextSettings = widget.widgetType === 'clock'
+      ? (ensureClockWidgetSettings(op.settings) as unknown as Record<string, unknown>)
+      : op.settings;
+    return widgets.map((w) => (w.id === op.id ? { ...w, settings: nextSettings } : w));
   };
 
   switch (operation.type) {
     case 'addWidget':
-      return handleAdd();
+      return handleAdd(operation);
     case 'moveWidget':
-      return handleMove();
+      return handleMove(operation);
     case 'resizeWidget':
-      return handleResize();
+      return handleResize(operation);
     case 'removeWidget':
-      return handleRemove();
+      return handleRemove(operation);
     case 'setWidgetLock':
-      return handleSetLock();
+      return handleSetLock(operation);
     case 'setWidgetSettings':
-      return handleSetSettings();
+      return handleSetSettings(operation);
     default:
       return null;
   }

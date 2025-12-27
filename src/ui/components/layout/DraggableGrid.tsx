@@ -182,7 +182,7 @@ export function DraggableGrid() {
       handlePopOutWidget,
     };
     
-    executeMenuAction(action, context).catch((err) => {
+    Promise.resolve(executeMenuAction(action, context)).catch((err: unknown) => {
       console.error('[DraggableGrid] executeMenuAction failed', err);
     });
   };
