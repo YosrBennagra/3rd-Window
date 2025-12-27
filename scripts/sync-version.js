@@ -15,8 +15,8 @@
  *   node scripts/sync-version.js        # display current versions
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const PACKAGE_JSON = path.join(ROOT_DIR, 'package.json');
@@ -75,9 +75,9 @@ function parseSemver(version) {
     throw new Error(`Invalid semver: ${version}`);
   }
   return {
-    major: parseInt(match[1], 10),
-    minor: parseInt(match[2], 10),
-    patch: parseInt(match[3], 10)
+    major: Number.parseInt(match[1], 10),
+    minor: Number.parseInt(match[2], 10),
+    patch: Number.parseInt(match[3], 10)
   };
 }
 
@@ -210,10 +210,10 @@ function main() {
   // Check if versions are in sync
   const allSame = areVersionsSynchronized(currentVersions);
   
-  if (!allSame) {
-    console.log('\n[WARN] Warning: Versions are not synchronized!');
-  } else {
+  if (allSame) {
     console.log('\n[OK] All versions are synchronized');
+  } else {
+    console.log('\n[WARN] Warning: Versions are not synchronized!');
   }
   
   // If no arguments, just display current versions
