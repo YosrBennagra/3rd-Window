@@ -16,6 +16,7 @@ jobs:
   version-check:
     name: Version Consistency Check
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       
@@ -53,6 +54,7 @@ jobs:
   lint:
     name: Lint and Format
     runs-on: windows-latest  # Windows-only app
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       
@@ -92,6 +94,7 @@ jobs:
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -125,6 +128,7 @@ jobs:
       matrix:
         platform: [windows-latest] # Windows-only (Linux/macOS not supported)
     runs-on: ${{ matrix.platform }}
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     
     steps:
       - uses: actions/checkout@v4
@@ -168,6 +172,7 @@ jobs:
     name: Test Rust
     needs: lint
     runs-on: windows-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       
@@ -188,6 +193,7 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       
