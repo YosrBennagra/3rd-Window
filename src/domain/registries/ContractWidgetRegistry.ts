@@ -56,8 +56,8 @@ class ContractBasedWidgetRegistry {
   private static compareAlpha(a: string, b: string): number {
     return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
   }
-  private contracts = new Map<WidgetId, WidgetContract>();
-  private validations = new Map<WidgetId, WidgetContractValidation>();
+  private readonly contracts = new Map<WidgetId, WidgetContract>();
+  private readonly validations = new Map<WidgetId, WidgetContractValidation>();
   private registrationOrder: WidgetId[] = [];
 
   /**

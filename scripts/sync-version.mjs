@@ -15,9 +15,9 @@
  *   node scripts/sync-version.mjs        # display current versions
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,9 +79,9 @@ function parseSemver(version) {
     throw new Error(`Invalid semver: ${version}`);
   }
   return {
-    major: parseInt(match[1], 10),
-    minor: parseInt(match[2], 10),
-    patch: parseInt(match[3], 10)
+    major: Number.parseInt(match[1], 10),
+    minor: Number.parseInt(match[2], 10),
+    patch: Number.parseInt(match[3], 10)
   };
 }
 
@@ -267,7 +267,7 @@ function main() {
 }
 
 // Run if called directly
-if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
+if (import.meta.url === `file:///${process.argv[1].replaceAll('\\', '/')}`) {
   main();
 }
 

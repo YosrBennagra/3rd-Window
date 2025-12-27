@@ -70,7 +70,7 @@ const generateWidgetId = (widgetType: string) => {
       try {
         // Use require so bundlers in browser builds won't include Node crypto
         // @ts-ignore
-        const nodeCrypto = require('crypto');
+        const nodeCrypto = require('node:crypto');
         if (nodeCrypto && typeof nodeCrypto.randomBytes === 'function') {
           const buf = nodeCrypto.randomBytes(8) as ArrayLike<number>;
           return `${widgetType}-${formatBytes(buf)}`;
