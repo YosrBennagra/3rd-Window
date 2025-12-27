@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { GridConfig, LayoutOperation, WidgetConstraints, WidgetLayout } from '@domain/models/layout';
-import { 
-  CLOCK_WIDGET_DEFAULT_SETTINGS, 
+import {
+  CLOCK_WIDGET_DEFAULT_SETTINGS,
   ensureClockWidgetSettings,
   TIMER_WIDGET_DEFAULT_SETTINGS,
   ensureTimerWidgetSettings,
@@ -42,7 +42,36 @@ export const GRID_ROWS = DEFAULT_GRID.rows;
 type GridBox = { x: number; y: number; width: number; height: number };
 
 const clampValue = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-const generateWidgetId = (widgetType: string) => `${widgetType}-${Math.random().toString(36).slice(2, 10)}`;
+
+// Generate a reasonably-unique widget id. Prefer secure RNGs when available:
+// 1) `crypto.randomUUID()` (most modern runtimes/browsers / Node >=14.17)
+// 2) `crypto.getRandomValues()` -> base36 string
+// 3) fallback to `Math.random()` for older environments
+const generateWidgetId = (widgetType: string) => {
+  try {
+    const webCrypto = (globalThis as any).crypto;
+    if (webCrypto) {
+      if (typeof webCrypto.randomUUID === 'function') {
+        return `${widgetType}-${webCrypto.randomUUID()}`;
+      }
+      if (typeof webCrypto.getRandomValues === 'function') {
+        const arr = new Uint8Array(8);
+        webCrypto.getRandomValues(arr);
+        // Convert bytes to compact base36 string
+        const s = Array.from(arr)
+          .map((b: number) => b.toString(36).padStart(2, '0'))
+          .join('')
+          .slice(0, 8);
+        return `${widgetType}-${s}`;
+      }
+    }
+  } catch {
+    // ignore and fall back
+  }
+
+  // Fallback (non-cryptographic). Acceptable for UI-only identifiers but less random.
+  return `${widgetType}-${Math.random().toString(36).slice(2, 10)}`;
+};
 
 const getDefaultWidgetSettings = (widgetType: string): Record<string, unknown> | undefined => {
   if (widgetType === 'clock') {
@@ -327,19 +356,19 @@ export const useGridStore = create<GridState>((set, get) => ({
     // Legacy load - replaced by loadPersisted
     set({ grid: DEFAULT_GRID, widgets: DEFAULT_WIDGETS, isLoaded: true });
   },
-  
+
   // Persistence methods (new versioned persistence)
   async savePersisted() {
     const { grid, widgets } = get();
     return { grid, widgets };
   },
-  
+
   async loadPersisted(layout: { grid: { columns: number; rows: number }; widgets: WidgetLayout[] }) {
     const normalizedWidgets = normalizeWidgets(layout.widgets, layout.grid);
-    set({ 
+    set({
       grid: layout.grid,
       widgets: normalizedWidgets,
-      isLoaded: true 
+      isLoaded: true
     });
   },
 
@@ -356,13 +385,13 @@ export const useGridStore = create<GridState>((set, get) => ({
 
   async addWidget(widgetType, layout) {
     const grid = get().grid ?? DEFAULT_GRID;
-    
+
     // Use widget-specific defaults or provided size
     const constraints = WIDGET_CONSTRAINTS[widgetType];
-    const defaultSize = constraints 
+    const defaultSize = constraints
       ? { width: constraints.minWidth, height: constraints.minHeight }
       : { width: 4, height: 4 };
-    
+
     const baseSize = clampSizeToConstraints(
       widgetType,
       { width: layout?.width ?? defaultSize.width, height: layout?.height ?? defaultSize.height },
