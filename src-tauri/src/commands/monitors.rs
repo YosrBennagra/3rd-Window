@@ -40,12 +40,65 @@ fn parse_edid_display_name(edid: &[u8]) -> Option<String> {
 }
 
 #[cfg(windows)]
-fn collect_edid_names() -> HashMap<String, String> {
-    use winreg::{
-        enums::{HKEY_LOCAL_MACHINE, KEY_READ},
-        RegKey,
-    };
+use winreg::{
+    enums::{HKEY_LOCAL_MACHINE, KEY_READ},
+    RegKey,
+};
 
+#[cfg(windows)]
+fn parse_model_entry(manufacturer: &str, model_key: &RegKey) -> Option<(Vec<String>, String)> {
+    let mut hardware_ids: Vec<String> = model_key.get_value("HardwareID").unwrap_or_default();
+
+    let edid_name = model_key
+        .open_subkey_with_flags("Device Parameters", KEY_READ)
+        .ok()
+        .and_then(|device_params| device_params.get_raw_value("EDID").ok())
+        .and_then(|edid| parse_edid_display_name(&edid.bytes))
+        .filter(|value| !value.eq_ignore_ascii_case(GENERIC_PNP_MONITOR));
+
+    let name = edid_name?;
+
+    if hardware_ids.is_empty() {
+        hardware_ids.push(format!("DISPLAY\\{}", manufacturer.to_ascii_uppercase()));
+        hardware_ids.push(format!("MONITOR\\{}", manufacturer.to_ascii_uppercase()));
+    }
+
+    Some((hardware_ids, name))
+}
+
+#[cfg(windows)]
+fn insert_hardware_ids(map: &mut HashMap<String, String>, hardware_ids: Vec<String>, name: String) {
+    for id in hardware_ids {
+        let normalized = id.trim().to_ascii_uppercase();
+        if normalized.is_empty() {
+            continue;
+        }
+        map.entry(normalized).or_insert_with(|| name.clone());
+    }
+}
+
+#[cfg(windows)]
+fn collect_models_for_manufacturer(
+    manufacturer: &str,
+    manufacturer_key: &RegKey,
+    map: &mut HashMap<String, String>,
+) {
+    for model in manufacturer_key.enum_keys().flatten() {
+        let model_key = match manufacturer_key.open_subkey_with_flags(&model, KEY_READ) {
+            Ok(k) => k,
+            Err(_) => {
+                continue;
+            },
+        };
+
+        if let Some((hardware_ids, name)) = parse_model_entry(manufacturer, &model_key) {
+            insert_hardware_ids(map, hardware_ids, name);
+        }
+    }
+}
+
+#[cfg(windows)]
+fn collect_edid_names() -> HashMap<String, String> {
     let mut map = HashMap::new();
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
 
@@ -57,27 +110,6 @@ fn collect_edid_names() -> HashMap<String, String> {
             },
         };
 
-    // Helper: return hardware ids and a valid EDID name (not the generic PnP placeholder).
-    fn parse_model_entry(manufacturer: &str, model_key: &RegKey) -> Option<(Vec<String>, String)> {
-        let mut hardware_ids: Vec<String> = model_key.get_value("HardwareID").unwrap_or_default();
-
-        let edid_name = model_key
-            .open_subkey_with_flags("Device Parameters", KEY_READ)
-            .ok()
-            .and_then(|device_params| device_params.get_raw_value("EDID").ok())
-            .and_then(|edid| parse_edid_display_name(&edid.bytes))
-            .filter(|value| !value.eq_ignore_ascii_case(GENERIC_PNP_MONITOR));
-
-        let name = edid_name?;
-
-        if hardware_ids.is_empty() {
-            hardware_ids.push(format!("DISPLAY\\{}", manufacturer.to_ascii_uppercase()));
-            hardware_ids.push(format!("MONITOR\\{}", manufacturer.to_ascii_uppercase()));
-        }
-
-        Some((hardware_ids, name))
-    }
-
     for manufacturer in display_root.enum_keys().flatten() {
         let manufacturer_key = match display_root.open_subkey_with_flags(&manufacturer, KEY_READ) {
             Ok(k) => k,
@@ -86,24 +118,7 @@ fn collect_edid_names() -> HashMap<String, String> {
             },
         };
 
-        for model in manufacturer_key.enum_keys().flatten() {
-            let model_key = match manufacturer_key.open_subkey_with_flags(&model, KEY_READ) {
-                Ok(k) => k,
-                Err(_) => {
-                    continue;
-                },
-            };
-
-            if let Some((hardware_ids, name)) = parse_model_entry(&manufacturer, &model_key) {
-                for id in hardware_ids {
-                    let normalized = id.trim().to_ascii_uppercase();
-                    if normalized.is_empty() {
-                        continue;
-                    }
-                    map.entry(normalized).or_insert_with(|| name.clone());
-                }
-            }
-        }
+        collect_models_for_manufacturer(&manufacturer, &manufacturer_key, &mut map);
     }
 
     map
