@@ -49,8 +49,7 @@ use winreg::{
 use windows::core::PCWSTR;
 #[cfg(windows)]
 use windows::Win32::Graphics::Gdi::{
-    EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE,
-    DISPLAY_DEVICE_MIRRORING_DRIVER,
+    EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE, DISPLAY_DEVICE_MIRRORING_DRIVER,
 };
 
 #[cfg(windows)]
@@ -251,9 +250,8 @@ fn enumerate_monitors_for_adapter(
             cb: std::mem::size_of::<DISPLAY_DEVICEW>() as u32,
             ..Default::default()
         };
-        let monitor_found = unsafe {
-            EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool()
-        };
+        let monitor_found =
+            unsafe { EnumDisplayDevicesW(adapter_ptr, monitor_index, &mut monitor, 0).as_bool() };
         if !monitor_found {
             break;
         }
