@@ -65,6 +65,26 @@ const generateWidgetId = (widgetType: string) => {
         return `${widgetType}-${s}`;
       }
     }
+
+    // Node.js fallback for older Node versions (sync require inside try/catch)
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    if (typeof (globalThis as any).process !== 'undefined') {
+      try {
+        // Use require so bundlers in browser builds won't include Node crypto
+        // @ts-ignore
+        const nodeCrypto = require('crypto');
+        if (nodeCrypto && typeof nodeCrypto.randomBytes === 'function') {
+          const buf = nodeCrypto.randomBytes(8);
+          const s = Array.from(buf)
+            .map((b: number) => b.toString(36).padStart(2, '0'))
+            .join('')
+            .slice(0, 8);
+          return `${widgetType}-${s}`;
+        }
+      } catch {
+        // ignore
+      }
+    }
   } catch {
     // ignore and fall back
   }

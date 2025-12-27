@@ -22,7 +22,7 @@ interface Props {
   widget: WidgetLayout;
 }
 
-export default function DiskUsageWidget({ widget: _widget }: Props) {
+export function DiskUsageWidget({ widget: _widget }: Props) {
   const [metrics, setMetrics] = useState<ExtendedSystemMetrics | null>(null);
 
   useEffect(() => {
@@ -173,3 +173,5 @@ export default function DiskUsageWidget({ widget: _widget }: Props) {
     </div>
   );
 }
+
+export default DiskUsageWidget;
