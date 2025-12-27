@@ -56,9 +56,11 @@ const WIDGET_OPTIONS: WidgetOption[] = [
 
 export function DesktopWidgetPicker() {
   const [spawning, setSpawning] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleAddWidget = async (widget: WidgetOption) => {
     setSpawning(true);
+    setErrorMessage(null);
     
     try {
       const widgetId = `widget-${Date.now()}`;
@@ -78,8 +80,7 @@ export function DesktopWidgetPicker() {
       await window.close();
     } catch (error) {
       console.error('Failed to spawn desktop widget:', error);
-      // TODO: Replace with non-blocking notification system
-      // For now, just log - users will see console if needed
+      setErrorMessage('Failed to add widget. Please try again.');
     } finally {
       setSpawning(false);
     }
@@ -113,6 +114,23 @@ export function DesktopWidgetPicker() {
         }}>
           Choose a widget to place on your desktop
         </p>
+        {errorMessage && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              background: 'rgba(248, 113, 113, 0.15)',
+              border: '1px solid rgba(248, 113, 113, 0.3)',
+              color: '#fca5a5',
+              borderRadius: '10px',
+              padding: '10px 12px',
+              fontSize: '12px',
+              marginBottom: '16px',
+            }}
+          >
+            {errorMessage}
+          </div>
+        )}
       </header>
 
       <div style={{
