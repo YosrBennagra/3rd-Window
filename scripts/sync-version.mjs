@@ -7,16 +7,20 @@
  * This is critical for CI/CD to ensure reproducible builds and clear release tracking.
  * 
  * Usage:
- *   node scripts/sync-version.js [version]
+ *   node scripts/sync-version.mjs [version]
  * 
  * Examples:
- *   node scripts/sync-version.js 1.0.0
- *   node scripts/sync-version.js patch  # increment patch version
- *   node scripts/sync-version.js        # display current versions
+ *   node scripts/sync-version.mjs 1.0.0
+ *   node scripts/sync-version.mjs patch  # increment patch version
+ *   node scripts/sync-version.mjs        # display current versions
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ROOT_DIR = path.join(__dirname, '..');
 const PACKAGE_JSON = path.join(ROOT_DIR, 'package.json');
@@ -263,11 +267,11 @@ function main() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
   main();
 }
 
-module.exports = { 
+export { 
   readVersions, 
   incrementVersion, 
   validateSemver,
